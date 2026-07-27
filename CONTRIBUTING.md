@@ -2,12 +2,13 @@
 
 ## Statut du projet
 
-Le dépôt n'est pas encore publié. La licence MIT et le titulaire `Thanh Chau`
-sont confirmés. Aucune contribution externe ne devrait être acceptée avant la
-publication des conditions de contribution.
+Le dépôt est public et expérimental. La licence MIT et le titulaire
+`Thanh Chau` sont confirmés. Aucun preset Input importable n'est encore
+considéré comme stable.
 
-Ce guide décrit le fonctionnement futur du projet et sert dès maintenant à la
-revue locale.
+Une contribution peut améliorer une proposition, fournir une preuve matérielle
+ou introduire un format portable. Son statut doit rester explicite pendant
+toute la revue.
 
 ## Types de contribution
 
@@ -17,6 +18,22 @@ revue locale.
 - proposer un preset d'application distinct ;
 - documenter un résultat négatif ou une incompatibilité ;
 - améliorer la sécurité sans activer d'action sensible par défaut.
+
+## Proposer un nouveau preset
+
+Commencer par ouvrir le modèle GitHub « Proposition de preset » avec :
+
+- l'application ou le workflow cible ;
+- le matériel, le système, la version d'Input et le firmware ;
+- le mapping touche par touche ;
+- le mode d'activation, notamment AppSense ;
+- la méthode d'installation envisagée ;
+- la sauvegarde et le retour arrière ;
+- les actions sensibles volontairement exclues.
+
+Une pull request doit ensuite placer le preset dans
+`profiles/<application-ou-workflow>/` selon les conventions de
+[`profiles/README.md`](profiles/README.md).
 
 ## Frontières d'architecture
 
@@ -56,6 +73,10 @@ Ces commandes ne modifient ni le clavier ni les réglages système.
 5. documenter les actions globales hors du layer AppSense ;
 6. ajouter la version, la date et la méthode de validation ;
 7. exécuter tous les contrôles locaux.
+
+Un export réel doit être assaini avant commit. Il ne doit contenir ni chemin
+utilisateur, ni identifiant de port, ni identifiant matériel unique. Une copie
+brute de la base Input reste locale et ignorée par Git.
 
 ## Fournir une preuve matérielle
 
@@ -98,6 +119,8 @@ Aucune approbation automatique ne sera acceptée dans le profil par défaut.
 - [ ] Liens locaux valides.
 - [ ] `git diff --check` sans erreur.
 - [ ] Licence et marques respectées.
+- [ ] Procédure de sauvegarde et de retour arrière documentée.
+- [ ] Statut d'import confirmé par une preuve ou indiqué comme non vérifié.
 
 ## Sécurité
 

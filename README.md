@@ -1,23 +1,41 @@
-# Codex Micro × Claude Desktop
+# Codex Micro Layers
 
-Base locale et open source pour utiliser le macropad Work Louder Codex Micro
-avec Claude Desktop sur macOS.
+Projet open source pour concevoir, tester et partager des configurations de
+layers pour le macropad Work Louder Codex Micro. Claude Desktop sur macOS sert
+de premier cas d'usage de référence.
 
 > Projet communautaire indépendant, sans affiliation ni approbation de Work
 > Louder ou Anthropic. Les noms de produits et marques appartiennent à leurs
 > propriétaires respectifs.
 
-Le projet suit deux pistes volontairement indépendantes :
+## Vision
 
-1. un preset logique de raccourcis associé à Claude Desktop par AppSense ;
-2. une étude expérimentale du protocole BLE « Hardware Buddy » de Claude
-   Desktop.
+L'objectif est qu'une personne puisse choisir un preset, sauvegarder sa
+configuration actuelle, installer ou reproduire le layer sans écraser le
+layer Codex natif, vérifier son fonctionnement et revenir en arrière.
+
+À terme, le dépôt doit accueillir plusieurs presets versionnés :
+
+- Claude Desktop ;
+- environnements de développement ;
+- navigateurs et workflows de recherche ;
+- outils de création comme Figma, Framer ou les applications Adobe ;
+- workflows proposés et testés par la communauté.
+
+Chaque preset doit distinguer clairement son niveau de preuve : proposition
+logique, validation manuelle ou format d'import réellement vérifié. Lire la
+[vision du projet](docs/vision.md) et la [feuille de route](docs/roadmap.md).
+
+Le projet conserve une piste séparée et expérimentale autour du protocole BLE
+« Hardware Buddy » de Claude Desktop. Elle ne conditionne pas les presets de
+raccourcis et ne prouve aucune compatibilité firmware.
 
 ## État au 27 juillet 2026
 
 - Dépôt public : [thannous/claude-codex-micro](https://github.com/thannous/claude-codex-micro).
-- Flux AppSense et preset de raccourcis documentés, validables et **non
-  appliqués**.
+- Premier contrat Claude/AppSense documenté et validable.
+- Aucun preset Work Louder Input importable n'est encore publié.
+- Le mapping Claude proposé reste **non appliqué** et non testé sur le clavier.
 - Layers existants du Codex Micro laissés intacts.
 - Aucun réglage macOS, Claude Desktop ou Work Louder n'a été modifié.
 - Codex Micro observé comme clavier HID Work Louder sur Bluetooth Low Energy.
@@ -31,7 +49,7 @@ Buddy. Claude attend un périphérique qui expose le Nordic UART Service et parl
 son protocole JSON. Ni ce service, ni un firmware Codex Micro extensible, ni la
 coexistence HID + NUS n'ont été démontrés sur le matériel.
 
-## Premier livrable : layer Claude piloté par AppSense
+## Premier preset : Claude piloté par AppSense
 
 Le profil logique est décrit dans
 [`profiles/claude-shortcuts/macos.example.json`](profiles/claude-shortcuts/macos.example.json)
@@ -54,7 +72,22 @@ premier plan. `Entrée` et les décisions de permission restent également
 exclues.
 
 Le fichier JSON est un contrat lisible et versionnable, pas encore un format
-d'import Work Louder.
+d'import Work Louder. Il ne doit donc pas être présenté comme un preset
+installable.
+
+## Prochaine étape
+
+La priorité V1 est de transformer ce contrat en expérience reproductible :
+
+1. inventorier et sauvegarder la configuration Input réelle ;
+2. déterminer le mécanisme officiel ou vérifiable de partage ;
+3. créer un layer Claude dans un emplacement libre sans toucher au layer natif ;
+4. tester AppSense, les touches, la molette, le joystick et le retour arrière ;
+5. publier un artefact assaini accompagné d'une procédure d'installation et
+   de restauration.
+
+Si Input ne propose pas de format portable vérifiable, le dépôt conservera une
+procédure manuelle explicite au lieu de revendiquer un import automatique.
 
 ## Prérequis
 
@@ -94,7 +127,12 @@ profiles/
     macos.example.json      contrat AppSense et mapping logique
     schema.json             structure attendue
     README.md               niveaux de preuve
+.github/
+  ISSUE_TEMPLATE/            proposition de preset
+  PULL_REQUEST_TEMPLATE.md   contrôle avant contribution
 docs/
+  vision.md                 objectif produit et principes
+  roadmap.md                étapes et portes de validation
   installation.md           installation et association AppSense
   scope-and-limitations.md  périmètre et preuves
   publishing-checklist.md   portes avant publication
@@ -118,6 +156,8 @@ expérimentation.
 
 ## Documentation
 
+- [Vision du projet](docs/vision.md)
+- [Feuille de route](docs/roadmap.md)
 - [Installation et configuration pas à pas](docs/installation.md)
 - [Guide de démarrage](docs/getting-started.md)
 - [Configuration et préservation des layers](docs/codex-micro/configuration.md)
@@ -136,14 +176,13 @@ expérimentation.
 - [Anthropic — exemple Claude Desktop Buddy](https://github.com/anthropics/claude-desktop-buddy)
 - [Anthropic — protocole Hardware Buddy BLE](https://github.com/anthropics/claude-desktop-buddy/blob/main/REFERENCE.md)
 
-## Licence et publication
+## Contribuer
 
-Le projet est placé sous licence [MIT](LICENSE). Aucun `user.name` n'étant
-configuré localement dans ce dépôt, l'identité n'a pas été déduite de Git : le
-propriétaire a explicitement confirmé `Thanh Chau` comme titulaire du copyright
-2026.
+Les propositions de presets doivent fournir leur compatibilité, leur mapping,
+leur niveau de validation et une méthode de retour arrière. Le
+[guide de contribution](CONTRIBUTING.md) et le modèle GitHub empêchent de
+présenter une simple proposition comme une configuration importable.
 
+Le projet est placé sous licence [MIT](LICENSE), copyright 2026 Thanh Chau.
 Consulter [LICENSING.md](LICENSING.md) et la
-[checklist de publication](docs/publishing-checklist.md). Les contributions
-peuvent être proposées sur le
-[dépôt GitHub public](https://github.com/thannous/claude-codex-micro).
+[checklist de publication](docs/publishing-checklist.md).

@@ -2,8 +2,10 @@
 
 ## Dans le périmètre
 
+- définir des conventions sûres pour des presets communautaires ;
 - documenter un layer Claude activé par Work Louder Input/AppSense ;
 - fournir un preset logique lisible et validable ;
+- préparer un format portable sans le déclarer importable avant validation ;
 - préserver les layers, profils et liens AppSense existants ;
 - distinguer raccourcis liés au focus et raccourcis globaux ;
 - fournir une sonde macOS en lecture seule ;
@@ -11,6 +13,7 @@
 
 ## Hors périmètre actuel
 
+- fournir un catalogue ou un installateur considéré comme stable ;
 - modifier le mapping réel du Codex Micro ;
 - créer ou supprimer un layer ou profil Work Louder ;
 - modifier un lien AppSense ;

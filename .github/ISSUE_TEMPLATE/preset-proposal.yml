@@ -1,0 +1,56 @@
+name: Proposition de preset
+description: Proposer un layer pour une application ou un workflow
+title: "[Preset] "
+labels:
+  - preset
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ne joignez aucun export brut contenant un chemin local, un numéro de série, une adresse Bluetooth ou un secret.
+  - type: input
+    id: target
+    attributes:
+      label: Application ou workflow
+      placeholder: Claude Desktop, VS Code, Figma…
+    validations:
+      required: true
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Cas d'usage
+      description: Expliquez le travail que ce preset doit accélérer.
+    validations:
+      required: true
+  - type: textarea
+    id: compatibility
+    attributes:
+      label: Compatibilité observée
+      description: Matériel, système, version d'Input, firmware et application.
+    validations:
+      required: true
+  - type: textarea
+    id: mapping
+    attributes:
+      label: Mapping proposé
+      description: Décrivez les touches, le cadran, le joystick, la couleur et AppSense.
+    validations:
+      required: true
+  - type: textarea
+    id: install
+    attributes:
+      label: Installation et retour arrière
+      description: Indiquez la sauvegarde, l'installation envisagée et la restauration.
+    validations:
+      required: true
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Sécurité
+      options:
+        - label: Le layer Codex natif n'est pas remplacé implicitement.
+          required: true
+        - label: Aucune action sensible ou destructive n'est activée par défaut.
+          required: true
+        - label: Le niveau de validation est présenté sans exagération.
+          required: true
