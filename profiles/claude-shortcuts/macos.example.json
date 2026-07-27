@@ -1,0 +1,125 @@
+{
+  "$schema": "./schema.json",
+  "id": "claude-desktop-macos-codex-micro-v0",
+  "status": "proposal-not-applied",
+  "target": {
+    "platform": "macOS",
+    "appBundleId": "com.anthropic.claudefordesktop",
+    "observedAppVersion": "1.24012.9",
+    "deviceFamily": "Work Louder Codex Micro"
+  },
+  "preservation": {
+    "mode": "do-not-replace-existing-layers",
+    "unlistedControls": "unchanged",
+    "touchLayerControl": "reserved",
+    "otherLayers": "unchanged",
+    "otherProfiles": "unchanged",
+    "otherAppSenseLinks": "unchanged"
+  },
+  "activation": {
+    "type": "appsense-foreground-application",
+    "provider": "Work Louder Input",
+    "application": {
+      "name": "Claude",
+      "bundleId": "com.anthropic.claudefordesktop"
+    },
+    "detectionMethod": "auto-detect",
+    "focusRequirementSeconds": 5,
+    "bindingStatus": "proposal-not-applied",
+    "focusLossBehavior": "manual-validation-required"
+  },
+  "layerBinding": {
+    "targetKind": "existing-layer",
+    "layerId": null,
+    "selectionStatus": "pending-inventory-and-approval",
+    "overwriteMapping": false,
+    "nativePresetImport": "not-confirmed"
+  },
+  "controls": [
+    {
+      "control": "key-1",
+      "label": "NEW",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Command", "N"]
+      },
+      "evidence": "installed-bundle-menu",
+      "risk": "low"
+    },
+    {
+      "control": "key-2",
+      "label": "FIND",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Command", "F"]
+      },
+      "evidence": "installed-bundle-menu",
+      "risk": "low"
+    },
+    {
+      "control": "key-3",
+      "label": "SET",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Command", "Comma"]
+      },
+      "evidence": "installed-bundle-menu",
+      "risk": "low"
+    },
+    {
+      "control": "key-4",
+      "label": "ESC",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Escape"]
+      },
+      "evidence": "manual-validation-required",
+      "risk": "medium"
+    },
+    {
+      "control": "wheel",
+      "label": "SCROLL",
+      "action": {
+        "type": "hid-scroll",
+        "axis": "vertical"
+      },
+      "evidence": "manual-validation-required",
+      "risk": "low"
+    },
+    {
+      "control": "joystick",
+      "label": "NAV",
+      "action": {
+        "type": "directional-keys",
+        "up": "ArrowUp",
+        "right": "ArrowRight",
+        "down": "ArrowDown",
+        "left": "ArrowLeft"
+      },
+      "evidence": "manual-validation-required",
+      "risk": "low"
+    }
+  ],
+  "outsideAppLinkedLayer": [
+    {
+      "action": "quick-entry",
+      "documentedShortcut": "DoublePressOption",
+      "reason": "Must remain reachable while another application is in the foreground."
+    },
+    {
+      "action": "voice-dictation",
+      "documentedShortcut": "CapsLock",
+      "reason": "Global shortcut; Claude AppSense layer may not be active from another application."
+    }
+  ],
+  "excludedByDefault": [
+    {
+      "action": "send-message",
+      "reason": "An accidental Enter key could send unfinished content."
+    },
+    {
+      "action": "permission-approve-or-deny",
+      "reason": "Consequential actions require a deliberate, separately validated mapping."
+    }
+  ]
+}

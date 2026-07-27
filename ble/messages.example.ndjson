@@ -1,0 +1,4 @@
+{"total":3,"running":1,"waiting":1,"tokens_today":31200,"prompt":{"id":"req_abc","tool":"Bash"}}
+{"cmd":"permission","id":"req_abc","decision":"once"}
+{"cmd":"permission","id":"req_abc","decision":"deny"}
+{"evt":"turn","role":"assistant","content":[]}
