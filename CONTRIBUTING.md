@@ -3,25 +3,16 @@
 ## Statut du projet
 
 Le dépôt est public et expérimental. La licence MIT et le titulaire
-`Thanh Chau` sont confirmés. Aucun preset Input importable n'est encore
-considéré comme stable.
+`Thanh Chau` sont confirmés. Aucun preset ne devient installable ou stable sans
+preuve reproductible.
 
-Une contribution peut améliorer une proposition, fournir une preuve matérielle
-ou introduire un format portable. Son statut doit rester explicite pendant
-toute la revue.
-
-## Types de contribution
-
-- corriger ou clarifier la documentation ;
-- ajouter une observation reproductible sur une version précise ;
-- améliorer le schéma ou les validateurs sans ajouter de dépendance inutile ;
-- proposer un preset d'application distinct ;
-- documenter un résultat négatif ou une incompatibilité ;
-- améliorer la sécurité sans activer d'action sensible par défaut.
+Une contribution peut améliorer une proposition, fournir une preuve matérielle,
+ajouter un outil de sécurité ou introduire un vrai export officiel assaini. Son
+niveau de preuve doit rester explicite pendant toute la revue.
 
 ## Proposer un nouveau preset
 
-Commencer par ouvrir le modèle GitHub « Proposition de preset » avec :
+Commencer par le modèle GitHub « Proposition de preset » avec :
 
 - l'application ou le workflow cible ;
 - le matériel, le système, la version d'Input et le firmware ;
@@ -31,99 +22,116 @@ Commencer par ouvrir le modèle GitHub « Proposition de preset » avec :
 - la sauvegarde et le retour arrière ;
 - les actions sensibles volontairement exclues.
 
-Une pull request doit ensuite placer le preset dans
-`profiles/<application-ou-workflow>/` selon les conventions de
+Placer ensuite le preset dans `profiles/<application-ou-workflow>/` selon
 [`profiles/README.md`](profiles/README.md).
 
-## Frontières d'architecture
+## Architecture
 
-Les contributions doivent maintenir trois frontières :
+Chaque preset stable sépare :
 
-- `profiles/claude-shortcuts/` décrit des raccourcis sans les appliquer ;
-- `docs/codex-micro/` documente le matériel et les procédures sans modifier le
-  périphérique ;
-- `ble/` reste expérimental jusqu'à un essai matériel reproductible.
+- `manifest.json` : identité, compatibilité, preuve et politique d'installation ;
+- `mapping.json` : positions physiques, actions, couleur et activation ;
+- `assets/` : visuels originaux ou redistribuables ;
+- `artifacts/` : uniquement un export officiel assaini et vérifié ;
+- `README.md` : installation, tests, limites et rollback.
 
-Le preset Claude doit rester lié à une activation AppSense « application au
-premier plan » et ne doit pas devenir un profil fixe implicite. Les raccourcis
-globaux, les actions qui envoient un message et les décisions de permission
-doivent rester hors du layer AppSense par défaut.
+Les schémas communs se trouvent dans `profiles/schema/v1/`. La piste BLE reste
+séparée sous `ble/`.
 
 ## Préparer l'environnement
 
-Prérequis : Node.js 18 ou version ultérieure. Le projet n'a aucune dépendance à
-installer.
-
-Depuis la racine :
+Prérequis : Node.js 18 ou version ultérieure. Aucune dépendance d'exécution
+n'est installée.
 
 ```sh
-node scripts/validate-profile.mjs
-node scripts/check-doc-links.mjs
+npm run check
 git diff --check
 ```
 
-Ces commandes ne modifient ni le clavier ni les réglages système.
+Les contrôles exécutent :
 
-## Modifier un preset
+- le validateur du contrat Claude historique ;
+- le validateur des manifestes et mappings ;
+- la vérification des liens locaux ;
+- les tests de sauvegarde, rollback, sanitation et idempotence sur fixtures.
 
-1. lire [`profiles/README.md`](profiles/README.md) ;
-2. conserver le statut `proposal-not-applied` sans preuve matérielle ;
-3. ne renseigner aucun `layerId` réel dans un exemple public ;
-4. conserver `overwriteMapping: false` ;
-5. documenter les actions globales hors du layer AppSense ;
-6. ajouter la version, la date et la méthode de validation ;
-7. exécuter tous les contrôles locaux.
+Ils ne modifient ni Input, ni le clavier, ni macOS.
 
-Un export réel doit être assaini avant commit. Il ne doit contenir ni chemin
-utilisateur, ni identifiant de port, ni identifiant matériel unique. Une copie
-brute de la base Input reste locale et ignorée par Git.
+## Modifier ou ajouter un preset
+
+1. conserver `proposal-not-applied` sans preuve matérielle ;
+2. protéger l'index `0` et ne jamais supposer qu'un identifiant local est
+   universel ;
+3. sélectionner le premier emplacement libre après inventaire ;
+4. conserver `replaceExisting: false` ;
+5. laisser les contrôles non utilisés sans action ou réservés ;
+6. exclure envoi, permissions, suppression, push, déploiement et commandes
+   destructrices ;
+7. documenter versions, date, preuve et résultat négatif éventuel ;
+8. exécuter `npm run check` et `git diff --check`.
+
+## Ajouter un export officiel
+
+Un fichier `*-layer.json` doit provenir de **Export layer** dans Work Louder
+Input. Ne jamais fabriquer les objets internes à partir du manifeste.
+
+Avant commit :
+
+```sh
+node scripts/input-layer.mjs inspect-export \
+  --input "$HOME/Downloads/Mon-layer.json" \
+  --json
+
+node scripts/input-layer.mjs sanitize-export \
+  --input "$HOME/Downloads/Mon-layer.json" \
+  --output profiles/<preset>/artifacts/mon-layer.json
+```
+
+Le fichier public doit ensuite subir :
+
+1. import dans une configuration isolée ;
+2. comparaison contrôle par contrôle au mapping ;
+3. second import prouvant l'idempotence ou un refus propre ;
+4. rollback par le profile d'origine ;
+5. nouvelle exportation et comparaison des sommes/structures.
+
+La copie brute, le profile original, les captures privées, les chemins locaux,
+ports, adresses Bluetooth, numéros de série, identifiants matériels et secrets
+restent sous `.local/` et hors de Git.
 
 ## Fournir une preuve matérielle
 
-Toute affirmation de compatibilité matérielle doit préciser la version du
-firmware, la méthode de connexion, le service GATT observé et le test réalisé.
-Les captures contenant une adresse Bluetooth, un numéro de série, un code
-d'appairage ou un jeton ne doivent pas être ajoutées au dépôt.
-
 Pour AppSense, documenter au minimum :
 
-- version de Work Louder Input ;
-- application détectée et nom affiché ;
+- versions d'Input, firmware, macOS et application ;
+- nom affiché et application détectée ;
+- index du nouveau layer et preuve que l'index `0` est intact ;
+- résultat de chaque touche, du cadran et du joystick ;
 - layer actif avec et sans focus Claude ;
-- comportement après redémarrage ;
-- autres liens AppSense présents, sans données privées.
+- persistance après redémarrage ;
+- autres liens AppSense préservés, sans publier leurs données privées ;
+- restauration du profile original.
 
 Un résultat non concluant doit rester indiqué comme tel.
 
 ## Piste BLE
 
 Une contribution BLE ne doit pas présenter Hardware Buddy comme compatible
-avec le Codex Micro sans preuve. Avant tout firmware, il faut documenter :
-
-- matériel et microcontrôleur exacts ;
-- procédure de sauvegarde et restauration ;
-- service Nordic UART observé ;
-- coexistence HID + NUS ;
-- stratégie de sécurité des permissions.
-
-Aucune approbation automatique ne sera acceptée dans le profil par défaut.
+sans preuve du service Nordic UART, de la coexistence HID + NUS, d'un firmware
+restaurable et d'une stratégie de permissions sûre. Aucun firmware ou outil de
+flash propriétaire ne doit être ajouté.
 
 ## Checklist de revue
 
 - [ ] Modification limitée au besoin annoncé.
-- [ ] Autres layers, profils et liens AppSense préservés.
-- [ ] État confirmé séparé des hypothèses.
-- [ ] Sources officielles liées directement.
-- [ ] Aucun secret ou identifiant matériel unique.
-- [ ] Validateur du profil réussi.
-- [ ] Liens locaux valides.
-- [ ] `git diff --check` sans erreur.
-- [ ] Licence et marques respectées.
-- [ ] Procédure de sauvegarde et de retour arrière documentée.
+- [ ] Layer `0`, autres layers, profiles et liens AppSense préservés.
+- [ ] Niveau de preuve exact.
+- [ ] Sources officielles reliées à l'affirmation correspondante.
+- [ ] Aucun secret, chemin privé ou identifiant matériel unique.
+- [ ] `npm run check` réussi.
+- [ ] `git diff --check` réussi.
+- [ ] Sauvegarde et retour arrière documentés.
 - [ ] Statut d'import confirmé par une preuve ou indiqué comme non vérifié.
+- [ ] Aucun asset ou firmware propriétaire.
 
-## Sécurité
-
-Lire [SECURITY.md](SECURITY.md). Tant qu'aucun canal privé n'est publié, ne pas
-ouvrir de rapport public contenant un secret, un identifiant ou un scénario
-directement exploitable.
+Lire [SECURITY.md](SECURITY.md) avant de publier un rapport sensible.

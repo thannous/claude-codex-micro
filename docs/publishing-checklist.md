@@ -1,49 +1,55 @@
 # Checklist de publication
 
 Le dépôt public et la publication d'un preset installable sont deux décisions
-distinctes. Le dépôt peut accueillir des propositions expérimentales ; un
-preset ne doit être présenté comme installable ou stable qu'après validation
-de toutes ses portes techniques.
+distinctes. Une proposition peut être utile et testée automatiquement sans être
+présentée comme un layer matériel validé.
 
 ## Dépôt public — effectué
 
-- [x] Choisir la licence MIT dans [LICENSING.md](../LICENSING.md).
-- [x] Installer le texte standard complet dans `LICENSE`.
-- [x] Mettre à jour la section Licence du README.
-- [x] Confirmer `Thanh Chau` comme détenteur du copyright.
-- [x] Installer le titulaire dans `LICENSE`.
-- [x] Afficher l'absence d'affiliation à Work Louder et Anthropic.
-- [x] Ne publier aucun asset, firmware ou export propriétaire.
-- [x] Créer le dépôt GitHub public.
-- [x] Définir `main` comme branche par défaut.
+- [x] Licence MIT et copyright 2026 Thanh Chau.
+- [x] Absence d'affiliation à Work Louder et Anthropic.
+- [x] Aucun firmware, asset propriétaire ou export utilisateur brut.
+- [x] `main` comme branche par défaut.
+- [x] Modèles GitHub de contribution.
 
 ## Contrôles applicables à chaque contribution
 
-- [ ] Vérifier les liens locaux avec `node scripts/check-doc-links.mjs`.
-- [ ] Vérifier manuellement les sources externes.
-- [ ] Valider le preset avec `node scripts/validate-profile.mjs`.
-- [ ] Exécuter `git diff --check`.
-- [ ] Confirmer que BLE est toujours indiqué comme non prouvé.
-- [ ] Confirmer qu'aucune action sensible n'est mappée par défaut.
+- [ ] `npm run check` réussi.
+- [ ] `git diff --check` réussi.
+- [ ] Sources externes vérifiées manuellement.
+- [ ] Niveau de preuve exact dans le manifeste et le README.
+- [ ] Layer natif à l'index `0` explicitement protégé.
+- [ ] Aucun envoi, permission, suppression, push, déploiement ou commande
+  destructive mappé par défaut.
+- [ ] BLE toujours indiqué comme non prouvé sans preuves GATT et firmware.
 
 ## Confidentialité
 
-- [ ] Rechercher secrets, jetons et clés.
-- [ ] Rechercher adresses Bluetooth et numéros de série.
-- [ ] Retirer captures ou logs contenant des données personnelles.
-- [ ] Vérifier que `work/` et `outputs/` restent ignorés.
+- [ ] Aucun secret, jeton, clé ou identifiant de compte.
+- [ ] Aucune adresse Bluetooth, numéro de série, port ou identifiant matériel.
+- [ ] Aucun chemin utilisateur absolu.
+- [ ] Aucune capture ou log contenant des données personnelles.
+- [ ] `.local/`, `work/` et `outputs/` ignorés par Git.
+- [ ] Tout `*-layer.json` passé par `sanitize-export` et revu manuellement.
 
-## Publication d'un preset installable
+## Portes du preset Claude V1
 
-- [ ] Identifier un format d'import ou une méthode d'installation vérifiable.
-- [ ] Créer et vérifier une sauvegarde restaurable.
-- [ ] Tester l'installation sur une copie propre ou un profil isolé.
-- [ ] Vérifier le mapping physique touche par touche.
-- [ ] Tester AppSense, la molette, le joystick et la perte de focus.
-- [ ] Vérifier l'idempotence ou le refus propre d'un doublon.
-- [ ] Tester le rollback.
-- [ ] Publier une matrice de compatibilité.
-- [ ] Réaliser une dernière revue de confidentialité et de sécurité.
+- [x] Flux officiels Import/Export layer et profile identifiés dans Input
+  `0.17.2`.
+- [x] Manifeste, mapping, schémas et représentation visuelle publiables.
+- [x] Sauvegarde, vérification SHA-256, dry-run, refus de doublon et rollback
+  testés sur copies isolées.
+- [ ] `git status --short` et configuration locale réelle inventoriés.
+- [ ] Export officiel du profile d'origine conservé hors Git.
+- [ ] Premier emplacement libre confirmé ; index `0` comparé avant/après.
+- [ ] Positions physiques et identifiants Input vérifiés.
+- [ ] Layer Claude créé sur le Codex Micro réel.
+- [ ] AppSense, touches, cadran, joystick et perte de focus testés.
+- [ ] Persistance après redémarrage d'Input vérifiée.
+- [ ] Vrai `*-layer.json` exporté, assaini et ajouté avec sa somme SHA-256.
+- [ ] Import dans une configuration isolée et second import testés.
+- [ ] Profile original réimporté et périphérique vérifié.
+- [ ] Matrice de compatibilité mise à jour avec les résultats.
 
-Tant que ces portes restent ouvertes, le profil Claude demeure une proposition
-logique non importable.
+Tant que les cases matérielles restent ouvertes, le preset conserve le statut
+`proposal-not-applied` et la pull request reste brouillon.

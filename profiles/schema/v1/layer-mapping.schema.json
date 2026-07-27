@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/schema/v1/layer-mapping.schema.json",
+  "title": "Codex Micro layer mapping v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatVersion",
+    "presetId",
+    "orientation",
+    "layer",
+    "activation",
+    "controls",
+    "unusedControls",
+    "excludedByDefault"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "formatVersion": { "const": "1.0.0" },
+    "presetId": { "type": "string" },
+    "orientation": { "const": "top-view-cable-away-from-user" },
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "rgb"],
+      "properties": {
+        "name": { "type": "string" },
+        "rgb": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hex", "label"],
+          "properties": {
+            "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "label": { "type": "string" }
+          }
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "provider",
+        "application",
+        "detection",
+        "focusSeconds",
+        "duplicatePolicy",
+        "focusLoss"
+      ],
+      "properties": {
+        "type": { "const": "appsense-foreground-application" },
+        "provider": { "const": "Work Louder Input" },
+        "application": {
+          "type": "object",
+          "required": ["name", "bundleId"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "bundleId": { "type": "string" }
+          }
+        },
+        "detection": { "const": "auto-detect" },
+        "focusSeconds": { "const": 5 },
+        "duplicatePolicy": { "const": "refuse" },
+        "focusLoss": { "const": "must-return-to-previous-safe-layer" }
+      }
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "inputControlId",
+          "physical",
+          "label",
+          "action",
+          "risk",
+          "physicalVerification"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "inputControlId": { "type": ["string", "integer", "null"] },
+          "physical": {
+            "type": "object",
+            "required": ["row", "column", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "row": { "type": "integer", "minimum": 1 },
+              "column": { "type": "integer", "minimum": 1 },
+              "description": { "type": "string" }
+            }
+          },
+          "label": { "type": "string" },
+          "action": { "type": "object" },
+          "risk": { "enum": ["low", "medium", "high"] },
+          "physicalVerification": { "enum": ["required", "verified"] }
+        }
+      }
+    },
+    "unusedControls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "behavior"],
+        "properties": {
+          "id": { "type": "string" },
+          "behavior": { "enum": ["no-action", "reserved"] }
+        }
+      }
+    },
+    "excludedByDefault": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "reason"],
+        "properties": {
+          "action": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  }
+}

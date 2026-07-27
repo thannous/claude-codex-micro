@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/codex-micro-claude/shortcut-profile.schema.json",
-  "title": "Codex Micro Claude shortcut profile",
+  "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/claude-shortcuts/schema.json",
+  "title": "Codex Micro Claude shortcut profile v1",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "id",
     "status",
@@ -10,187 +11,60 @@
     "preservation",
     "activation",
     "layerBinding",
+    "appearance",
     "controls",
+    "unusedControls",
     "outsideAppLinkedLayer",
     "excludedByDefault"
   ],
   "properties": {
-    "id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "status": {
-      "const": "proposal-not-applied"
-    },
-    "target": {
-      "type": "object",
-      "required": [
-        "platform",
-        "appBundleId",
-        "observedAppVersion",
-        "deviceFamily"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "platform": {
-          "const": "macOS"
-        },
-        "appBundleId": {
-          "const": "com.anthropic.claudefordesktop"
-        },
-        "observedAppVersion": {
-          "type": "string"
-        },
-        "deviceFamily": {
-          "type": "string"
-        }
-      }
-    },
+    "$schema": { "type": "string" },
+    "id": { "const": "claude-desktop-macos-codex-micro-v1" },
+    "status": { "const": "proposal-not-applied" },
+    "target": { "type": "object" },
     "preservation": {
       "type": "object",
       "required": [
         "mode",
+        "protectedLayerIndexes",
         "unlistedControls",
         "touchLayerControl",
         "otherLayers",
         "otherProfiles",
         "otherAppSenseLinks"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "mode": {
-          "const": "do-not-replace-existing-layers"
-        },
-        "unlistedControls": {
-          "const": "unchanged"
-        },
-        "touchLayerControl": {
-          "const": "reserved"
-        },
-        "otherLayers": {
-          "const": "unchanged"
-        },
-        "otherProfiles": {
-          "const": "unchanged"
-        },
-        "otherAppSenseLinks": {
-          "const": "unchanged"
-        }
-      }
+      ]
     },
-    "activation": {
+    "activation": { "type": "object" },
+    "layerBinding": { "type": "object" },
+    "appearance": {
       "type": "object",
-      "required": [
-        "type",
-        "provider",
-        "application",
-        "detectionMethod",
-        "focusRequirementSeconds",
-        "bindingStatus",
-        "focusLossBehavior"
-      ],
-      "additionalProperties": false,
+      "required": ["name", "rgb"],
       "properties": {
-        "type": {
-          "const": "appsense-foreground-application"
-        },
-        "provider": {
-          "const": "Work Louder Input"
-        },
-        "application": {
-          "type": "object",
-          "required": ["name", "bundleId"],
-          "additionalProperties": false,
-          "properties": {
-            "name": {
-              "const": "Claude"
-            },
-            "bundleId": {
-              "const": "com.anthropic.claudefordesktop"
-            }
-          }
-        },
-        "detectionMethod": {
-          "const": "auto-detect"
-        },
-        "focusRequirementSeconds": {
-          "const": 5
-        },
-        "bindingStatus": {
-          "const": "proposal-not-applied"
-        },
-        "focusLossBehavior": {
-          "const": "manual-validation-required"
-        }
-      }
-    },
-    "layerBinding": {
-      "type": "object",
-      "required": [
-        "targetKind",
-        "layerId",
-        "selectionStatus",
-        "overwriteMapping",
-        "nativePresetImport"
-      ],
-      "additionalProperties": false,
-      "properties": {
-        "targetKind": {
-          "const": "existing-layer"
-        },
-        "layerId": {
-          "type": "null"
-        },
-        "selectionStatus": {
-          "const": "pending-inventory-and-approval"
-        },
-        "overwriteMapping": {
-          "const": false
-        },
-        "nativePresetImport": {
-          "const": "not-confirmed"
-        }
+        "name": { "const": "Claude" },
+        "rgb": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
       }
     },
     "controls": {
       "type": "array",
-      "minItems": 1,
+      "minItems": 6,
       "items": {
         "type": "object",
-        "required": ["control", "label", "action", "evidence", "risk"],
         "additionalProperties": false,
+        "required": ["control", "physicalPosition", "label", "action", "evidence", "risk"],
         "properties": {
-          "control": {
-            "type": "string",
-            "minLength": 1
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1
-          },
-          "action": {
-            "type": "object"
-          },
+          "control": { "type": "string" },
+          "physicalPosition": { "type": "string" },
+          "label": { "type": "string" },
+          "action": { "type": "object" },
           "evidence": {
-            "enum": [
-              "installed-bundle-menu",
-              "anthropic-help-center",
-              "manual-validation-required"
-            ]
+            "enum": ["installed-bundle-menu", "anthropic-help-center", "manual-validation-required"]
           },
-          "risk": {
-            "enum": ["low", "medium", "high"]
-          }
+          "risk": { "enum": ["low", "medium", "high"] }
         }
       }
     },
-    "outsideAppLinkedLayer": {
-      "type": "array",
-      "minItems": 2
-    },
-    "excludedByDefault": {
-      "type": "array",
-      "minItems": 2
-    }
+    "unusedControls": { "type": "array", "minItems": 1 },
+    "outsideAppLinkedLayer": { "type": "array", "minItems": 2 },
+    "excludedByDefault": { "type": "array", "minItems": 6 }
   }
 }

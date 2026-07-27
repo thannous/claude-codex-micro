@@ -1,0 +1,127 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/schema/v1/preset-manifest.schema.json",
+  "title": "Codex Micro community preset manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatVersion",
+    "id",
+    "name",
+    "status",
+    "summary",
+    "target",
+    "compatibility",
+    "preservation",
+    "installation",
+    "files",
+    "validation"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "formatVersion": { "const": "1.0.0" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+    "name": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": [
+        "proposal-not-applied",
+        "hardware-observed",
+        "manually-validated",
+        "export-format-verified"
+      ]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "deviceFamily", "application"],
+      "properties": {
+        "platform": { "const": "macOS" },
+        "deviceFamily": { "const": "Work Louder Codex Micro" },
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "bundleId"],
+          "properties": {
+            "name": { "type": "string" },
+            "bundleId": { "type": "string" }
+          }
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "required": ["input", "firmware", "macOS", "claude"]
+    },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protectedLayerIndexes",
+        "slotPolicy",
+        "maxLayers",
+        "replaceExisting",
+        "otherProfiles",
+        "otherLayers",
+        "otherAppSenseLinks"
+      ],
+      "properties": {
+        "protectedLayerIndexes": {
+          "type": "array",
+          "contains": { "const": 0 },
+          "minContains": 1,
+          "uniqueItems": true
+        },
+        "slotPolicy": { "const": "first-free-after-protected" },
+        "maxLayers": { "const": 6 },
+        "replaceExisting": { "const": false },
+        "otherProfiles": { "const": "unchanged" },
+        "otherLayers": { "const": "unchanged" },
+        "otherAppSenseLinks": { "const": "unchanged" }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanism",
+        "applyMode",
+        "artifact",
+        "artifactStatus",
+        "backupRequired",
+        "rollback",
+        "directStoragePatch"
+      ],
+      "properties": {
+        "mechanism": { "const": "work-louder-input-layer-json" },
+        "applyMode": { "const": "guided-ui" },
+        "artifact": { "type": ["string", "null"] },
+        "artifactStatus": {
+          "enum": ["pending-real-export", "captured-unverified", "roundtrip-verified"]
+        },
+        "backupRequired": { "const": true },
+        "rollback": { "const": "official-profile-import" },
+        "directStoragePatch": { "const": "forbidden-until-format-verified" }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mapping", "visual", "artifactDirectory"],
+      "properties": {
+        "mapping": { "type": "string" },
+        "visual": { "type": "string" },
+        "artifactDirectory": { "type": "string" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "completed"],
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "completed": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    }
+  }
+}

@@ -1,41 +1,78 @@
-# Profil de raccourcis Claude
+# Claude Desktop — Codex Micro V1
 
-[`macos.example.json`](macos.example.json) est un profil logique et
-versionnable pour un layer Claude activé par AppSense. Il ne correspond pas
-encore à un format d'import Work Louder et ne choisit aucun layer.
+Ce dossier contient le premier preset de référence de la bibliothèque. Il vise
+un nouveau layer `Claude`, placé dans le premier emplacement libre après le
+layer Codex natif protégé à l'index `0`.
 
-Le contrat comprend :
+## État réel
 
-- `activation` : Claude Desktop au premier plan déclenche AppSense ;
-- `layerBinding` : un layer existant doit être choisi après inventaire ;
-- `controls` : mapping attendu dans ce layer ;
-- `outsideAppLinkedLayer` : raccourcis globaux à ne pas placer seulement dans
-  ce layer ;
-- `excludedByDefault` : actions sensibles absentes.
+- format communautaire et mapping : implémentés ;
+- mécanisme officiel Input `*-layer.json` : observé dans Input `0.17.2` ;
+- sauvegarde, inventaire, dry-run et rollback : implémentés et testés sur des
+  copies isolées ;
+- fichier officiel Claude `*-layer.json` : **pas encore capturé** ;
+- création du layer, AppSense et tests matériels : **non exécutés dans cette
+  branche**.
 
-Les niveaux de preuve sont :
+Le statut reste `proposal-not-applied`. Aucun fichier de ce dossier ne doit être
+présenté comme un import Input prêt à l'emploi avant le round-trip matériel.
 
-- `installed-bundle-menu` : raccourci lu dans le menu du bundle Claude local ;
-- `anthropic-help-center` : raccourci décrit par l'aide officielle Anthropic ;
-- `manual-validation-required` : comportement dépendant du focus, de la
-  version ou du configurateur.
+## Fichiers
 
-Valider la structure :
+```text
+manifest.json             identité, compatibilité, preuve et installation
+mapping.json              mapping physique et règles de sécurité
+macos.example.json        contrat logique historique, aligné sur la V1
+schema.json               schéma du contrat historique
+assets/layout.svg         représentation originale du clavier
+artifacts/README.md       porte d'entrée du futur export officiel
+```
+
+Les schémas réutilisables se trouvent dans `profiles/schema/v1/`.
+
+## Mapping physique proposé
+
+Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
+
+| Contrôle | Position | Action |
+| --- | --- | --- |
+| Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
+| Touche 2 | même rangée, deuxième | `⌘F` — recherche |
+| Touche 3 | même rangée, troisième | `⌘,` — réglages |
+| Touche 4 | même rangée, tout à droite | `Esc` — annuler/fermer selon le contexte |
+| Cadran | coin supérieur gauche | horaire : descendre ; antihoraire : monter |
+| Joystick | coin supérieur droit | quatre flèches directionnelles |
+
+![Schéma du layer Claude](assets/layout.svg)
+
+Les six touches agents, la touche large du bas, la touche inférieure droite et
+l'appui du cadran sont explicitement sans action. Le capteur tactile reste
+réservé au changement de layer.
+
+## AppSense
+
+Le lien cible uniquement :
+
+```text
+Claude
+com.anthropic.claudefordesktop
+```
+
+La politique de doublon est `refuse`. Un lien Claude existant doit être examiné
+avant toute création ; les autres liens ne sont jamais modifiés.
+
+## Sécurité
+
+Le validateur interdit dans les contrôles actifs : Retour/Entrée, envoi,
+approbation ou refus de permission, suppression, `git push`, déploiement et
+commande destructive.
+
+Valider le preset :
 
 ```sh
 node scripts/validate-profile.mjs
+node scripts/validate-presets.mjs
+node --test
 ```
 
-Le validateur refuse notamment :
-
-- une activation autre qu'AppSense liée à l'application au premier plan ;
-- la sélection ou l'écrasement d'un layer avant accord ;
-- une action `Entrée` ;
-- une décision de permission ;
-- un raccourci global placé dans le layer AppSense ;
-- un statut laissant croire que le profil est déjà appliqué.
-
-Le profil reste donc une spécification jusqu'à l'inventaire des layers et
-l'accord explicite de l'utilisateur. La documentation Work Louder confirme
-l'association AppSense à un layer ; le support d'un preset natif importable
-reste à vérifier dans la version d'Input utilisée.
+Lire ensuite [`docs/installation.md`](../../docs/installation.md).

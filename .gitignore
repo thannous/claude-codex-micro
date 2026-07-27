@@ -1,4 +1,5 @@
 .DS_Store
+/.local/
 /outputs/
 /work/
 node_modules/

@@ -1,98 +1,121 @@
-# Profils et presets
+# Profils et presets communautaires
 
-Ce dossier est destiné aux configurations communautaires. Il contient
-actuellement des contrats logiques, pas des exports Work Louder Input.
+Ce dossier sépare trois objets qui ne doivent pas être confondus :
 
-## Preset disponible
+1. le **manifeste communautaire**, portable et lisible ;
+2. le **mapping physique**, indépendant des identifiants locaux d'Input ;
+3. l'éventuel **export officiel Work Louder**, importable uniquement après un
+   round-trip prouvé.
+
+## Structure V1
 
 ```text
-claude-shortcuts/
-  README.md
-  macos.example.json
-  schema.json
+profiles/
+  schema/v1/
+    preset-manifest.schema.json
+    layer-mapping.schema.json
+  <preset>/
+    README.md
+    manifest.json
+    mapping.json
+    assets/
+    artifacts/
 ```
 
-`macos.example.json` décrit :
+Le premier preset est `claude-shortcuts/`.
 
-- l'application cible ;
-- l'activation AppSense liée au focus ;
-- la stratégie de sélection d'un layer existant ;
-- les contrôles attendus ;
-- les raccourcis globaux hors du layer ;
+## Cycle de preuve
+
+| Statut | Signification |
+| --- | --- |
+| `proposal-not-applied` | contrat, mapping et outils seulement |
+| `hardware-observed` | environnement et configuration réelle inventoriés |
+| `manually-validated` | layer et AppSense testés sur le matériel déclaré |
+| `export-format-verified` | export, import isolé, doublon et rollback reproduits |
+
+Un environnement peut être `hardware-observed` sans que le preset lui-même
+quitte `proposal-not-applied`.
+
+## Manifeste
+
+`manifest.json` décrit :
+
+- l'application et le matériel cibles ;
+- les versions observées ;
+- le niveau de preuve ;
+- les layers protégés ;
+- la politique de premier emplacement libre ;
+- le mécanisme d'installation ;
+- l'artefact officiel éventuel ;
+- les validations requises et réalisées.
+
+Le manifeste ne contient jamais d'index local supposé universel, de port, de
+numéro de série ou de chemin utilisateur.
+
+## Mapping
+
+`mapping.json` décrit :
+
+- les positions physiques stables et lisibles ;
+- les raccourcis ou comportements ;
+- la couleur du layer ;
+- AppSense ;
+- les contrôles sans action ;
 - les actions sensibles exclues.
 
-## Cycle de vie
+Un `inputControlId` peut rester `null` jusqu'à sa vérification dans Input. Il ne
+doit pas être deviné à partir d'un autre appareil.
 
-Un preset passe idéalement par les états suivants :
+## Artefact officiel
 
-1. `proposal-not-applied` : documentation seulement ;
-2. `hardware-observed` : layer et version Input inventoriés ;
-3. `manually-validated` : comportement testé sur une combinaison précise ;
-4. `export-format-verified` : uniquement si un export natif a été confirmé.
+Input `0.17.2` expose `Import layer` et `Export layer` avec des fichiers
+`*-layer.json`. Un artefact public doit provenir de ce flux officiel.
 
-Le preset actuel reste au premier état. Aucun statut supérieur ne doit être
-utilisé sans preuve reproductible.
+Pour atteindre `export-format-verified` :
 
-Un format d'import ne peut atteindre `export-format-verified` qu'après :
+1. exporter le profile d'origine ;
+2. créer et vérifier une sauvegarde locale ;
+3. installer le layer sur le premier emplacement libre ;
+4. exporter le layer ;
+5. assainir l'export avec `scripts/input-layer.mjs sanitize-export` ;
+6. l'importer dans une configuration isolée ;
+7. comparer chaque contrôle au mapping ;
+8. répéter l'import afin de prouver l'idempotence ou un refus propre ;
+9. restaurer le profile d'origine ;
+10. documenter les versions et résultats.
 
-1. sauvegarde d'une configuration existante ;
-2. installation sur une copie isolée ou un profil de test ;
-3. comparaison du mapping obtenu au manifeste ;
-4. second passage prouvant l'idempotence ou le refus propre d'un doublon ;
-5. restauration vérifiée.
+Un JSON communautaire ne doit jamais être renommé en `*-layer.json` pour donner
+l'impression d'être officiellement importable.
 
 ## Ajouter un preset
 
-Créer un dossier au nom stable et descriptif :
+Créer un dossier stable, par exemple :
 
 ```text
-profiles/<application-ou-workflow>/
+profiles/figma-macos/
   README.md
   manifest.json
   mapping.json
-  schema.json
-  assets/                 optionnel, uniquement si redistribuable
+  assets/layout.svg
+  artifacts/README.md
 ```
 
-Pendant la phase de prototype, un fichier unique comme
-`macos.example.json` reste accepté. Lorsqu'un preset devient installable, les
-responsabilités doivent être séparées :
+Copier les schémas V1 par référence, adapter le mapping, puis exécuter :
 
-- `manifest.json` : identité, compatibilité, statut et méthode d'installation ;
-- `mapping.json` : touches, cadran, joystick, couleurs et activation ;
-- `schema.json` : contrat validable ;
-- `README.md` : installation, vérification, retour arrière et limites ;
-- `assets/` : aperçu original ou redistribuable, sans marque tierce non
-  autorisée.
+```sh
+node scripts/validate-presets.mjs
+node --test
+node scripts/check-doc-links.mjs
+git diff --check
+```
 
-Le README doit préciser :
+## Invariants obligatoires
 
-- versions macOS, Input, application et firmware observées ;
-- application au premier plan attendue ;
-- layer ou preset existant utilisé ;
-- raccourcis et niveaux de risque ;
-- comportement à la perte de focus ;
-- contrôles volontairement exclus ;
-- méthode de retour arrière.
-
-## Portabilité
-
-Un preset public ne doit pas dépendre :
-
-- d'un chemin utilisateur absolu ;
-- d'un port USB ou BLE précis ;
-- d'un numéro de série ;
-- d'un identifiant local de layer supposé identique chez tous les utilisateurs ;
-- d'un export complet contenant les autres profils de l'utilisateur.
-
-Un futur installateur doit proposer un mode de simulation, créer une sauvegarde
-avant écriture, appliquer uniquement le delta annoncé et fournir un rollback.
-
-## Règles
-
-- ne pas inclure d'adresse Bluetooth, numéro de série ou identifiant privé ;
-- ne pas présenter le JSON comme importable sans preuve ;
-- ne pas remplacer un layer ou un lien AppSense existant ;
-- séparer les raccourcis globaux des mappings liés au focus ;
-- exclure par défaut envoi, suppression et décisions de permission ;
-- conserver les sources officielles et la date de validation.
+- l'index `0` du layer Codex natif reste protégé ;
+- aucun autre profile, layer ou lien AppSense n'est remplacé implicitement ;
+- le premier emplacement libre est choisi après inventaire ;
+- dry-run et sauvegarde précèdent toute installation ;
+- Retour/Entrée, permissions, suppression, push, déploiement et commandes
+  destructrices restent absents par défaut ;
+- les fichiers bruts restent sous `.local/`, ignoré par Git ;
+- toute limitation est publiée sans exagérer le niveau de preuve.
