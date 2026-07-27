@@ -1,0 +1,218 @@
+name: Inspect Work Louder Input 0.17.2
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/inspect-input-0172.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      INPUT_ARCHIVE_URL: https://github.com/worklouder/input-releases/releases/download/v0.17.2/input-0.17.2-arm64-mac.zip
+    steps:
+      - name: Download and extract the official application
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "$INPUT_ARCHIVE_URL" \
+            --output "$RUNNER_TEMP/input.zip"
+          shasum -a 256 "$RUNNER_TEMP/input.zip" > "$RUNNER_TEMP/archive.sha256"
+          mkdir -p "$RUNNER_TEMP/input-app" "$RUNNER_TEMP/input-asar"
+          ditto -x -k "$RUNNER_TEMP/input.zip" "$RUNNER_TEMP/input-app"
+          APP_PATH="$(find "$RUNNER_TEMP/input-app" -maxdepth 3 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+          npx --yes @electron/asar@3.2.10 extract \
+            "$APP_PATH/Contents/Resources/app.asar" \
+            "$RUNNER_TEMP/input-asar"
+          printf '%s' "$APP_PATH" > "$RUNNER_TEMP/app-path"
+
+      - name: Build a sanitized capability report
+        shell: bash
+        run: |
+          set -euo pipefail
+          export REPORT_PATH="$RUNNER_TEMP/input-0172-report.md"
+          python3 <<'PY'
+          import hashlib
+          import json
+          import os
+          import plistlib
+          import re
+          from pathlib import Path
+
+          temp = Path(os.environ["RUNNER_TEMP"])
+          root = temp / "input-asar"
+          app = Path((temp / "app-path").read_text(encoding="utf-8"))
+          report = Path(os.environ["REPORT_PATH"])
+          archive = temp / "input.zip"
+
+          with (app / "Contents" / "Info.plist").open("rb") as handle:
+              plist = plistlib.load(handle)
+
+          package = {}
+          package_path = root / "package.json"
+          if package_path.exists():
+              package = json.loads(package_path.read_text(encoding="utf-8"))
+
+          candidates = list(root.glob("dist/assets/device_config_data-*.js"))
+          candidates += [
+              root / "dist-electron/main/index.js",
+              root / "dist-electron/preload/preload.mjs",
+          ]
+          candidates = [path for path in candidates if path.is_file()]
+
+          keyword_re = re.compile(
+              r"import|export|preset|profile|backup|restore|config(?:uration)?|settings|appsense|auto.?detect|layer",
+              re.IGNORECASE,
+          )
+          literal_re = re.compile(
+              r"(?P<quote>['\"])(?P<body>(?:\\.|(?!\1).){1,260}?)(?P=quote)",
+              re.DOTALL,
+          )
+          printable_re = re.compile(r"^[\x20-\x7e]+$")
+
+          strings = set()
+          local_storage_keys = set()
+          ipc_channels = set()
+          file_markers = set()
+          object_keys = set()
+          source_maps = []
+          signals = {}
+
+          for path in candidates:
+              rel = path.relative_to(root).as_posix()
+              text = path.read_text(encoding="utf-8", errors="ignore")
+              signals[rel] = {}
+
+              if "sourceMappingURL=" in text:
+                  source_maps.append(rel)
+
+              for match in literal_re.finditer(text):
+                  value = match.group("body")
+                  value = re.sub(r"\\[nrt]", " ", value)
+                  value = re.sub(r"\s+", " ", value).strip()
+                  if (
+                      value
+                      and len(value) <= 220
+                      and printable_re.fullmatch(value)
+                      and keyword_re.search(value)
+                      and not value.startswith(("http://", "https://", "data:"))
+                  ):
+                      strings.add(value)
+
+              for pattern, target in (
+                  (r"localStorage\.(?:getItem|setItem|removeItem)\(\s*['\"]([^'\"]+)['\"]", local_storage_keys),
+                  (r"(?:ipcRenderer\.(?:invoke|send|on)|ipcMain\.(?:handle|on))\(\s*['\"]([^'\"]+)['\"]", ipc_channels),
+              ):
+                  for value in re.findall(pattern, text):
+                      if len(value) <= 120 and printable_re.fullmatch(value):
+                          target.add(value)
+
+              for value in re.findall(
+                  r"(?:\*\.)?[A-Za-z0-9_-]+\.(?:json|input|preset|config|backup|zip)",
+                  text,
+                  flags=re.IGNORECASE,
+              ):
+                  file_markers.add(value)
+
+              for anchor in re.finditer(
+                  r"Import Configuration|Export Configuration|import configuration|export configuration",
+                  text,
+                  flags=re.IGNORECASE,
+              ):
+                  window = text[max(0, anchor.start() - 12000):anchor.end() + 12000]
+                  for key in re.findall(r"(?:\{|,)\s*([A-Za-z_$][A-Za-z0-9_$]{1,80})\s*:", window):
+                      if keyword_re.search(key) or key.lower() in {
+                          "name", "id", "version", "device", "profile", "profiles",
+                          "layer", "layers", "actions", "keymap", "settings", "data",
+                      }:
+                          object_keys.add(key)
+
+              checks = {
+                  "official import/export labels": r"Import Configuration|Export Configuration",
+                  "Electron open dialog": r"showOpenDialog|openFile",
+                  "Electron save dialog": r"showSaveDialog|saveFile",
+                  "browser file input": r"FileReader|type\s*[:=]\s*['\"]file['\"]",
+                  "browser download": r"createObjectURL|new\s+Blob|\.download\s*=",
+                  "JSON parse": r"JSON\.parse",
+                  "JSON serialize": r"JSON\.stringify",
+                  "localStorage": r"localStorage",
+                  "device configuration write": r"write.{0,80}(?:device|keymap|config)|(?:device|keymap|config).{0,80}write",
+                  "AppSense": r"AppSense|appSense|auto.?detect",
+              }
+              for label, pattern in checks.items():
+                  signals[rel][label] = bool(re.search(pattern, text, re.IGNORECASE | re.DOTALL))
+
+          def render(values, limit=100):
+              values = sorted(values, key=lambda item: item.lower())
+              if not values:
+                  return ["- None found."]
+              result = [f"- `{value}`" for value in values[:limit]]
+              if len(values) > limit:
+                  result.append(f"- … {len(values) - limit} additional values omitted.")
+              return result
+
+          archive_hash = hashlib.sha256(archive.read_bytes()).hexdigest()
+          lines = [
+              "# Work Louder Input 0.17.2 — sanitized inspection",
+              "",
+              "> Generated from the official release in GitHub Actions. Only bounded strings, keys, file markers and boolean capability signals are retained. No application source, proprietary asset, local path, port, serial number or hardware identifier is published.",
+              "",
+              "## Release identity",
+              "",
+              f"- Archive SHA-256: `{archive_hash}`",
+              f"- Bundle identifier: `{plist.get('CFBundleIdentifier', 'unknown')}`",
+              f"- Short version: `{plist.get('CFBundleShortVersionString', 'unknown')}`",
+              f"- Build version: `{plist.get('CFBundleVersion', 'unknown')}`",
+              f"- Electron package name: `{package.get('name', 'unknown')}`",
+              f"- Electron package version: `{package.get('version', 'unknown')}`",
+              "",
+              "## Files inspected",
+              "",
+          ]
+          lines += [f"- `{path.relative_to(root).as_posix()}`" for path in candidates]
+          lines += ["", "## Matching human-readable strings", ""] + render(strings)
+          lines += ["", "## Local-storage keys", ""] + render(local_storage_keys)
+          lines += ["", "## IPC channel literals", ""] + render(ipc_channels)
+          lines += ["", "## File-format markers", ""] + render(file_markers)
+          lines += ["", "## Candidate exported-object keys", ""] + render(object_keys)
+          lines += ["", "## Source-map signals", ""] + render(source_maps)
+          lines += ["", "## Capability signals", ""]
+          for rel, values in signals.items():
+              lines.append(f"### `{rel}`")
+              lines.append("")
+              for label, present in values.items():
+                  lines.append(f"- {label}: `{'yes' if present else 'no'}`")
+              lines.append("")
+
+          lines += [
+              "## Interpretation boundary",
+              "",
+              "- A label or code signal proves only that the packaged application contains that concept.",
+              "- A Work Louder format is called importable only after the UI flow, resulting file and restoration have been reproduced.",
+              "- Until then, repository manifests remain community contracts and installers must refuse unrecognized writes.",
+              "",
+          ]
+          report.write_text("\n".join(lines), encoding="utf-8")
+          print(report.read_text(encoding="utf-8"))
+          PY
+
+      - name: Upload sanitized report only
+        uses: actions/upload-artifact@v4
+        with:
+          name: input-0.17.2-sanitized-inspection
+          path: ${{ runner.temp }}/input-0172-report.md
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove extracted proprietary files
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/input-app" "$RUNNER_TEMP/input-asar" "$RUNNER_TEMP/input.zip"
