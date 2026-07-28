@@ -109,13 +109,28 @@ npm run configure
 La première ouverture peut installer les dépendances verrouillées du GUI, puis
 lance l'interface uniquement sur `127.0.0.1` et ouvre le navigateur.
 
-Le parcours demande un export officiel Work Louder Input qui contient
-exactement un layer `Claude`, hors index `0`, déjà lié à Claude Desktop avec
-AppSense. L'utilisateur peut vérifier et personnaliser les quatre touches, le
-cadran et le joystick, puis télécharger son propre
-`Claude-macOS-profile.json`. Le fichier source, le layer natif, les autres
-layers et les autres liens AppSense sont conservés. Le JSON logique public
-n'est jamais présenté comme directement importable.
+L'interface est disponible en anglais (langue par défaut), français, espagnol
+et allemand. Le choix de langue est mémorisé localement dans le navigateur.
+
+Le parcours est un assistant en trois étapes : charger l'export officiel Work
+Louder Input (avec aide intégrée pour créer le layer `Claude` et le lien
+AppSense), personnaliser les contrôles, puis vérifier et générer. L'écran de
+vérification affiche les garanties de préservation (layer natif, AppSense,
+autres layers) et l'empreinte SHA-256 du `Claude-macOS-profile.json` produit.
+Le fichier source, le layer natif, les autres layers et les autres liens
+AppSense sont conservés. Le JSON logique public n'est jamais présenté comme
+directement importable.
+
+Le configurateur relit le mapping déjà présent dans le layer Claude chargé,
+mémorise localement la configuration en cours, suit le thème clair ou sombre
+du système et propose :
+
+- les quatre actions Claude canoniques, plus des raccourcis personnalisés
+  restreints aux touches sûres (Retour/Entrée, Suppression et Retour arrière
+  restent interdits par construction) ;
+- trois modes de molette (pages, lignes, volume expérimental) ;
+- en option explicitement marquée expérimentale et non validée sur matériel,
+  la rangée de quatre touches lumineuses (`base[1]`).
 
 ## Démarrage sans modification
 

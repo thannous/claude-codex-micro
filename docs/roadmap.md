@@ -64,6 +64,7 @@ format et son effet sur le périphérique ne sont pas prouvés.
 
 ## V3 — catalogue communautaire
 
+- ajouter un preset « Claude Code » (terminal) en premier candidat naturel ;
 - ajouter des presets IDE, navigateur, recherche, Figma et Framer ;
 - indexer les presets par application, plateforme et compatibilité ;
 - utiliser les modèles GitHub de proposition et de pull request ;

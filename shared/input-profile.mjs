@@ -1,18 +1,62 @@
 const DEVICE_TYPE = "codex_micro";
 const TARGET_LAYER_NAME = "Claude";
 
-const KEYCODE_BY_KEY = {
+const MODIFIER_KEYCODES = {
   Command: "KC_LGUI",
   Shift: "KC_LSFT",
-  N: "KC_N",
-  D: "KC_D",
+  Option: "KC_LALT",
+  Control: "KC_LCTL",
 };
 
-const DIRECT_KEYCODES = {
+// Touches finales autorisées pour un raccourci. Retour/Entrée, Suppression et
+// Retour arrière sont volontairement absents : un appui accidentel ne doit
+// jamais envoyer, approuver ou détruire quoi que ce soit.
+const FINAL_KEYCODES = {
+  ...Object.fromEntries(
+    Array.from({ length: 26 }, (_, index) => {
+      const letter = String.fromCharCode(65 + index);
+      return [letter, `KC_${letter}`];
+    }),
+  ),
+  ...Object.fromEntries(
+    Array.from({ length: 10 }, (_, digit) => [String(digit), `KC_${digit}`]),
+  ),
+  ...Object.fromEntries(
+    Array.from({ length: 12 }, (_, index) => [`F${index + 1}`, `KC_F${index + 1}`]),
+  ),
+  ArrowUp: "KC_UP",
+  ArrowDown: "KC_DOWN",
+  ArrowLeft: "KC_LEFT",
+  ArrowRight: "KC_RGHT",
+  PageUp: "KC_PGUP",
+  PageDown: "KC_PGDN",
+  Home: "KC_HOME",
+  End: "KC_END",
   Escape: "KC_ESC",
+  Space: "KC_SPC",
+  Tab: "KC_TAB",
 };
+
+const FINAL_KEY_BY_KEYCODE = Object.fromEntries(
+  Object.entries(FINAL_KEYCODES).map(([key, keycode]) => [keycode, key]),
+);
+
+const MODIFIER_KEY_BY_KEYCODE = Object.fromEntries(
+  Object.entries(MODIFIER_KEYCODES).map(([key, keycode]) => [keycode, key]),
+);
+
+const FORBIDDEN_KEYS = Object.freeze(["Enter", "Return", "Delete", "Backspace"]);
+
+// Une touche imprimable seule taperait du texte dans la conversation : elle
+// n'est acceptée qu'accompagnée d'un modificateur.
+const PRINTABLE_KEYS = new Set([
+  ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)),
+  ...Array.from({ length: 10 }, (_, digit) => String(digit)),
+  "Space",
+]);
 
 const CONTROL_ORDER = ["key-1", "key-2", "key-3", "key-4"];
+const ADVANCED_CONTROL_ORDER = ["key-5", "key-6", "key-7", "key-8"];
 
 const DEFAULT_MAPPING = {
   joystick: "navigation",
@@ -50,38 +94,76 @@ const ACTION_DEFINITIONS = {
   },
 };
 
+const WHEEL_MODES = {
+  scroll: { counterClockwise: "KC_PGUP", clockwise: "KC_PGDN" },
+  lines: { counterClockwise: "KC_UP", clockwise: "KC_DOWN" },
+  volume: { counterClockwise: "KC_VOLD", clockwise: "KC_VOLU", experimental: true },
+  none: null,
+};
+
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
 }
 
-function assert(condition, message) {
-  if (!condition) throw new Error(message);
+function assert(condition, message, code) {
+  if (!condition) {
+    const error = new Error(message);
+    if (code) error.code = code;
+    throw error;
+  }
 }
 
 function sameJson(left, right) {
   return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function buildKeyInputs(keys) {
+function validateCustomKeys(keys) {
+  assert(
+    Array.isArray(keys) && keys.length > 0,
+    "Un raccourci personnalisé doit contenir au moins une touche.",
+    "CUSTOM_EMPTY",
+  );
+
   const modifiers = keys.slice(0, -1);
   const finalKey = keys.at(-1);
 
-  assert(finalKey && KEYCODE_BY_KEY[finalKey], `Touche non prise en charge : ${finalKey}`);
+  assert(
+    !FORBIDDEN_KEYS.includes(finalKey) && !modifiers.some((key) => FORBIDDEN_KEYS.includes(key)),
+    "Retour, Entrée, Suppression et Retour arrière sont interdits par sécurité.",
+    "FORBIDDEN_KEY",
+  );
+  assert(
+    FINAL_KEYCODES[finalKey],
+    `Touche non prise en charge : ${finalKey}`,
+    "UNSUPPORTED_KEY",
+  );
   for (const modifier of modifiers) {
     assert(
-      modifier === "Command" || modifier === "Shift",
+      MODIFIER_KEYCODES[modifier],
       `Modificateur non pris en charge : ${modifier}`,
+      "UNSUPPORTED_MODIFIER",
     );
   }
+  assert(
+    modifiers.length > 0 || !PRINTABLE_KEYS.has(finalKey),
+    "Une touche imprimable seule doit être combinée à un modificateur.",
+    "PRINTABLE_NEEDS_MODIFIER",
+  );
+
+  return { modifiers, finalKey };
+}
+
+function buildKeyInputs(keys) {
+  const { modifiers, finalKey } = validateCustomKeys(keys);
 
   return [
     ...modifiers.map((key) => ({
-      keycode: KEYCODE_BY_KEY[key],
+      keycode: MODIFIER_KEYCODES[key],
       delay: 0,
       actionType: 1,
     })),
     {
-      keycode: KEYCODE_BY_KEY[finalKey],
+      keycode: FINAL_KEYCODES[finalKey],
       delay: 0,
       actionType: 2,
     },
@@ -89,31 +171,82 @@ function buildKeyInputs(keys) {
       .slice()
       .reverse()
       .map((key) => ({
-        keycode: KEYCODE_BY_KEY[key],
+        keycode: MODIFIER_KEYCODES[key],
         delay: 0,
         actionType: 0,
       })),
   ];
 }
 
+function decodeKeyInputs(keyInputs) {
+  if (!Array.isArray(keyInputs) || keyInputs.length % 2 !== 1) return null;
+
+  const modifierCount = (keyInputs.length - 1) / 2;
+  const keys = [];
+
+  for (let index = 0; index < modifierCount; index += 1) {
+    const press = keyInputs[index];
+    const release = keyInputs[keyInputs.length - 1 - index];
+    const key = MODIFIER_KEY_BY_KEYCODE[press?.keycode];
+    if (!key || press.actionType !== 1) return null;
+    if (release?.keycode !== press.keycode || release.actionType !== 0) return null;
+    keys.push(key);
+  }
+
+  const finalInput = keyInputs[modifierCount];
+  const finalKey = FINAL_KEY_BY_KEYCODE[finalInput?.keycode];
+  if (!finalKey || finalInput.actionType !== 2) return null;
+
+  keys.push(finalKey);
+  return keys;
+}
+
 function nextId(items) {
   return items.reduce((highest, item) => Math.max(highest, Number(item.id) || 0), -1) + 1;
 }
 
-function findOrCreateAction(profile, definition, createdActionIds) {
-  const keyInputs = buildKeyInputs(definition.keys);
+function findOrCreateAction(profile, name, keyInputs, createdActionIds) {
   const existing = profile.actions.find((action) => sameJson(action.keyInputs, keyInputs));
   if (existing) return existing.id;
 
   const id = nextId(profile.actions);
   profile.actions.push({
     id,
-    name: definition.name,
+    name,
     color: null,
     keyInputs,
   });
   createdActionIds.push(id);
   return id;
+}
+
+function resolveKeyAssignment(profile, assignment, createdActionIds) {
+  if (assignment && typeof assignment === "object") {
+    assert(
+      assignment.type === "custom",
+      `Affectation inconnue : ${JSON.stringify(assignment)}`,
+      "UNKNOWN_ASSIGNMENT",
+    );
+    const { modifiers, finalKey } = validateCustomKeys(assignment.keys);
+    if (modifiers.length === 0) return FINAL_KEYCODES[finalKey];
+    const keyInputs = buildKeyInputs(assignment.keys);
+    const name = `Custom ${assignment.keys.join("+")}`;
+    const id = findOrCreateAction(profile, name, keyInputs, createdActionIds);
+    return `KA_${id}`;
+  }
+
+  const definition = ACTION_DEFINITIONS[assignment];
+  assert(definition, `Action inconnue : ${assignment}`, "UNKNOWN_ASSIGNMENT");
+
+  if (definition.type === "shortcut") {
+    const keyInputs = buildKeyInputs(definition.keys);
+    const id = findOrCreateAction(profile, definition.name, keyInputs, createdActionIds);
+    return `KA_${id}`;
+  }
+  if (definition.type === "direct") {
+    return FINAL_KEYCODES[definition.key];
+  }
+  return "KC_NONE";
 }
 
 function addActionsToGroup(profile, actionIds) {
@@ -154,16 +287,29 @@ function radialSectors(keycodes) {
 }
 
 export function inspectInputProfile(source) {
-  assert(source && typeof source === "object", "Le fichier JSON est vide.");
+  assert(source && typeof source === "object", "Le fichier JSON est vide.", "EMPTY_FILE");
   assert(
     source.keyboard === DEVICE_TYPE,
     "Cette sauvegarde ne provient pas d’un Codex Micro.",
+    "WRONG_DEVICE",
   );
-  assert(source.language, "La langue du profil Input est absente.");
-  assert(source.profile && typeof source.profile === "object", "Profil Input absent.");
-  assert(Array.isArray(source.profile.layers), "Liste des layers Input absente.");
-  assert(Array.isArray(source.actions), "Liste des actions Input absente.");
-  assert(Array.isArray(source.multiactions), "Liste des multiactions Input absente.");
+  assert(source.language, "La langue du profil Input est absente.", "MISSING_LANGUAGE");
+  assert(
+    source.profile && typeof source.profile === "object",
+    "Profil Input absent.",
+    "MISSING_PROFILE",
+  );
+  assert(
+    Array.isArray(source.profile.layers),
+    "Liste des layers Input absente.",
+    "MISSING_LAYERS",
+  );
+  assert(Array.isArray(source.actions), "Liste des actions Input absente.", "MISSING_ACTIONS");
+  assert(
+    Array.isArray(source.multiactions),
+    "Liste des multiactions Input absente.",
+    "MISSING_MULTIACTIONS",
+  );
 
   const matchingLayers = source.profile.layers.filter(
     (layer) => layer.name?.trim().toLowerCase() === TARGET_LAYER_NAME.toLowerCase(),
@@ -173,23 +319,31 @@ export function inspectInputProfile(source) {
     matchingLayers.length === 0
       ? "Aucun layer « Claude » n’a été trouvé dans cette sauvegarde."
       : "Plusieurs layers « Claude » ont été trouvés : gardez-en un seul avant l’import.",
+    matchingLayers.length === 0 ? "NO_CLAUDE_LAYER" : "MULTIPLE_CLAUDE_LAYERS",
   );
 
   const layerIndex = source.profile.layers.indexOf(matchingLayers[0]);
   const layer = matchingLayers[0];
-  assert(layerIndex > 0, "Le layer Claude ne peut pas remplacer le layer natif à l’index 0.");
+  assert(
+    layerIndex > 0,
+    "Le layer Claude ne peut pas remplacer le layer natif à l’index 0.",
+    "CLAUDE_LAYER_NATIVE",
+  );
   assert(
     Array.isArray(layer.layout?.base?.[2]) && layer.layout.base[2].length >= 4,
     "Le layer Claude n’a pas la disposition attendue pour les quatre touches.",
+    "BAD_KEY_ROW",
   );
   assert(
     Array.isArray(layer.layout?.encoders?.[0]) && layer.layout.encoders[0].length >= 3,
     "Le layer Claude n’a pas la disposition attendue pour la molette.",
+    "BAD_ENCODERS",
   );
-  assert(layer.layout?.joystick, "Le layer Claude ne contient pas de joystick.");
+  assert(layer.layout?.joystick, "Le layer Claude ne contient pas de joystick.", "MISSING_JOYSTICK");
   assert(
     Number.isInteger(layer.linkedAppId) && layer.linkedAppId >= 0,
     "Le layer Claude doit déjà être associé à Claude avec un identifiant AppSense valide.",
+    "MISSING_APPSENSE",
   );
 
   return {
@@ -199,8 +353,78 @@ export function inspectInputProfile(source) {
     layerName: layer.name,
     layerIndex,
     appSenseLinked: true,
+    advancedRowAvailable:
+      Array.isArray(layer.layout?.base?.[1]) && layer.layout.base[1].length >= 4,
     inputSchema: "0.17.x",
   };
+}
+
+export function deriveMappingFromProfile(source) {
+  const inspection = inspectInputProfile(source);
+  const layer = source.profile.layers[inspection.layerIndex];
+  const actionsById = new Map(source.actions.map((action) => [String(action.id), action]));
+
+  const decodeCell = (cell) => {
+    const keycode = cell?.keycode;
+    if (!keycode || keycode === "KC_NONE") return "none";
+    if (keycode === "KC_ESC") return "stop";
+
+    const reference = /^KA_(\d+)$/.exec(keycode);
+    if (reference) {
+      const action = actionsById.get(reference[1]);
+      if (!action) return "none";
+      for (const [id, definition] of Object.entries(ACTION_DEFINITIONS)) {
+        if (
+          definition.type === "shortcut" &&
+          sameJson(action.keyInputs, buildKeyInputs(definition.keys))
+        ) {
+          return id;
+        }
+      }
+      const keys = decodeKeyInputs(action.keyInputs);
+      return keys ? { type: "custom", keys } : "none";
+    }
+
+    const finalKey = FINAL_KEY_BY_KEYCODE[keycode];
+    return finalKey ? { type: "custom", keys: [finalKey] } : "none";
+  };
+
+  const mapping = {};
+  CONTROL_ORDER.forEach((controlId, index) => {
+    mapping[controlId] = decodeCell(layer.layout.base[2][index]);
+  });
+
+  let advancedInUse = false;
+  if (inspection.advancedRowAvailable) {
+    const decoded = ADVANCED_CONTROL_ORDER.map((controlId, index) => [
+      controlId,
+      decodeCell(layer.layout.base[1][index]),
+    ]);
+    advancedInUse = decoded.some(([, assignment]) => assignment !== "none");
+    if (advancedInUse) {
+      for (const [controlId, assignment] of decoded) mapping[controlId] = assignment;
+    }
+  }
+
+  const encoder = layer.layout.encoders[0];
+  mapping.wheel = "none";
+  for (const [mode, keycodes] of Object.entries(WHEEL_MODES)) {
+    if (
+      keycodes &&
+      encoder[0]?.keycode === keycodes.counterClockwise &&
+      encoder[1]?.keycode === keycodes.clockwise
+    ) {
+      mapping.wheel = mode;
+      break;
+    }
+  }
+
+  const sectors = layer.layout.joystick?.sectors ?? [];
+  mapping.joystick = sectors.some((sector) => sector.k === "KC_UP") ? "navigation" : "none";
+
+  const assigned = Object.values(mapping).filter((value) => value !== "none").length;
+
+  return { mapping, advancedInUse, assigned };
 }
 
 export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
@@ -218,30 +442,46 @@ export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
   output.actionGroups = [];
 
   for (const [index, controlId] of CONTROL_ORDER.entries()) {
-    const actionId = mapping[controlId];
-    const definition = ACTION_DEFINITIONS[actionId];
-    assert(definition, `Action inconnue pour ${controlId} : ${actionId}`);
+    targetLayer.layout.base[2][index].keycode = resolveKeyAssignment(
+      output,
+      mapping[controlId],
+      createdActionIds,
+    );
+  }
 
-    if (definition.type === "shortcut") {
-      const id = findOrCreateAction(output, definition, createdActionIds);
-      targetLayer.layout.base[2][index].keycode = `KA_${id}`;
-    } else if (definition.type === "direct") {
-      targetLayer.layout.base[2][index].keycode = DIRECT_KEYCODES[definition.key];
-    } else {
-      targetLayer.layout.base[2][index].keycode = "KC_NONE";
+  const advancedAssignments = ADVANCED_CONTROL_ORDER.filter(
+    (controlId) => mapping[controlId] != null,
+  );
+  if (advancedAssignments.length > 0) {
+    assert(
+      inspection.advancedRowAvailable,
+      "Le layer Claude n’a pas la disposition attendue pour la rangée avancée.",
+      "BAD_ADVANCED_ROW",
+    );
+    for (const controlId of advancedAssignments) {
+      const index = ADVANCED_CONTROL_ORDER.indexOf(controlId);
+      targetLayer.layout.base[1][index].keycode = resolveKeyAssignment(
+        output,
+        mapping[controlId],
+        createdActionIds,
+      );
     }
   }
 
-  if (mapping.wheel === "scroll") {
-    targetLayer.layout.encoders[0][0].keycode = "KC_PGUP";
-    targetLayer.layout.encoders[0][1].keycode = "KC_PGDN";
+  const wheelMode = WHEEL_MODES[mapping.wheel];
+  assert(
+    mapping.wheel in WHEEL_MODES,
+    `Action inconnue pour la molette : ${mapping.wheel}`,
+    "UNKNOWN_ASSIGNMENT",
+  );
+  if (wheelMode) {
+    targetLayer.layout.encoders[0][0].keycode = wheelMode.counterClockwise;
+    targetLayer.layout.encoders[0][1].keycode = wheelMode.clockwise;
     targetLayer.layout.encoders[0][2].keycode = "KC_NONE";
-  } else if (mapping.wheel === "none") {
+  } else {
     targetLayer.layout.encoders[0].forEach((entry) => {
       entry.keycode = "KC_NONE";
     });
-  } else {
-    throw new Error(`Action inconnue pour la molette : ${mapping.wheel}`);
   }
 
   if (mapping.joystick === "navigation") {
@@ -289,11 +529,22 @@ export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
       preservedLayers: output.profile.layers.length - 1,
       nativeLayerPreserved: true,
       appSensePreserved: true,
-      wheelMode: mapping.wheel === "scroll" ? "Page précédente / suivante" : "Non assignée",
+      advancedAssignments: advancedAssignments.length,
+      wheelMode: mapping.wheel === "scroll" ? "Page précédente / suivante" : mapping.wheel,
       joystickMode:
         mapping.joystick === "navigation" ? "Flèches directionnelles" : "Non assigné",
     },
   };
 }
 
-export { DEFAULT_MAPPING };
+export {
+  ACTION_DEFINITIONS,
+  ADVANCED_CONTROL_ORDER,
+  CONTROL_ORDER,
+  DEFAULT_MAPPING,
+  FINAL_KEYCODES,
+  FORBIDDEN_KEYS,
+  MODIFIER_KEYCODES,
+  PRINTABLE_KEYS,
+  WHEEL_MODES,
+};
