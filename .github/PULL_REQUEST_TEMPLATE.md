@@ -26,7 +26,7 @@ sans rapport avec cette PR.
 
 Cette PR :
 
-- [ ] reste compatible avec les profils existants ;
+- [ ] reste compatible avec les anciens profils ;
 - [ ] nécessite une migration documentée ;
 - [ ] modifie le format des manifests ;
 - [ ] modifie le format des imports ou exports ;
@@ -56,9 +56,8 @@ Requise pour toute modification de documentation :
 
 Requise si la PR ne concerne pas uniquement la documentation :
 
-- [ ] `npm run check` réussit.
-- [ ] Tous les tests Node passent.
-- [ ] Le build du GUI réussit.
+- [ ] `npm ci --no-audit --no-fund` réussit sans modifier le lockfile.
+- [ ] `npm run check` réussit, y compris le build et les tests du GUI.
 - [ ] Aucun changement involontaire n'apparaît dans les profils générés.
 - [ ] Le GUI a été testé sans erreur ni avertissement inattendu dans la console,
       s'il est affecté.

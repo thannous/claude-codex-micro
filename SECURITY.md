@@ -55,24 +55,22 @@ Tant que la piste n'est pas auditée :
 ## Dépendances et scripts
 
 Le projet ne transmet pas les profils ou exports Work Louder à un service
-distant et le configurateur ne contient actuellement ni télémétrie ni appel
-réseau applicatif pour les traiter.
+distant. Le configurateur, le générateur et les validateurs les traitent
+localement, sans télémétrie applicative.
 
-Une connexion réseau peut toutefois être utilisée pendant l'installation des
-dépendances. Lors de la première exécution de `npm run configure`, si Vite
-n'est pas déjà installé dans `prototype/node_modules`, le script exécute :
+Une connexion réseau peut toutefois être utilisée par
+`npm ci --no-audit --no-fund` pour télécharger depuis le registre configuré les
+versions verrouillées dans `package-lock.json`. Lors de sa première exécution,
+`npm run configure` peut de même lancer `npm ci` dans `prototype/` si les
+dépendances du GUI sont absentes. Une fois installées, le traitement des
+profils reste local. Toute nouvelle dépendance ou communication distante doit
+être justifiée, verrouillée, documentée et auditée avant publication.
 
-```sh
-npm ci --no-audit --no-fund
-```
+## Sauvegarde et restauration
 
-Cette commande peut contacter le registre npm configuré et télécharge les
-versions verrouillées dans `prototype/package-lock.json`. Une fois les
-dépendances présentes, le configurateur lance un serveur local lié à
-`127.0.0.1`. Les profils sont traités localement et ne sont pas téléversés par
-le code du projet.
-
-Le configurateur ne modifie pas directement les réglages Work Louder Input :
-l'utilisateur reste responsable de l'import du profil généré. Toute nouvelle
-dépendance ou communication distante doit être justifiée, verrouillée,
-documentée et auditée avant publication.
+Le retour arrière principal reste l'import du profile officiel d'origine dans
+Input. La restauration brute du stockage est secondaire et exige plusieurs
+confirmations explicites. Sa destination doit correspondre exactement à un
+chemin Input détecté ou à `WORK_LOUDER_INPUT_USER_DATA`. L'outil refuse la
+racine du système, le dossier utilisateur, le dépôt, les liens symboliques et
+tout dossier non approuvé.

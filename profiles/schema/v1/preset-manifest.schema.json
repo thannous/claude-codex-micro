@@ -1,0 +1,217 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/schema/v1/preset-manifest.schema.json",
+  "title": "Codex Micro community preset manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatVersion",
+    "id",
+    "name",
+    "status",
+    "summary",
+    "target",
+    "compatibility",
+    "preservation",
+    "installation",
+    "files",
+    "validation"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "formatVersion": { "const": "1.0.0" },
+    "id": { "type": "string", "pattern": "^[a-z0-9][a-z0-9-]+$" },
+    "name": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": [
+        "proposal-not-applied",
+        "hardware-observed",
+        "manually-validated",
+        "export-format-verified"
+      ]
+    },
+    "summary": { "type": "string", "minLength": 1 },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["platform", "deviceFamily", "application"],
+      "properties": {
+        "platform": { "const": "macOS" },
+        "deviceFamily": { "const": "Work Louder Codex Micro" },
+        "application": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "bundleId"],
+          "properties": {
+            "name": { "type": "string" },
+            "bundleId": { "type": "string" }
+          }
+        }
+      }
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["input", "firmware", "macOS", "claude"],
+      "properties": {
+        "input": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedVersion", "supportedVersions", "bundleId", "sharingMechanism"],
+          "properties": {
+            "observedVersion": { "type": "string", "pattern": "^0\\.17\\.\\d+$" },
+            "supportedVersions": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "type": "string", "pattern": "^0\\.17\\.\\d+$" }
+            },
+            "bundleId": { "const": "it.focusense.input-app" },
+            "sharingMechanism": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "kind",
+                "fileSuffix",
+                "evidence",
+                "topLevelKeysObserved",
+                "importTest"
+              ],
+              "properties": {
+                "kind": { "const": "official-layer-json" },
+                "fileSuffix": { "const": "-layer.json" },
+                "evidence": { "type": "string", "minLength": 1 },
+                "topLevelKeysObserved": {
+                  "type": "array",
+                  "minItems": 9,
+                  "uniqueItems": true,
+                  "items": { "type": "string" }
+                },
+                "importTest": { "type": "string", "minLength": 1 }
+              }
+            }
+          }
+        },
+        "firmware": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedVersion", "evidence"],
+          "properties": {
+            "observedVersion": { "type": "string", "minLength": 1 },
+            "evidence": { "type": "string", "minLength": 1 }
+          }
+        },
+        "macOS": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedVersion", "architecture"],
+          "properties": {
+            "observedVersion": { "type": "string", "minLength": 1 },
+            "architecture": { "enum": ["arm64", "x64"] }
+          }
+        },
+        "claude": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["observedVersion"],
+          "properties": {
+            "observedVersion": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "preservation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protectedLayerIndexes",
+        "targetLayerPolicy",
+        "targetLayerName",
+        "targetAppSenseLink",
+        "maxLayers",
+        "replaceExisting",
+        "otherProfiles",
+        "otherLayers",
+        "otherAppSenseLinks"
+      ],
+      "properties": {
+        "protectedLayerIndexes": {
+          "type": "array",
+          "contains": { "const": 0 },
+          "minContains": 1,
+          "uniqueItems": true
+        },
+        "targetLayerPolicy": { "const": "exactly-one-existing-named-layer" },
+        "targetLayerName": { "const": "Claude" },
+        "targetAppSenseLink": { "const": "preserve-existing" },
+        "maxLayers": { "const": 6 },
+        "replaceExisting": { "const": false },
+        "otherProfiles": { "const": "unchanged" },
+        "otherLayers": { "const": "unchanged" },
+        "otherAppSenseLinks": { "const": "unchanged" }
+      }
+    },
+    "installation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mechanism",
+        "applyMode",
+        "sourceArtifact",
+        "outputArtifact",
+        "layerArtifact",
+        "layerArtifactSha256",
+        "layerArtifactStatus",
+        "backupRequired",
+        "rollback",
+        "directStoragePatch"
+      ],
+      "properties": {
+        "mechanism": { "const": "local-profile-transform" },
+        "applyMode": { "const": "guided-ui" },
+        "sourceArtifact": { "const": "official-profile-json" },
+        "outputArtifact": { "const": "generated-profile-json" },
+        "layerArtifact": {
+          "oneOf": [
+            { "type": "null" },
+            {
+              "type": "string",
+              "pattern": "^artifacts/(?!.*(?:^|/)\\.\\.(?:/|$))[^/]+-layer\\.json$"
+            }
+          ]
+        },
+        "layerArtifactSha256": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+          ]
+        },
+        "layerArtifactStatus": {
+          "enum": ["pending-real-export", "captured-unverified", "roundtrip-verified"]
+        },
+        "backupRequired": { "const": true },
+        "rollback": { "const": "official-profile-import" },
+        "directStoragePatch": { "const": "forbidden-until-format-verified" }
+      }
+    },
+    "files": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mapping", "visual", "artifactDirectory"],
+      "properties": {
+        "mapping": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "visual": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+$" },
+        "artifactDirectory": { "type": "string", "pattern": "^(?!/)(?!.*(?:^|/)\\.\\.(?:/|$)).+/$" }
+      }
+    },
+    "validation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["required", "completed"],
+      "properties": {
+        "required": { "type": "array", "items": { "type": "string" }, "uniqueItems": true },
+        "completed": { "type": "array", "items": { "type": "string" }, "uniqueItems": true }
+      }
+    }
+  }
+}

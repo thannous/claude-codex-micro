@@ -6,11 +6,15 @@
     "platform": "macOS",
     "appBundleId": "com.anthropic.claudefordesktop",
     "observedAppVersion": "1.24012.9",
-    "deviceFamily": "Work Louder Codex Micro"
+    "deviceFamily": "Work Louder Codex Micro",
+    "observedInputVersion": "0.17.3",
+    "supportedInputVersions": ["0.17.3"],
+    "observedFirmwareVersion": "v0.4.1"
   },
   "preservation": {
-    "mode": "do-not-replace-existing-layers",
-    "unlistedControls": "unchanged",
+    "mode": "update-only-existing-layer",
+    "protectedLayerIndexes": [0],
+    "unlistedControls": "no-action-in-target-layer",
     "touchLayerControl": "reserved",
     "otherLayers": "unchanged",
     "otherProfiles": "unchanged",
@@ -23,73 +27,83 @@
       "name": "Claude",
       "bundleId": "com.anthropic.claudefordesktop"
     },
-    "detectionMethod": "auto-detect",
-    "focusRequirementSeconds": 5,
-    "bindingStatus": "proposal-not-applied",
-    "focusLossBehavior": "manual-validation-required"
+    "detectionMethod": "preserve-existing",
+    "bindingStatus": "existing-link-required",
+    "focusLossBehavior": "manual-validation-required",
+    "duplicatePolicy": "refuse"
   },
   "layerBinding": {
     "targetKind": "existing-layer",
     "layerId": null,
-    "selectionStatus": "pending-inventory-and-approval",
-    "overwriteMapping": false,
-    "nativePresetImport": "not-confirmed"
+    "selectionPolicy": "exactly-one-layer-named-Claude",
+    "selectionStatus": "existing-layer-required",
+    "overwriteMapping": true,
+    "nativePresetImport": "local-profile-transform"
+  },
+  "appearance": {
+    "name": "Claude",
+    "rgb": "#D97757"
   },
   "controls": [
     {
-      "control": "key-1",
+      "control": "command-row-left",
+      "physicalPosition": "third-row-left-to-right-1",
       "label": "NEW",
       "action": {
         "type": "shortcut",
-        "keys": ["Command", "N"]
+        "keys": ["Meta", "N"]
       },
-      "evidence": "anthropic-code-docs",
+      "evidence": "installed-bundle-menu",
       "risk": "low"
     },
     {
-      "control": "key-2",
+      "control": "command-row-center-left",
+      "physicalPosition": "third-row-left-to-right-2",
       "label": "VOICE",
       "action": {
         "type": "shortcut",
-        "keys": ["Command", "D"]
+        "keys": ["Meta", "D"]
+      },
+      "evidence": "installed-bundle-menu",
+      "risk": "low"
+    },
+    {
+      "control": "command-row-center-right",
+      "physicalPosition": "third-row-left-to-right-3",
+      "label": "DIFF",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Meta", "Shift", "D"]
+      },
+      "evidence": "installed-bundle-menu",
+      "risk": "low"
+    },
+    {
+      "control": "command-row-right",
+      "physicalPosition": "third-row-left-to-right-4",
+      "label": "ESC",
+      "action": {
+        "type": "key",
+        "keys": ["Escape"]
+      },
+      "evidence": "manual-validation-required",
+      "risk": "medium"
+    },
+    {
+      "control": "encoder-rotate",
+      "physicalPosition": "top-right-rotary-encoder",
+      "label": "PAGE",
+      "action": {
+        "type": "page-navigation",
+        "clockwise": "PageDown",
+        "counterclockwise": "PageUp"
       },
       "evidence": "manual-validation-required",
       "risk": "low"
     },
     {
-      "control": "key-3",
-      "label": "DIFF",
-      "action": {
-        "type": "shortcut",
-        "keys": ["Command", "Shift", "D"]
-      },
-      "evidence": "anthropic-code-docs",
-      "risk": "low"
-    },
-    {
-      "control": "key-4",
-      "label": "ESC",
-      "action": {
-        "type": "shortcut",
-        "keys": ["Escape"]
-      },
-      "evidence": "anthropic-code-docs",
-      "risk": "low"
-    },
-    {
-      "control": "wheel",
-      "label": "SCROLL",
-      "action": {
-        "type": "page-keys",
-        "counterClockwise": "PageUp",
-        "clockwise": "PageDown",
-        "press": "None"
-      },
-      "evidence": "local-input-import",
-      "risk": "low"
-    },
-    {
       "control": "joystick",
+      "physicalPosition": "top-left-planar-joystick",
       "label": "NAV",
       "action": {
         "type": "directional-keys",
@@ -98,9 +112,16 @@
         "down": "ArrowDown",
         "left": "ArrowLeft"
       },
-      "evidence": "local-input-import",
+      "evidence": "manual-validation-required",
       "risk": "low"
     }
+  ],
+  "unusedControls": [
+    { "control": "six-agent-keys", "behavior": "no-action" },
+    { "control": "bottom-wide-key", "behavior": "no-action" },
+    { "control": "bottom-right-key", "behavior": "no-action" },
+    { "control": "encoder-press", "behavior": "no-action" },
+    { "control": "touch-layer-sensor", "behavior": "reserved" }
   ],
   "outsideAppLinkedLayer": [
     {
@@ -111,17 +132,15 @@
     {
       "action": "voice-dictation",
       "documentedShortcut": "CapsLock",
-      "reason": "Global quick-entry dictation, distinct from the in-app Command+D voice shortcut."
+      "reason": "Claude global dictation must remain independent from the AppSense-linked layer."
     }
   ],
   "excludedByDefault": [
-    {
-      "action": "send-message",
-      "reason": "An accidental Enter key could send unfinished content."
-    },
-    {
-      "action": "permission-approve-or-deny",
-      "reason": "Consequential actions require a deliberate, separately validated mapping."
-    }
+    { "action": "send-message", "reason": "An accidental Return could send unfinished content." },
+    { "action": "permission-approve-or-deny", "reason": "Consequential decisions require deliberate review." },
+    { "action": "delete", "reason": "Deletion is consequential and difficult to reverse." },
+    { "action": "git-push", "reason": "Publishing code is outside the safe layer." },
+    { "action": "deploy", "reason": "Deployment is outside the safe layer." },
+    { "action": "destructive-command", "reason": "Shell or destructive commands are forbidden." }
   ]
 }

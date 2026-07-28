@@ -95,7 +95,7 @@ test("recognizes exactly one non-native Claude layer with AppSense", () => {
   assert.equal(report.appSenseLinked, true);
 });
 
-test("builds the current Claude mapping without touching the source or native layer", () => {
+test("builds the canonical mapping without touching the source or native layer", () => {
   const source = sourceProfile();
   const sourceSnapshot = structuredClone(source);
   const nativeSnapshot = structuredClone(source.profile.layers[0]);
@@ -129,11 +129,7 @@ test("builds the current Claude mapping without touching the source or native la
   const diff = profile.actions.find((action) => action.name === "Claude Diff");
   assert.deepEqual(
     voice.keyInputs.map(({ keycode, actionType }) => [keycode, actionType]),
-    [
-      ["KC_LGUI", 1],
-      ["KC_D", 2],
-      ["KC_LGUI", 0],
-    ],
+    [["KC_LGUI", 1], ["KC_D", 2], ["KC_LGUI", 0]],
   );
   assert.deepEqual(
     diff.keyInputs.map(({ keycode, actionType }) => [keycode, actionType]),
@@ -147,7 +143,7 @@ test("builds the current Claude mapping without touching the source or native la
   );
 });
 
-test("supports leaving individual controls unassigned", () => {
+test("supports explicitly unassigned controls", () => {
   const { profile } = buildInputProfile(sourceProfile(), {
     joystick: "none",
     wheel: "none",

@@ -1,0 +1,100 @@
+{
+  "$schema": "../schema/v1/preset-manifest.schema.json",
+  "formatVersion": "1.0.0",
+  "id": "claude-desktop-macos-codex-micro-v1",
+  "name": "Claude Desktop for Codex Micro",
+  "status": "hardware-observed",
+  "summary": "A local transform for one existing Claude layer that preserves its AppSense link and the native Codex layer at index 0.",
+  "target": {
+    "platform": "macOS",
+    "deviceFamily": "Work Louder Codex Micro",
+    "application": {
+      "name": "Claude",
+      "bundleId": "com.anthropic.claudefordesktop"
+    }
+  },
+  "compatibility": {
+    "input": {
+      "observedVersion": "0.17.3",
+      "supportedVersions": [
+        "0.17.3"
+      ],
+      "bundleId": "it.focusense.input-app",
+      "sharingMechanism": {
+        "kind": "official-layer-json",
+        "fileSuffix": "-layer.json",
+        "evidence": "packaged-application-ast",
+        "topLevelKeysObserved": [
+          "keyboard",
+          "language",
+          "layer",
+          "actions",
+          "multiactions",
+          "smartActions",
+          "actionGroups",
+          "multiactionGroups",
+          "smartActionGroups"
+        ],
+        "importTest": "profile-generator-validated-on-0.17.3; official-layer-roundtrip-pending"
+      }
+    },
+    "firmware": {
+      "observedVersion": "v0.4.1",
+      "evidence": "local-setup-screen-observation"
+    },
+    "macOS": {
+      "observedVersion": "26.5.2",
+      "architecture": "arm64"
+    },
+    "claude": {
+      "observedVersion": "1.24012.9"
+    }
+  },
+  "preservation": {
+    "protectedLayerIndexes": [0],
+    "targetLayerPolicy": "exactly-one-existing-named-layer",
+    "targetLayerName": "Claude",
+    "targetAppSenseLink": "preserve-existing",
+    "maxLayers": 6,
+    "replaceExisting": false,
+    "otherProfiles": "unchanged",
+    "otherLayers": "unchanged",
+    "otherAppSenseLinks": "unchanged"
+  },
+  "installation": {
+    "mechanism": "local-profile-transform",
+    "applyMode": "guided-ui",
+    "sourceArtifact": "official-profile-json",
+    "outputArtifact": "generated-profile-json",
+    "layerArtifact": null,
+    "layerArtifactSha256": null,
+    "layerArtifactStatus": "pending-real-export",
+    "backupRequired": true,
+    "rollback": "official-profile-import",
+    "directStoragePatch": "forbidden-until-format-verified"
+  },
+  "files": {
+    "mapping": "mapping.json",
+    "visual": "assets/layout.svg",
+    "artifactDirectory": "artifacts/"
+  },
+  "validation": {
+    "required": [
+      "official-profile-export-backup",
+      "existing-claude-layer-confirmed",
+      "physical-control-ids-confirmed",
+      "appsense-focus-test",
+      "focus-loss-test",
+      "input-restart-persistence-test",
+      "official-layer-export-roundtrip",
+      "rollback-test"
+    ],
+    "completed": [
+      "logical-mapping-validation",
+      "sensitive-action-policy-validation",
+      "isolated-transaction-fixture-tests",
+      "input-0.17.2-sharing-mechanism-inspection",
+      "input-0.17.3-profile-generator-validation"
+    ]
+  }
+}

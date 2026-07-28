@@ -2,55 +2,74 @@
 
 ## État actuel
 
-Le dépôt public contient :
+Le dépôt public contient désormais :
 
-- un contrat logique Claude/AppSense ;
-- un schéma et un validateur ;
-- des procédures de préservation et de test ;
-- une observation locale d'Input `0.17.2` et du firmware `v0.4.1` ;
-- une étude BLE séparée, explicitement non fonctionnelle.
+- un manifeste communautaire et un mapping physique Claude ;
+- des schémas réutilisables pour les futurs presets ;
+- une représentation SVG originale ;
+- un outil d'inventaire, sauvegarde, dry-run, sanitation et rollback ;
+- un générateur local de profile Input `0.17.3` qui conserve AppSense ;
+- des tests transactionnels sur copies isolées ;
+- une analyse reproductible du format de partage d'Input `0.17.2` ;
+- une piste BLE séparée, explicitement non fonctionnelle.
 
-Il ne contient pas encore de preset Input importable.
+Le vrai export officiel Claude `*-layer.json` et la validation matérielle
+complète restent manquants. Le preset conserve donc le statut
+`hardware-observed`.
 
 ## V1 — preset Claude vérifié
 
 Objectif : obtenir un premier layer reproductible sans modifier le layer Codex
 natif.
 
-- [ ] Inventorier les profils, layers, actions et liens AppSense réels.
-- [ ] Créer une sauvegarde locale restaurable.
-- [ ] Identifier le mécanisme de sérialisation ou d'import supporté par Input.
-- [ ] Ajouter un layer Claude dans un emplacement libre.
-- [ ] Vérifier les touches, la molette, le joystick et la couleur.
-- [ ] Vérifier l'activation AppSense et la perte de focus.
-- [ ] Vérifier la persistance après redémarrage d'Input.
-- [ ] Tester l'installation sur une copie isolée.
-- [ ] Tester le rollback.
-- [ ] Publier le premier artefact assaini et sa matrice de compatibilité.
+- [ ] exécuter `git status --short` dans la copie locale et préserver les
+  modifications sans rapport ;
+- [x] exporter le profile Input réel et inventorier profils, layers, actions et
+  liens AppSense ;
+- [x] fournir une sauvegarde locale vérifiée et un rollback transactionnel ;
+- [x] identifier les flux officiels Import/Export layer et profile d'Input
+  `0.17.2` ;
+- [x] définir le manifeste, le mapping physique, la couleur et les exclusions ;
+- [x] protéger l'index `0`, exiger un unique layer Claude existant et conserver
+  son AppSense ;
+- [x] générer localement un nouveau profile Input `0.17.3` ;
+- [ ] vérifier les positions, les touches, le cadran et le joystick ;
+- [ ] vérifier AppSense, la perte de focus et les liens concurrents ;
+- [ ] vérifier la persistance après redémarrage d'Input ;
+- [ ] exporter et assainir le vrai `*-layer.json` ;
+- [ ] tester l'import sur une configuration isolée et le second import ;
+- [ ] restaurer le profile d'origine et vérifier le périphérique ;
+- [ ] promouvoir le niveau de preuve et sortir la PR du mode brouillon.
 
 La V1 est terminée uniquement si une autre personne peut reproduire le résultat
 sans identifiant local ni remplacement implicite d'un layer.
 
-## V2 — outils de portabilité
+## V2 — portabilité généralisée
 
-- définir un manifeste commun aux presets ;
-- fournir export assaini, simulation et validation ;
-- appliquer un patch minimal au lieu d'une base Input complète ;
-- détecter les incompatibilités de version ;
-- empêcher les doublons ou rendre l'installation idempotente ;
-- générer un aperçu visuel du mapping ;
-- automatiser la restauration vérifiée.
+Les fondations minimales sont déjà présentes, mais ne sont pas déclarées
+stables :
 
-Si Input ne permet pas un import fiable, ces outils généreront une procédure
-manuelle vérifiée sans prétendre installer automatiquement.
+- [x] manifeste commun et schémas V1 ;
+- [x] simulation, sauvegarde, sanitation et tests de rollback sur fixtures ;
+- [x] sélection d'un unique layer existant et refus de l'absence/duplication ;
+- [x] aperçu visuel du mapping ;
+- [ ] prise en charge d'un artefact officiel vérifié ;
+- [ ] comparaison structurelle avant/après depuis de vrais exports ;
+- [ ] détection des incompatibilités Input/firmware ;
+- [ ] journal de validation matérielle signé par versions et sommes de contrôle ;
+- [ ] automatisation du rollback officiel si Input expose un canal supporté.
+
+Aucun patch direct du stockage Input ne deviendra le chemin normal tant que son
+format et son effet sur le périphérique ne sont pas prouvés.
 
 ## V3 — catalogue communautaire
 
 - ajouter des presets IDE, navigateur, recherche, Figma et Framer ;
 - indexer les presets par application, plateforme et compatibilité ;
-- fournir un modèle GitHub de proposition ;
+- utiliser les modèles GitHub de proposition et de pull request ;
 - exiger une méthode de sauvegarde et de retour arrière ;
-- publier les résultats négatifs et incompatibilités connus.
+- publier les résultats négatifs et incompatibilités connus ;
+- permettre plusieurs représentations physiques sans identifiants locaux.
 
 ## V4 — expérience simplifiée
 

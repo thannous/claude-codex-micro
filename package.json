@@ -9,9 +9,13 @@
   "scripts": {
     "configure": "node scripts/configure.mjs",
     "build:profile": "node scripts/build-input-profile.mjs",
-    "test": "node --test tests/*.test.mjs",
-    "test:gui": "npm --prefix prototype run test:sites",
+    "validate": "node scripts/validate-profile.mjs && node scripts/validate-presets.mjs && node scripts/check-doc-links.mjs",
+    "test": "node --test",
     "build:gui": "npm --prefix prototype run build",
-    "check": "npm run test && npm run build:gui && npm run test:gui && node scripts/validate-profile.mjs && node scripts/check-doc-links.mjs"
+    "test:gui": "npm --prefix prototype run test:sites",
+    "check": "npm run validate && npm test && npm run build:gui && npm run test:gui"
+  },
+  "devDependencies": {
+    "ajv": "8.17.1"
   }
 }

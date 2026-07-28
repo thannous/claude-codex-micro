@@ -1,102 +1,120 @@
 # Guide de démarrage
 
-Ce guide distingue ce qui est déjà vérifié, ce qui est seulement proposé et ce
-qui nécessite une autorisation explicite.
+Ce guide ne modifie pas Input tant que `--apply` n'est pas utilisé. Même avec
+`--apply`, l'outil ne clique pas dans l'interface et ne patche pas directement
+la configuration d'Input.
 
-## 1. Inventaire en lecture seule
+## 1. Contrôler le dépôt
 
-Exécuter :
+```sh
+git status --short
+npm ci --no-audit --no-fund
+npm run check
+```
+
+Préserver toute modification sans rapport. Les données locales vont sous
+`.local/`.
+
+## 2. Sonde générale en lecture seule
 
 ```sh
 ./scripts/probe-macos.sh
+node scripts/input-layer.mjs doctor --json
 ```
 
-Le script lit la version de macOS, la version de Claude installée et les
-propriétés HID non uniques du Codex Micro. Il ne lance pas d'application, ne
-fait pas de scan GATT et ne change aucun réglage.
+La première commande lit les versions et propriétés HID non uniques. La seconde
+cherche Input, Claude et les emplacements de configuration candidats.
 
-Comparer la sortie à
-[l'observation initiale](codex-micro/local-observation-2026-07-27.md).
+Comparer avec
+[`local-observation-2026-07-27.md`](codex-micro/local-observation-2026-07-27.md).
 
-## 2. Comprendre le flux AppSense
+## 3. Comprendre les fichiers V1
 
-Le profil
-[`profiles/claude-shortcuts/macos.example.json`](../profiles/claude-shortcuts/macos.example.json)
-sépare :
+- [`manifest.json`](../profiles/claude-shortcuts/manifest.json) : compatibilité,
+  preuve, préservation et installation ;
+- [`mapping.json`](../profiles/claude-shortcuts/mapping.json) : positions,
+  raccourcis, couleur et AppSense ;
+- [`layout.svg`](../profiles/claude-shortcuts/assets/layout.svg) : aperçu ;
+- [`macos.example.json`](../profiles/claude-shortcuts/macos.example.json) :
+  contrat logique historique aligné sur V1.
 
-- l'identité de Claude Desktop ;
-- l'activation AppSense quand l'application est au premier plan ;
-- le layer existant à choisir après inventaire ;
-- les raccourcis du layer ;
-- les raccourcis globaux qui doivent rester en dehors de ce layer.
+Le manifeste communautaire n'est pas un export Input. Le parcours principal
+transforme localement un export officiel `*-profile.json` d'Input `0.17.3`.
+L'étude du format `*-layer.json` d'Input `0.17.2` reste une preuve historique.
 
-Le profil n'est pas importable tel quel dans Work Louder Input. Il sert de
-contrat jusqu'à ce que le format d'export ou d'import du modèle exact soit
-identifié.
+## 4. Exporter et sauvegarder avant toute modification
 
-Valider sa structure :
+Dans Input :
+
+1. vérifier qu'il existe exactement un layer `Claude`, hors index `0` ;
+2. vérifier que ce layer est déjà lié à Claude Desktop avec AppSense ;
+3. inventorier visuellement les autres profils, layers et liens ;
+4. utiliser **Export Profile** ;
+5. quitter Input.
+
+Puis :
 
 ```sh
-node scripts/validate-profile.mjs
+node scripts/input-layer.mjs backup \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --json
 ```
 
-## 3. Préserver les layers et profils
+La sauvegarde doit être vérifiée avant l'installation.
 
-Avant toute application future :
+## 5. Inventorier et simuler
 
-1. relever les six layers existants, touche par touche ;
-2. exporter chaque layer si Input le permet, sinon faire des captures ;
-3. relever les liens AppSense existants ;
-4. identifier un layer ou preset existant déjà destiné à Claude ;
-5. comparer son mapping au preset logique de ce dépôt ;
-6. s'il ne correspond pas, s'arrêter sans le modifier ;
-7. ne jamais utiliser `Reset settings`, qui supprime les layers et actions
-   selon la documentation Work Louder.
+```sh
+node scripts/input-layer.mjs inventory \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --output .local/inventories/current.json \
+  --json
 
-Le profil proposé n'assigne volontairement aucun numéro de layer. Aucun layer,
-profil ou lien AppSense n'a été lu, créé, remplacé, lié ou réinitialisé pendant
-l'initialisation.
+node scripts/input-layer.mjs install \
+  --inventory .local/inventories/current.json \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --dry-run \
+  --json
+```
 
-## 4. Association AppSense future, uniquement après accord
+Le plan doit protéger l'index `0`, sélectionner exactement le layer `Claude`
+existant et refuser son absence ou sa duplication.
 
-La procédure publiée par Work Louder consiste à lier une application à un
-layer, lancer `Auto detect`, puis garder l'application cible au premier plan
-pendant cinq secondes. Appliquée à Claude, une procédure prudente suivrait cet
-ordre :
+## 6. Installation guidée
 
-1. ouvrir la version officiellement compatible de Work Louder Input ;
-2. sauvegarder les layers, profils et liens AppSense courants ;
-3. sélectionner le layer existant approuvé, sans changer ses touches ;
-4. utiliser le lien AppSense du layer et `Auto detect` ;
-5. mettre Claude Desktop au premier plan pendant cinq secondes ;
-6. vérifier que Claude au premier plan active le bon layer ;
-7. quitter le focus de Claude et vérifier le retour au comportement précédent ;
-8. garder les raccourcis globaux, `Entrée` et les permissions hors du layer.
+Lire [`installation.md`](installation.md), puis seulement après revue :
 
-Cette procédure modifierait la configuration Work Louder et n'a donc pas été
-exécutée.
+```sh
+node scripts/input-layer.mjs install \
+  --apply \
+  --inventory .local/inventories/current.json \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --open-input \
+  --json
+```
 
-## 5. Limites à tester
+Générer ensuite le nouveau profile sans modifier la sauvegarde source :
 
-La documentation Work Louder confirme l'activation d'un layer quand
-l'application liée est au premier plan. Elle ne précise pas :
+```sh
+npm run build:profile -- \
+  "$HOME/Downloads/Mac-profile.json" \
+  "$HOME/Downloads/Claude-macOS-profile.json"
+```
 
-- le critère d'identification de l'application utilisé par `Auto detect` ;
-- le layer restauré quand Claude perd le focus ;
-- les conflits si plusieurs applications ou liens correspondent ;
-- le comportement de la fenêtre de saisie rapide ouverte depuis une autre app ;
-- si la notion de « preset » est importable dans la version d'Input utilisée.
+Importer `Claude-macOS-profile.json` avec **Add New**. Ne jamais utiliser
+`Reset settings`, remplacer l'index `0` ou recréer un lien AppSense.
 
-## 6. Évaluer la piste BLE séparément
+## 7. Validation et retour arrière
 
-Lire [le protocole](../ble/protocol.md), puis la
-[matrice de faisabilité](../ble/feasibility.md).
+Tester AppSense, les quatre touches, le cadran, le joystick, la perte de focus
+et le redémarrage. L'export de layer reste une validation de publication
+optionnelle, distincte du profile généré.
 
-La liaison BLE HID actuelle ne démontre ni le Nordic UART Service, ni la
-possibilité de modifier le firmware. Aucun appairage Hardware Buddy et aucun
-flash ne doivent être tentés avant :
+Le rollback principal consiste à réimporter le `*-profile.json` original dans
+Input. La copie brute du stockage n'est qu'un recours secondaire explicite.
 
-1. l'identification du matériel et du firmware ;
-2. une procédure de sauvegarde et de récupération ;
-3. la preuve que la cible peut exposer HID + NUS ;
-4. une autorisation explicite pour le périphérique et Claude Desktop.
+## 8. Piste BLE séparée
+
+Lire [`ble/protocol.md`](../ble/protocol.md) et
+[`ble/feasibility.md`](../ble/feasibility.md). Aucun résultat du preset HID ne
+prouve la compatibilité Hardware Buddy.

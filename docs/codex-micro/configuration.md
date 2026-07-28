@@ -1,110 +1,126 @@
-# Configurer le Codex Micro pour Claude
-
-## Objectif du premier livrable
-
-Reproduire le comportement Work Louder Input/AppSense utilisé avec les
-applications créatives : quand Claude Desktop passe au premier plan, Input
-sélectionne automatiquement le layer qui lui est associé. Le Codex Micro
-continue ensuite d'émettre des raccourcis HID standards.
-
-Cette piste ne dépend pas de Hardware Buddy.
+# Configurer le Codex Micro pour Claude Desktop
 
 ## Flux cible
 
-1. L'utilisateur exporte son profil Input actif, qui contient un layer
-   `Claude` lié par AppSense.
-2. Le GUI valide la sauvegarde et génère une copie `Claude macOS`.
-3. L'utilisateur importe cette copie et la rend active dans Input.
-4. Claude passe au premier plan et AppSense active le layer lié.
-5. Les touches, la molette et le joystick émettent les raccourcis du layer.
+1. exporter le profile Input actif et créer une sauvegarde vérifiée ;
+2. inventorier les layers sans publier les données privées ;
+3. protéger intégralement le layer natif à l'index `0` ;
+4. exiger exactement un layer `Claude` existant, hors index `0` ;
+5. conserver son lien AppSense dans une copie locale du profile ;
+6. appliquer le mapping physique documenté à cette copie ;
+7. tester chaque contrôle, la perte de focus et le redémarrage ;
+8. exporter le layer, l'assainir et vérifier son round-trip ;
+9. restaurer le profile original en cas d'écart.
 
-Le profil logique du dépôt décrit ce contrat. Le fichier importable est généré
-personnellement depuis la sauvegarde de l'utilisateur ; il n'est pas publié avec
-son identifiant AppSense.
+Cette intégration utilise les raccourcis HID et AppSense. Elle ne dépend pas du
+protocole expérimental Hardware Buddy.
 
-## Politique de préservation
+Le manifeste et le mapping V1 décrivent l'état observé du générateur. Le fichier
+logique `macos.example.json` reste `proposal-not-applied` et ne doit pas être
+importé tel quel. `npm run configure` fabrique uniquement un profile personnel
+à partir de l'export officiel de l'utilisateur.
 
-Le fichier `macos.example.json` est une **cible logique non appliquée**. Le
-générateur impose en plus les invariants suivants :
+## Préservation obligatoire
 
-- exactement un layer `Claude` dans une sauvegarde Codex Micro ;
-- layer natif et autres layers copiés à l'identique ;
-- identifiant AppSense du layer Claude conservé ;
-- profil de sortie distinct nommé `Claude macOS` ;
-- sauvegarde source jamais modifiée ni écrasée.
+Le preset et l'outil imposent les règles suivantes :
 
-Le capteur tactile qui change de layer est réservé au fonctionnement Work
-Louder existant et n'est jamais remappé par ce projet.
+- index `0` protégé, sans remplacement ni modification ;
+- politique `exactly-one-existing-named-layer` ;
+- six emplacements au maximum ;
+- aucun autre profile, layer ou lien AppSense modifié ;
+- absence ou doublon `Claude` refusé ;
+- structure d'export inconnue refusée au lieu d'être interprétée ;
+- sauvegarde et vérification SHA-256 avant la session réelle ;
+- aucune écriture directe dans le stockage Input ou le périphérique.
 
-## Mapping minimal proposé
+L'inventaire bloque la transformation si l'export officiel ne permet pas de
+prouver la présence du layer protégé à l'index `0` et d'un unique layer
+`Claude`.
 
-Le mapping source est
-[`profiles/claude-shortcuts/macos.example.json`](../../profiles/claude-shortcuts/macos.example.json).
-Les noms `key-1` à `key-4` correspondent aux quatre touches de la rangée
-d'actions du layer Claude.
+## Mapping physique V1
 
-| Contrôle logique | Action proposée | Preuve | Risque |
-| --- | --- | --- | --- |
-| `key-1` | Nouvelle session, `⌘N` | Documentation Claude Code Desktop | Faible |
-| `key-2` | Activer le mode vocal, `⌘D` | Vérifié localement dans Claude | Faible |
-| `key-3` | Afficher/masquer le diff, `⌘⇧D` | Documentation Claude Code Desktop | Faible |
-| `key-4` | Arrêter la réponse, `Esc` | Documentation Claude Code Desktop | Faible |
-| Molette | `Page Up` / `Page Down`, clic libre | Import Input 0.17.3 vérifié | Faible |
-| Joystick | Flèches gauche, bas, droite, haut | Import Input 0.17.3 vérifié | Faible |
+Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 
-Tous les autres contrôles du layer restent inchangés.
+| Contrôle | Position | Action |
+| --- | --- | --- |
+| Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
+| Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
+| Touche 3 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
+| Touche 4 | même rangée, tout à droite | `Esc` — annuler ou fermer selon le contexte |
+| Cadran | coin supérieur droit | horaire : `PageDown` ; antihoraire : `PageUp` |
+| Joystick | coin supérieur gauche | flèches haut, droite, bas et gauche |
 
-## Raccourcis globaux hors du layer AppSense
+![Schéma physique du mapping](../../profiles/claude-shortcuts/assets/layout.svg)
 
-Anthropic documente la saisie rapide par double appui sur `Option` et sa dictée
-globale par `Caps Lock` lorsqu'elles sont activées. Elles servent précisément
-quand une autre application peut être au premier plan. Elles sont distinctes du
-mode vocal lancé par `⌘D` dans Claude.
+Les identifiants internes `inputControlId` restent `null` jusqu'à leur relevé
+dans Input sur le Codex Micro exact. Les positions ci-dessus sont donc une cible
+physique lisible, pas une affirmation sur le schéma interne de l'application.
 
-Les deux actions d’accès rapide restent donc documentées comme extension
-globale distincte et ne sont appliquées nulle part par ce projet.
+## Apparence
 
-## Actions exclues
+- nom du layer : `Claude` ;
+- couleur proposée : `#D97757` ;
+- autres contrôles : `no-action` ;
+- capteur tactile : réservé au changement de layer ;
+- appui du cadran : aucune action.
 
-- `Entrée` : un appui accidentel pourrait envoyer un message inachevé.
-- Approbation/refus de permission : décision conséquente, non adaptée à un
-  mapping initial.
-- Saisie rapide et dictée de Quick Entry : raccourcis globaux hors du layer
-  AppSense.
-- Modification des raccourcis Claude : réglage utilisateur hors périmètre.
-- Reset Work Louder : supprimerait les layers et actions existants.
+## AppSense
 
-## Ce qui est confirmé
+Le lien cible uniquement :
 
-La documentation Work Louder confirme :
+```text
+Claude
+com.anthropic.claudefordesktop
+```
 
-- jusqu'à six layers programmables ;
-- le changement manuel de layer par capteur tactile ;
-- l'association d'un logiciel à un layer via AppSense ;
-- la sélection automatique du layer lorsque l'application est au premier plan ;
-- la procédure `Auto detect` avec l'application ciblée gardée au focus pendant
-  cinq secondes.
+Le lien doit exister avant l'export du profile. Le générateur conserve son
+`linkedAppId` dans la copie locale, refuse son absence et ne crée jamais un
+second lien. Les autres liens ne sont jamais modifiés.
 
-## Validation locale obtenue
+Le retour à un état sûr après perte de focus reste une validation matérielle
+obligatoire : il ne doit pas être supposé à partir de la seule documentation.
 
-- import du fichier généré dans Work Louder Input `0.17.3` ;
-- profil `Claude macOS` actif et mise à jour du layout confirmée par Input ;
-- layer natif, autres layers et lien AppSense conservés ;
-- `⌘N`, `⌘D` et `⌘⇧D` vérifiés directement dans Claude ;
-- `Esc` présent dans le mapping Input.
+## Actions absentes par défaut
 
-## Ce qui reste à confirmer sur le matériel
+- Retour/Entrée et envoi d'un message ;
+- approbation, refus ou rejet d'une permission ;
+- suppression ;
+- `git push` ;
+- déploiement ;
+- terminal, shell ou commande destructive ;
+- raccourcis globaux Saisie rapide et Dictée.
 
-- le critère exact utilisé pour identifier Claude ;
-- le retour au layer précédent quand Claude perd le focus ;
-- la priorité en cas de liens AppSense concurrents ;
-- le comportement avec plusieurs fenêtres ou bureaux macOS ;
-- le comportement de la saisie rapide Claude par-dessus une autre application ;
-- l'appui physique sur `Esc` pendant une réponse de test ;
-- la persistance du profil et du lien après de futures mises à jour.
+Les raccourcis globaux sont volontairement hors du layer AppSense : ils doivent
+rester utilisables quand une autre application est au premier plan. Sur la
+configuration documentée, il s'agit du double appui sur Option pour la saisie
+rapide et de Verr. Maj. pour la dictée globale.
+
+## Partage officiel observé
+
+Input `0.17.2` contient les flux **Export layer**, **Import layer**, **Export
+Profile** et **Import Profile**. Un export de layer porte le suffixe
+`*-layer.json` et contient l'enveloppe décrite dans
+[`docs/research/input-0.17.2-sharing.md`](../research/input-0.17.2-sharing.md).
+
+Le dépôt ne fabrique pas les objets internes `layer`, `actions` et groupes. Le
+futur artefact doit provenir d'un vrai export du Codex Micro, être assaini, puis
+réimporté sur une configuration isolée.
+
+## Validation restante
+
+- [ ] export du profile réel et inventaire lisible ;
+- [ ] positions et identifiants physiques vérifiés dans Input ;
+- [x] transformation locale du layer existant sans modification de l'index `0` ;
+- [x] conservation du lien AppSense dans le profile généré ;
+- [ ] quatre touches, cadran et joystick testés ;
+- [ ] contrôles inutilisés confirmés sans action ;
+- [ ] état sûr après perte de focus ;
+- [ ] persistance après redémarrage ;
+- [ ] export/import du layer reproduit sur une copie isolée ;
+- [ ] doublon refusé ou traité idempotemment ;
+- [ ] profile original réimporté et périphérique vérifié.
 
 ## Sources
 
-- [Work Louder — Codex Micro : layers, AppSense et Input](https://worklouder.cc/openai-micro-setup)
-- [Anthropic — saisie rapide et dictée sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
-- [Anthropic — raccourcis Claude Code Desktop](https://code.claude.com/docs/en/desktop#keyboard-shortcuts)
+- [Work Louder — Codex Micro, layers et AppSense](https://worklouder.cc/openai-micro-setup)
+- [Claude — saisie rapide sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
