@@ -43,27 +43,27 @@
         "type": "shortcut",
         "keys": ["Command", "N"]
       },
-      "evidence": "installed-bundle-menu",
+      "evidence": "anthropic-code-docs",
       "risk": "low"
     },
     {
       "control": "key-2",
-      "label": "FIND",
+      "label": "VOICE",
       "action": {
         "type": "shortcut",
-        "keys": ["Command", "F"]
+        "keys": ["Command", "D"]
       },
-      "evidence": "installed-bundle-menu",
+      "evidence": "manual-validation-required",
       "risk": "low"
     },
     {
       "control": "key-3",
-      "label": "SET",
+      "label": "DIFF",
       "action": {
         "type": "shortcut",
-        "keys": ["Command", "Comma"]
+        "keys": ["Command", "Shift", "D"]
       },
-      "evidence": "installed-bundle-menu",
+      "evidence": "anthropic-code-docs",
       "risk": "low"
     },
     {
@@ -73,17 +73,19 @@
         "type": "shortcut",
         "keys": ["Escape"]
       },
-      "evidence": "manual-validation-required",
-      "risk": "medium"
+      "evidence": "anthropic-code-docs",
+      "risk": "low"
     },
     {
       "control": "wheel",
       "label": "SCROLL",
       "action": {
-        "type": "hid-scroll",
-        "axis": "vertical"
+        "type": "page-keys",
+        "counterClockwise": "PageUp",
+        "clockwise": "PageDown",
+        "press": "None"
       },
-      "evidence": "manual-validation-required",
+      "evidence": "local-input-import",
       "risk": "low"
     },
     {
@@ -96,7 +98,7 @@
         "down": "ArrowDown",
         "left": "ArrowLeft"
       },
-      "evidence": "manual-validation-required",
+      "evidence": "local-input-import",
       "risk": "low"
     }
   ],
@@ -109,7 +111,7 @@
     {
       "action": "voice-dictation",
       "documentedShortcut": "CapsLock",
-      "reason": "Global shortcut; Claude AppSense layer may not be active from another application."
+      "reason": "Global quick-entry dictation, distinct from the in-app Command+D voice shortcut."
     }
   ],
   "excludedByDefault": [

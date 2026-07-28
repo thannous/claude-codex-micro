@@ -33,13 +33,16 @@ raccourcis et ne prouve aucune compatibilité firmware.
 ## État au 27 juillet 2026
 
 - Dépôt public : [thannous/claude-codex-micro](https://github.com/thannous/claude-codex-micro).
-- Premier contrat Claude/AppSense documenté et validable.
-- Aucun preset Work Louder Input importable n'est encore publié.
-- Le mapping Claude proposé reste **non appliqué** et non testé sur le clavier.
-- Layers existants du Codex Micro laissés intacts.
-- Aucun réglage macOS, Claude Desktop ou Work Louder n'a été modifié.
+- Le contrat logique Claude/AppSense reste documenté et validable.
+- Le configurateur local transforme une sauvegarde officielle Input en profil
+  personnel importable `Claude macOS`.
+- Import vérifié localement dans Work Louder Input `0.17.3`, profil rendu actif
+  et mise à jour du Codex Micro confirmée par Input.
+- Layer natif, autres layers et lien AppSense Claude préservés.
+- Raccourcis Claude vérifiés sur macOS : `⌘N`, `⌘D` et `⌘⇧D`; `Esc` est mappé
+  mais n'a pas été déclenché pendant une réponse en cours.
 - Codex Micro observé comme clavier HID Work Louder sur Bluetooth Low Energy.
-- Work Louder Input `0.17.2` et firmware Codex Micro `v0.4.1` observés.
+- Work Louder Input `0.17.3` et firmware Codex Micro `v0.4.1` observés.
 - Claude Desktop `1.24012.9` observé localement.
 - Compatibilité Codex Micro ↔ Hardware Buddy **non prouvée**.
 - Licence MIT, copyright 2026 Thanh Chau.
@@ -60,34 +63,34 @@ Il ne décrit pas un profil fixe toujours actif. Il sépare :
 
 1. un layer existant, choisi par l'utilisateur et associé à Claude Desktop ;
 2. AppSense, qui détecte Claude au premier plan et sélectionne ce layer ;
-3. les raccourcis HID présents dans le layer (`⌘N`, `⌘F`, `⌘,`, `Esc`,
+3. les raccourcis HID présents dans le layer (`⌘N`, `⌘D`, `⌘⇧D`, `Esc`,
    molette et joystick).
 
-Le profil ne choisit pas le layer et n'écrase aucun mapping. Si aucun layer
-existant ne correspond, il faut s'arrêter et demander une décision.
+Le contrat logique ne choisit pas le layer. Le configurateur, lui, exige une
+sauvegarde Input contenant exactement un layer `Claude`, puis produit une copie
+séparée : il ne modifie ni la sauvegarde source ni le layer natif.
 
-La saisie rapide et la dictée sont des raccourcis globaux : elles sont exclues
-du layer AppSense initial, car celui-ci n'est actif que lorsque Claude est au
-premier plan. `Entrée` et les décisions de permission restent également
-exclues.
+La saisie rapide et sa dictée globale sont des raccourcis distincts : elles
+restent hors du layer AppSense initial, car celui-ci n'est actif que lorsque
+Claude est au premier plan. Le mode vocal `⌘D` reste dans le layer Claude.
+`Entrée` et les décisions de permission restent également exclues.
 
-Le fichier JSON est un contrat lisible et versionnable, pas encore un format
-d'import Work Louder. Il ne doit donc pas être présenté comme un preset
-installable.
+Le fichier `macos.example.json` reste un contrat lisible et versionnable, pas un
+format d'import Work Louder. Le fichier personnel généré par le GUI est un
+artefact distinct, construit à partir de la sauvegarde officielle de
+l'utilisateur et validé avant téléchargement.
 
-## Prochaine étape
+## Configurer et générer le profil
 
-La priorité V1 est de transformer ce contrat en expérience reproductible :
+1. lancer `npm run configure` ;
+2. exporter le profil actif depuis Work Louder Input ;
+3. charger ce JSON dans le GUI ;
+4. personnaliser les contrôles et télécharger `Claude-macOS-profile.json` ;
+5. dans Input, utiliser `Add New`, importer le fichier puis rendre le profil
+   `Claude macOS` actif.
 
-1. inventorier et sauvegarder la configuration Input réelle ;
-2. déterminer le mécanisme officiel ou vérifiable de partage ;
-3. créer un layer Claude dans un emplacement libre sans toucher au layer natif ;
-4. tester AppSense, les touches, la molette, le joystick et le retour arrière ;
-5. publier un artefact assaini accompagné d'une procédure d'installation et
-   de restauration.
-
-Si Input ne propose pas de format portable vérifiable, le dépôt conservera une
-procédure manuelle explicite au lieu de revendiquer un import automatique.
+Le fichier source reste votre sauvegarde de retour arrière. Le générateur
+fonctionne entièrement en local et ne publie pas le lien AppSense personnel.
 
 ## Prérequis
 
@@ -101,6 +104,17 @@ procédure manuelle explicite au lieu de revendiquer un import automatique.
 La version Claude observée n'est pas présentée comme une version minimale
 garantie. Le projet n'installe ni Claude Desktop ni Work Louder Input.
 
+## Ouvrir l’interface de configuration
+
+Depuis la racine du projet :
+
+```sh
+npm run configure
+```
+
+La commande prépare les dépendances du GUI si nécessaire, démarre le serveur
+local et ouvre automatiquement le configurateur dans le navigateur.
+
 ## Démarrage local sans modification
 
 ```sh
@@ -113,10 +127,9 @@ Le premier script ne lance aucune application et ne change aucun réglage. Le
 deuxième vérifie les invariants de sécurité du preset. Le troisième vérifie les
 liens locaux de la documentation. Aucun n'écrit dans les réglages.
 
-Pour une future configuration réelle, lire
-[Installation et configuration](docs/installation.md). Les étapes qui ouvrent
-Input, créent un lien AppSense ou changent un mapping exigent un accord
-explicite et n'ont pas été exécutées dans ce projet.
+Pour une configuration réelle, lire
+[Installation et configuration](docs/installation.md). Le guide distingue la
+génération locale, l'import réel dans Input et le test matériel.
 
 ## Structure
 

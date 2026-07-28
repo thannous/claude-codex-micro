@@ -3,3 +3,13 @@
 /work/
 node_modules/
 *.log
+
+# Local GUI builds and design-review artifacts
+/prototype/dist/
+/prototype/audit-ux-ui/
+/prototype/design-reference/
+/prototype/qa/
+/prototype/design-qa.md
+/prototype/public/assets/ai-controller-generated*.png
+/prototype/public/assets/ai-controller-glass-v3.png
+/prototype/public/assets/glass-background-v1.png

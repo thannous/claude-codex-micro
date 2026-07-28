@@ -175,6 +175,7 @@
             "enum": [
               "installed-bundle-menu",
               "anthropic-help-center",
+              "anthropic-code-docs",
               "manual-validation-required"
             ]
           },

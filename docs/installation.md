@@ -5,15 +5,14 @@ Ce guide prépare le comportement suivant :
 > Claude Desktop au premier plan → AppSense active le layer Claude existant →
 > le Codex Micro émet les raccourcis de ce layer.
 
-Les étapes de lecture et de validation peuvent être exécutées sans changer la
-machine. Les étapes marquées **modification réelle** exigent un accord explicite
-et n'ont pas été exécutées pendant la création du projet.
+Le GUI fabrique le profil localement à partir d'une sauvegarde officielle Input.
+L'import dans Input et l'activation du profil sont des **modifications réelles**.
 
 ## 1. Prérequis
 
 - macOS avec Claude Desktop installé ;
 - Codex Micro déjà reconnu et fonctionnel ;
-- Work Louder Input compatible avec la révision et le firmware du clavier ;
+- Work Louder Input `0.17.x` compatible avec le clavier ;
 - Node.js 18 ou version ultérieure pour le validateur ;
 - accès au mapping actuel, aux six layers et aux liens AppSense ;
 - moyen de sauvegarde ou, à défaut, captures complètes du profil actuel.
@@ -23,11 +22,8 @@ concerne que la piste BLE expérimentale.
 
 ## 2. Obtenir le projet
 
-Le dépôt est actuellement local et aucune URL distante n'existe. Après une
-publication autorisée, remplacer `<URL_DU_DEPOT>` par l'URL réelle :
-
 ```sh
-git clone <URL_DU_DEPOT>
+git clone https://github.com/thannous/claude-codex-micro.git
 cd claude-codex-micro
 ```
 
@@ -50,62 +46,83 @@ La sonde lit seulement les versions macOS/Claude et les propriétés HID non
 uniques du Codex Micro. Elle ne lance pas Input ou Claude et ne scanne pas les
 services GATT.
 
-## 4. Inventorier la configuration existante
+## 4. Exporter la sauvegarde Input
 
-Avant toute association AppSense :
+Avant tout import :
 
 1. noter la version exacte de Work Louder Input ;
 2. relever le nom, le numéro et le mapping de chaque layer ;
 3. relever les profils et liens AppSense existants ;
-4. exporter la configuration si cette fonction existe dans la version utilisée ;
-5. sinon, prendre des captures de chaque contrôle ;
-6. identifier un layer déjà prévu pour Claude ou dont le mapping correspond au
-   [preset logique](../profiles/claude-shortcuts/macos.example.json).
+4. depuis le menu du profil actif, utiliser l'export JSON d'Input ;
+5. conserver ce fichier intact comme sauvegarde ;
+6. vérifier qu'il contient exactement un layer nommé `Claude`, déjà lié à
+   Claude avec AppSense.
 
-Si aucun layer existant ne correspond, s'arrêter. Ce projet n'autorise ni
-l'écrasement d'un layer ni la création implicite d'un nouveau profil.
+Le générateur refuse le mauvais modèle de clavier, une structure incomplète ou
+plusieurs layers `Claude`.
 
-## 5. Comparer le layer candidat au preset
+## 5. Générer le profil personnel
+
+Depuis la racine :
+
+```sh
+npm run configure
+```
+
+Dans le GUI :
+
+1. ouvrir le configurateur ;
+2. charger la sauvegarde JSON ;
+3. vérifier le message `Sauvegarde Input vérifiée` et `AppSense conservé` ;
+4. personnaliser les six contrôles ;
+5. cliquer sur `Générer le profil`.
+
+Le téléchargement `Claude-macOS-profile.json` est une copie : la sauvegarde
+source, le layer natif, les autres layers et le lien AppSense ne sont pas
+modifiés.
+
+La même génération est disponible en ligne de commande :
+
+```sh
+npm run build:profile -- sauvegarde.json Claude-macOS-profile.json
+```
+
+Le fichier de sortie doit être un nouveau chemin ; le script refuse de
+l'écraser.
+
+## 6. Mapping par défaut
 
 Le preset initial attend :
 
 | Contrôle logique | Raccourci ou comportement |
 | --- | --- |
-| `key-1` | `⌘N`, nouvelle conversation |
-| `key-2` | `⌘F`, recherche |
-| `key-3` | `⌘,`, réglages |
-| `key-4` | `Esc`, comportement contextuel à tester |
-| Molette | défilement vertical, à confirmer |
-| Joystick | flèches directionnelles, à confirmer |
+| `key-1` | `⌘N`, nouvelle session |
+| `key-2` | `⌘D`, activer le mode vocal |
+| `key-3` | `⌘⇧D`, afficher ou masquer le diff |
+| `key-4` | `Esc`, arrêter la réponse |
+| Molette | sens antihoraire `Page Up`, horaire `Page Down`, clic libre |
+| Joystick | flèches gauche, bas, droite et haut |
 
-Les positions physiques ne sont pas imposées. Les contrôles non listés doivent
-rester inchangés.
-
-La saisie rapide et la dictée Claude sont globales et restent hors de ce layer.
+L’accès rapide et sa dictée globale sont distincts et restent hors de ce layer.
 `Entrée` et les décisions de permission sont exclues.
 
-## 6. Associer Claude avec AppSense — modification réelle
-
-Cette procédure reprend le flux publié par Work Louder. Elle modifie la
-configuration Input :
+## 7. Importer dans Input — modification réelle
 
 1. ouvrir Work Louder Input ;
-2. sélectionner le layer existant approuvé ;
-3. cliquer sur l'icône de lien près du nom du layer ;
-4. choisir `Auto detect` ;
-5. ouvrir Claude Desktop et le garder au premier plan pendant cinq secondes ;
-6. revenir dans Input et vérifier que le lien cible bien Claude ;
-7. ne modifier aucune touche pendant cette opération.
+2. ouvrir le sélecteur de profils ;
+3. choisir `Add New` puis importer `Claude-macOS-profile.json` ;
+4. vérifier le profil `Claude macOS` et le layer `Claude` ;
+5. rendre `Claude macOS` actif avec l'icône de profil courant ;
+6. attendre la confirmation de mise à jour du layout ;
+7. vérifier que le lien AppSense du layer Claude est toujours présent.
 
-Le détail technique utilisé par `Auto detect` pour reconnaître Claude n'est pas
-documenté publiquement. Le bundle attendu est
-`com.anthropic.claudefordesktop`, mais il faut vérifier ce qu'Input affiche.
+L'import crée un nouveau profil. Il ne faut pas utiliser `Reset settings`.
 
-## 7. Tester sans enjeu
+## 8. Tester sans enjeu
 
 1. ouvrir une conversation de test sans données sensibles ;
 2. mettre Claude au premier plan et observer le layer actif ;
-3. tester une seule action à faible risque, par exemple `⌘F` ;
+3. tester une seule action à faible risque, par exemple la touche `NEW` ;
 4. passer au Finder ou à une autre application ;
 5. vérifier le layer actif après la perte de focus ;
 6. revenir dans Claude et vérifier la réactivation ;
@@ -115,19 +132,20 @@ documenté publiquement. Le bundle attendu est
 Ne pas tester `Entrée`, une approbation, un refus ou une commande destructive
 depuis le macropad.
 
-## 8. Retour arrière
+## 9. Retour arrière
 
-Si le mauvais layer est activé :
+Si le profil ne convient pas :
 
 1. arrêter les tests ;
-2. retirer uniquement le lien AppSense Claude nouvellement créé ;
-3. restaurer le lien précédent d'après l'inventaire ;
-4. vérifier manuellement chaque autre application liée.
+2. ouvrir le sélecteur de profils dans Input ;
+3. rendre le profil `Default` ou le profil d'origine actif ;
+4. vérifier le layout et les liens AppSense d'origine ;
+5. supprimer éventuellement `Claude macOS` seulement après cette vérification.
 
 Ne pas utiliser `Reset settings` : Work Louder indique que cette action supprime
 les layers, profils et actions.
 
-## 9. Limites
+## 10. Limites
 
 Le comportement suivant reste à valider sur le matériel réel :
 
@@ -136,4 +154,5 @@ Le comportement suivant reste à valider sur le matériel réel :
 - Claude sur plusieurs bureaux ou écrans ;
 - fenêtre de saisie rapide affichée au-dessus d'une autre application ;
 - persistance du lien après mise à jour d'Input ou Claude ;
-- import/export d'un preset natif Work Louder.
+- activation AppSense après chaque future mise à jour d'Input ou Claude ;
+- appui physique sur les quatre touches dans le contexte propre à l'utilisateur.

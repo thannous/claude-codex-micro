@@ -2,9 +2,11 @@
 
 ## Statut
 
-Le projet n'est pas encore publié et ne possède ni version supportée ni canal
-public de signalement. Ne publiez pas de vulnérabilité contenant des données
-privées. Un canal privé devra être défini avant la publication.
+Le dépôt est public, mais le projet reste expérimental et ne possède pas encore
+de version supportée ni de canal privé de signalement. Ne publiez jamais de
+secret, de profil personnel ou de détail permettant d'exploiter une
+vulnérabilité. En l'absence de canal privé, ouvrez seulement un signalement
+minimal demandant un moyen de contact confidentiel.
 
 ## Modèle de risque
 
@@ -52,7 +54,25 @@ Tant que la piste n'est pas auditée :
 
 ## Dépendances et scripts
 
-Les scripts actuels utilisent uniquement Node.js et les outils macOS fournis
-par le système. Ils ne téléchargent rien et n'écrivent pas dans les réglages.
-Toute future dépendance doit être justifiée, verrouillée et auditée avant
-publication.
+Le projet ne transmet pas les profils ou exports Work Louder à un service
+distant et le configurateur ne contient actuellement ni télémétrie ni appel
+réseau applicatif pour les traiter.
+
+Une connexion réseau peut toutefois être utilisée pendant l'installation des
+dépendances. Lors de la première exécution de `npm run configure`, si Vite
+n'est pas déjà installé dans `prototype/node_modules`, le script exécute :
+
+```sh
+npm ci --no-audit --no-fund
+```
+
+Cette commande peut contacter le registre npm configuré et télécharge les
+versions verrouillées dans `prototype/package-lock.json`. Une fois les
+dépendances présentes, le configurateur lance un serveur local lié à
+`127.0.0.1`. Les profils sont traités localement et ne sont pas téléversés par
+le code du projet.
+
+Le configurateur ne modifie pas directement les réglages Work Louder Input :
+l'utilisateur reste responsable de l'import du profil généré. Toute nouvelle
+dépendance ou communication distante doit être justifiée, verrouillée,
+documentée et auditée avant publication.

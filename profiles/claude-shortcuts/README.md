@@ -1,8 +1,13 @@
 # Profil de raccourcis Claude
 
 [`macos.example.json`](macos.example.json) est un profil logique et
-versionnable pour un layer Claude activé par AppSense. Il ne correspond pas
-encore à un format d'import Work Louder et ne choisit aucun layer.
+versionnable pour un layer Claude activé par AppSense. Il ne correspond pas au
+format d'import Work Louder et ne choisit aucun layer.
+
+Le configurateur lancé par `npm run configure` génère un artefact différent :
+une copie importable et personnelle construite depuis la sauvegarde officielle
+du profil Input de l'utilisateur. Cette copie conserve le layer natif, les
+autres layers et le lien AppSense, puis configure le layer `Claude`.
 
 Le contrat comprend :
 
@@ -17,6 +22,8 @@ Les niveaux de preuve sont :
 
 - `installed-bundle-menu` : raccourci lu dans le menu du bundle Claude local ;
 - `anthropic-help-center` : raccourci décrit par l'aide officielle Anthropic ;
+- `anthropic-code-docs` : raccourci décrit par la documentation officielle de
+  Claude Code Desktop ;
 - `manual-validation-required` : comportement dépendant du focus, de la
   version ou du configurateur.
 
@@ -35,7 +42,7 @@ Le validateur refuse notamment :
 - un raccourci global placé dans le layer AppSense ;
 - un statut laissant croire que le profil est déjà appliqué.
 
-Le profil reste donc une spécification jusqu'à l'inventaire des layers et
-l'accord explicite de l'utilisateur. La documentation Work Louder confirme
-l'association AppSense à un layer ; le support d'un preset natif importable
-reste à vérifier dans la version d'Input utilisée.
+Le contrat logique reste donc une spécification. La génération importable a été
+vérifiée avec Input `0.17.3`, mais elle dépend volontairement de la sauvegarde
+personnelle de l'utilisateur : aucun identifiant AppSense n'est publié dans le
+dépôt.

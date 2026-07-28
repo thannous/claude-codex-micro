@@ -1,0 +1,17 @@
+{
+  "name": "codex-micro-layers",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "configure": "node scripts/configure.mjs",
+    "build:profile": "node scripts/build-input-profile.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:gui": "npm --prefix prototype run test:sites",
+    "build:gui": "npm --prefix prototype run build",
+    "check": "npm run test && npm run build:gui && npm run test:gui && node scripts/validate-profile.mjs && node scripts/check-doc-links.mjs"
+  }
+}
