@@ -1,13 +1,65 @@
-# Codex Micro Layers
+<h1 align="center">Codex Micro × Claude</h1>
 
-Bibliothèque open source de configurations pour le macropad Work Louder Codex
-Micro. Claude Desktop sur macOS sert de premier preset de référence.
+<p align="center">
+  <strong>A safe, local configurator for mapping Work Louder Codex Micro controls to Claude Desktop.</strong>
+</p>
 
-> Projet communautaire indépendant, sans affiliation ni approbation de Work
-> Louder ou Anthropic. Les noms de produits et marques appartiennent à
-> leurs propriétaires respectifs.
+<p align="center">
+  <img alt="Project status: work in progress" src="https://img.shields.io/badge/status-work%20in%20progress-D97757?style=flat-square">
+  <img alt="Platform: macOS" src="https://img.shields.io/badge/platform-macOS-2F2927?style=flat-square">
+  <img alt="Processing: local only" src="https://img.shields.io/badge/processing-local%20only-5B8C6F?style=flat-square">
+  <img alt="Interface languages: EN, FR, ES, DE" src="https://img.shields.io/badge/UI-EN%20%C2%B7%20FR%20%C2%B7%20ES%20%C2%B7%20DE-6D5A7D?style=flat-square">
+</p>
 
-## Vision
+![Codex Micro controls mapped to Claude Desktop](docs/assets/readme/hero-configurator.png)
+
+## Map Claude to your fingertips
+
+This project turns a real Work Louder Input profile into a dedicated
+`Claude macOS` profile—without uploading the backup or overwriting the native
+Codex layer.
+
+**Current mapping:** `K1 ⌘N` new session · `K2 ⌘D` voice · `K3 ⌘⇧D` diff ·
+`K4 Esc` stop · dial to scroll · joystick to navigate.
+
+| Guided mapping | Safety review before export |
+| :---: | :---: |
+| ![Three-step Claude mapping wizard](docs/assets/readme/mapping-wizard.png) | ![Native layer and AppSense preservation report](docs/assets/readme/safety-review.png) |
+| Pick a control, choose an action, and keep the mapping readable. | Verify preservation rules and the SHA-256 fingerprint before downloading. |
+
+> [!IMPORTANT]
+> This is an actively developed community project. The local configurator and
+> profile generator work with the documented fixtures and Input `0.17.3`
+> profile flow, but the official `*-layer.json` round-trip and full hardware
+> checklist are still in progress.
+
+## What works today
+
+- guided three-step setup with English, French, Spanish, and German interfaces;
+- visual mapping for the joystick, dial, and Claude shortcut keys;
+- safe custom shortcuts with destructive keys rejected by construction;
+- preservation checks for the native layer, other layers, and AppSense link;
+- local JSON generation with a SHA-256 fingerprint and no upload.
+
+## Run it locally
+
+```sh
+git clone https://github.com/thannous/claude-codex-micro.git
+cd claude-codex-micro
+npm run configure
+```
+
+Node.js 18 or newer is required. The app binds only to `127.0.0.1`.
+
+> Independent community project, not affiliated with or endorsed by Work
+> Louder or Anthropic. Product names and trademarks belong to their respective
+> owners.
+
+---
+
+## Documentation détaillée
+
+### Vision
 
 Une personne doit pouvoir :
 
@@ -24,7 +76,7 @@ Une personne doit pouvoir :
 Figma, Framer, applications Adobe et workflows communautaires. Lire la
 [vision](docs/vision.md) et la [feuille de route](docs/roadmap.md).
 
-## Résultat V1 actuel
+### Résultat V1 actuel
 
 Le dépôt contient désormais :
 
@@ -51,7 +103,7 @@ checklist matérielle complète restent ouverts. Le fichier logique
 `macos.example.json` reste séparément `proposal-not-applied` : ce n'est pas un
 preset universel à importer.
 
-## Mapping Claude proposé
+### Mapping Claude proposé
 
 Le layer natif Codex situé à l'index `0` est protégé. Le profile source doit
 contenir exactement un layer `Claude`, différent de l'index `0` et déjà lié à
@@ -76,7 +128,7 @@ Les raccourcis globaux de Claude restent hors du layer AppSense : double appui
 sur Option pour la saisie rapide et Verr. Maj. pour la dictée globale. Ils
 doivent rester disponibles quand une autre application est au premier plan.
 
-## Ce qui est interdit par défaut
+### Ce qui est interdit par défaut
 
 - Retour/Entrée et envoi de message ;
 - approbation ou refus de permission ;
@@ -88,7 +140,7 @@ doivent rester disponibles quand une autre application est au premier plan.
 Les validateurs échouent si l'une de ces actions apparaît dans un contrôle
 actif.
 
-## Compatibilité observée
+### Compatibilité observée
 
 - macOS `26.5.2` arm64 ;
 - Work Louder Input `0.17.3` pour le générateur de profile ;
@@ -100,7 +152,7 @@ actif.
 Voir la [matrice de compatibilité](docs/compatibility.md) pour distinguer les
 faits, tests de fixture et validations matérielles manquantes.
 
-## Configurateur graphique
+### Configurateur graphique
 
 ```sh
 npm run configure
@@ -132,7 +184,7 @@ du système et propose :
 - en option explicitement marquée expérimentale et non validée sur matériel,
   la rangée de quatre touches lumineuses (`base[1]`).
 
-## Démarrage sans modification
+### Démarrage sans modification
 
 Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
 sont verrouillées dans `package-lock.json`.
@@ -149,7 +201,7 @@ node scripts/input-layer.mjs install --dry-run --json
 La dernière commande reste bloquée sans inventaire local contenant exactement
 un layer `Claude`, ce qui est volontaire.
 
-## Installation sûre
+### Installation sûre
 
 Le parcours réel commence par un export officiel de profile et une sauvegarde
 vérifiée :
@@ -181,7 +233,7 @@ fichier source reste inchangé et aucune donnée n'est téléversée.
 Lire le [guide d'installation et de retour arrière](docs/installation.md) avant
 `--apply`.
 
-## Format de partage
+### Format de partage
 
 Input `0.17.2` expose un flux officiel au niveau layer et profile :
 
@@ -196,7 +248,7 @@ transforme localement un vrai `*-profile.json`. Un éventuel artefact layer
 public restera optionnel et devra être lié à son SHA-256, au mapping canonique
 et à une preuve de round-trip.
 
-## Structure
+### Structure
 
 ```text
 profiles/
@@ -230,7 +282,7 @@ ble/                        piste Hardware Buddy séparée
 Les sauvegardes, inventaires et sessions sont stockés sous `.local/`, ignoré
 par Git. `work/` et `outputs/` restent également locaux.
 
-## Validation
+### Validation
 
 ```sh
 npm run check
@@ -241,7 +293,7 @@ git diff --check
 La CI exécute les mêmes contrôles. Les tests isolés prouvent le comportement de
 l'outil, pas celui d'Input ou du clavier réel.
 
-## Piste BLE Hardware Buddy
+### Piste BLE Hardware Buddy
 
 Cette piste reste indépendante. La présence du Codex Micro en BLE HID ne prouve
 ni le Nordic UART Service, ni la coexistence HID + NUS, ni un firmware
@@ -251,7 +303,7 @@ publié.
 Lire [`ble/README.md`](ble/README.md) et
 [`ble/feasibility.md`](ble/feasibility.md).
 
-## Documentation
+### Liens de documentation
 
 - [Vision](docs/vision.md)
 - [Feuille de route](docs/roadmap.md)
@@ -263,14 +315,14 @@ Lire [`ble/README.md`](ble/README.md) et
 - [Contribution](CONTRIBUTING.md)
 - [Sécurité](SECURITY.md)
 
-## Sources principales
+### Sources principales
 
 - [Work Louder — configuration officielle du Codex Micro](https://worklouder.cc/openai-micro-setup)
 - [Work Louder — releases Input](https://github.com/worklouder/input-releases/releases)
 - [Claude — saisie rapide sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
 - [Claude — ouvrir l'application avec un lien](https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link)
 
-## Licence
+### Licence
 
 MIT, copyright 2026 Thanh Chau. Voir [LICENSE](LICENSE) et
 [LICENSING.md](LICENSING.md).
