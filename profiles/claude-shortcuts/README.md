@@ -1,41 +1,82 @@
-# Profil de raccourcis Claude
+# Claude Desktop — Codex Micro V1
 
-[`macos.example.json`](macos.example.json) est un profil logique et
-versionnable pour un layer Claude activé par AppSense. Il ne correspond pas
-encore à un format d'import Work Louder et ne choisit aucun layer.
+Ce dossier contient le premier preset de référence de la bibliothèque. Il
+transforme localement un profile contenant exactement un layer `Claude`, déjà
+lié avec AppSense et distinct du layer Codex natif protégé à l'index `0`.
 
-Le contrat comprend :
+## État réel
 
-- `activation` : Claude Desktop au premier plan déclenche AppSense ;
-- `layerBinding` : un layer existant doit être choisi après inventaire ;
-- `controls` : mapping attendu dans ce layer ;
-- `outsideAppLinkedLayer` : raccourcis globaux à ne pas placer seulement dans
-  ce layer ;
-- `excludedByDefault` : actions sensibles absentes.
+- format communautaire et mapping : implémentés ;
+- générateur de profile : validé sur un export Input `0.17.3` ;
+- mécanisme officiel Input `*-layer.json` : observé historiquement dans Input
+  `0.17.2` ;
+- sauvegarde, inventaire, dry-run et rollback : implémentés et testés sur des
+  copies isolées ;
+- fichier officiel Claude `*-layer.json` : **pas encore capturé** ;
+- validation complète de toutes les commandes, de la perte de focus et du
+  rollback matériel : **encore requise**.
 
-Les niveaux de preuve sont :
+Le statut reste `hardware-observed`. Aucun artefact layer ne doit être présenté
+comme prêt à l'emploi avant le round-trip matériel et la vérification de son
+SHA-256.
 
-- `installed-bundle-menu` : raccourci lu dans le menu du bundle Claude local ;
-- `anthropic-help-center` : raccourci décrit par l'aide officielle Anthropic ;
-- `manual-validation-required` : comportement dépendant du focus, de la
-  version ou du configurateur.
+## Fichiers
 
-Valider la structure :
-
-```sh
-node scripts/validate-profile.mjs
+```text
+manifest.json             identité, compatibilité, preuve et installation
+mapping.json              mapping physique et règles de sécurité
+macos.example.json        contrat logique historique, aligné sur la V1
+schema.json               schéma du contrat historique
+assets/layout.svg         représentation originale du clavier
+artifacts/README.md       porte d'entrée du futur export officiel
 ```
 
-Le validateur refuse notamment :
+Les schémas réutilisables se trouvent dans `profiles/schema/v1/`.
 
-- une activation autre qu'AppSense liée à l'application au premier plan ;
-- la sélection ou l'écrasement d'un layer avant accord ;
-- une action `Entrée` ;
-- une décision de permission ;
-- un raccourci global placé dans le layer AppSense ;
-- un statut laissant croire que le profil est déjà appliqué.
+## Mapping physique proposé
 
-Le profil reste donc une spécification jusqu'à l'inventaire des layers et
-l'accord explicite de l'utilisateur. La documentation Work Louder confirme
-l'association AppSense à un layer ; le support d'un preset natif importable
-reste à vérifier dans la version d'Input utilisée.
+Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
+
+| Contrôle | Position | Action |
+| --- | --- | --- |
+| Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
+| Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
+| Touche 3 | même rangée, troisième | `⌘⇧D` — afficher/masquer le diff |
+| Touche 4 | même rangée, tout à droite | `Esc` — annuler/fermer selon le contexte |
+| Cadran | coin supérieur droit | horaire : `PageDown` ; antihoraire : `PageUp` |
+| Joystick | coin supérieur gauche | quatre flèches directionnelles |
+
+![Schéma du layer Claude](assets/layout.svg)
+
+Les six touches agents, la touche large du bas, la touche inférieure droite et
+l'appui du cadran sont explicitement sans action. Le capteur tactile reste
+réservé au changement de layer.
+
+## AppSense
+
+Le lien cible uniquement :
+
+```text
+Claude
+com.anthropic.claudefordesktop
+```
+
+La politique exige exactement un layer Claude et conserve son `linkedAppId`.
+L'outil ne crée pas de second lien et ne modifie jamais les autres liens.
+
+## Sécurité
+
+Le validateur interdit dans les contrôles actifs : Retour/Entrée, envoi,
+approbation ou refus de permission, suppression, `git push`, déploiement et
+commande destructive.
+
+Valider le preset :
+
+```sh
+npm ci --no-audit --no-fund
+node scripts/validate-profile.mjs
+node scripts/validate-presets.mjs
+node --test
+```
+
+Lire ensuite [`docs/installation.md`](../../docs/installation.md).

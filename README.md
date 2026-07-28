@@ -1,188 +1,233 @@
 # Codex Micro Layers
 
-Projet open source pour concevoir, tester et partager des configurations de
-layers pour le macropad Work Louder Codex Micro. Claude Desktop sur macOS sert
-de premier cas d'usage de référence.
+Bibliothèque open source de configurations pour le macropad Work Louder Codex
+Micro. Claude Desktop sur macOS sert de premier preset de référence.
 
 > Projet communautaire indépendant, sans affiliation ni approbation de Work
-> Louder ou Anthropic. Les noms de produits et marques appartiennent à leurs
-> propriétaires respectifs.
+> Louder ou Anthropic. Les noms de produits et marques appartiennent à
+> leurs propriétaires respectifs.
 
 ## Vision
 
-L'objectif est qu'une personne puisse choisir un preset, sauvegarder sa
-configuration actuelle, installer ou reproduire le layer sans écraser le
-layer Codex natif, vérifier son fonctionnement et revenir en arrière.
+Une personne doit pouvoir :
 
-À terme, le dépôt doit accueillir plusieurs presets versionnés :
+1. comprendre le mapping avant de toucher au clavier ;
+2. vérifier sa compatibilité ;
+3. sauvegarder la configuration Input existante ;
+4. simuler le changement ;
+5. transformer uniquement le layer `Claude` existant dans une copie locale ;
+6. tester AppSense et chaque contrôle ;
+7. restaurer l'état précédent ;
+8. contribuer un autre preset avec le même niveau d'exigence.
 
-- Claude Desktop ;
-- environnements de développement ;
-- navigateurs et workflows de recherche ;
-- outils de création comme Figma, Framer ou les applications Adobe ;
-- workflows proposés et testés par la communauté.
+À terme, le catalogue pourra accueillir des layers IDE, navigateur, recherche,
+Figma, Framer, applications Adobe et workflows communautaires. Lire la
+[vision](docs/vision.md) et la [feuille de route](docs/roadmap.md).
 
-Chaque preset doit distinguer clairement son niveau de preuve : proposition
-logique, validation manuelle ou format d'import réellement vérifié. Lire la
-[vision du projet](docs/vision.md) et la [feuille de route](docs/roadmap.md).
+## Résultat V1 actuel
 
-Le projet conserve une piste séparée et expérimentale autour du protocole BLE
-« Hardware Buddy » de Claude Desktop. Elle ne conditionne pas les presets de
-raccourcis et ne prouve aucune compatibilité firmware.
+Le dépôt contient désormais :
 
-## État au 27 juillet 2026
+- un manifeste portable V1 et des schémas réutilisables ;
+- un mapping physique Claude avec couleur, cadran, joystick et AppSense ;
+- une représentation SVG originale du Codex Micro ;
+- un outil Node.js de diagnostic, inventaire, sauvegarde, dry-run, sanitation et
+  rollback ;
+- un générateur local de profile Input `0.17.3` qui préserve le layer natif et
+  le lien AppSense existant ;
+- des tests transactionnels sur copies isolées ;
+- une analyse reproductible du mécanisme de partage d'Input `0.17.2` ;
+- une procédure permettant de capturer ensuite le véritable export officiel.
 
-- Dépôt public : [thannous/claude-codex-micro](https://github.com/thannous/claude-codex-micro).
-- Premier contrat Claude/AppSense documenté et validable.
-- Aucun preset Work Louder Input importable n'est encore publié.
-- Le mapping Claude proposé reste **non appliqué** et non testé sur le clavier.
-- Layers existants du Codex Micro laissés intacts.
-- Aucun réglage macOS, Claude Desktop ou Work Louder n'a été modifié.
-- Codex Micro observé comme clavier HID Work Louder sur Bluetooth Low Energy.
-- Work Louder Input `0.17.2` et firmware Codex Micro `v0.4.1` observés.
-- Claude Desktop `1.24012.9` observé localement.
-- Compatibilité Codex Micro ↔ Hardware Buddy **non prouvée**.
-- Licence MIT, copyright 2026 Thanh Chau.
+L'analyse du package officiel confirme des commandes **Import layer** et
+**Export layer**, des fichiers `*-layer.json`, ainsi que l'enveloppe JSON
+attendue. Le vrai fichier Claude n'est volontairement pas fabriqué : ses objets
+internes doivent provenir d'un export réel du Codex Micro.
 
-La présence du Bluetooth ne suffit pas à établir la compatibilité Hardware
-Buddy. Claude attend un périphérique qui expose le Nordic UART Service et parle
-son protocole JSON. Ni ce service, ni un firmware Codex Micro extensible, ni la
-coexistence HID + NUS n'ont été démontrés sur le matériel.
+Le preset est `hardware-observed` : le générateur a été validé sur un export
+Input `0.17.3`, mais le round-trip d'un artefact `*-layer.json` et la checklist
+matérielle complète restent ouverts.
 
-## Premier preset : Claude piloté par AppSense
+## Mapping Claude proposé
 
-Le profil logique est décrit dans
-[`profiles/claude-shortcuts/macos.example.json`](profiles/claude-shortcuts/macos.example.json)
-et expliqué dans
-[`docs/codex-micro/configuration.md`](docs/codex-micro/configuration.md).
+Le layer natif Codex situé à l'index `0` est protégé. Le profile source doit
+contenir exactement un layer `Claude`, différent de l'index `0` et déjà lié à
+Claude Desktop avec AppSense.
 
-Il ne décrit pas un profil fixe toujours actif. Il sépare :
+| Contrôle | Action |
+| --- | --- |
+| rangée des quatre touches carrées, gauche | `⌘N` — nouvelle conversation |
+| même rangée, deuxième | `⌘D` — mode vocal |
+| même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
+| même rangée, droite | `Esc` — annuler ou fermer selon le contexte |
+| cadran, coin supérieur droit | `PageUp` / `PageDown` |
+| joystick, coin supérieur gauche | quatre flèches directionnelles |
+| autres contrôles | aucune action ; capteur de layer réservé |
 
-1. un layer existant, choisi par l'utilisateur et associé à Claude Desktop ;
-2. AppSense, qui détecte Claude au premier plan et sélectionne ce layer ;
-3. les raccourcis HID présents dans le layer (`⌘N`, `⌘F`, `⌘,`, `Esc`,
-   molette et joystick).
+Couleur proposée : `#D97757`. Activation : Claude Desktop au premier plan via
+AppSense et `Auto detect`.
 
-Le profil ne choisit pas le layer et n'écrase aucun mapping. Si aucun layer
-existant ne correspond, il faut s'arrêter et demander une décision.
+![Mapping physique Claude](profiles/claude-shortcuts/assets/layout.svg)
 
-La saisie rapide et la dictée sont des raccourcis globaux : elles sont exclues
-du layer AppSense initial, car celui-ci n'est actif que lorsque Claude est au
-premier plan. `Entrée` et les décisions de permission restent également
-exclues.
+## Ce qui est interdit par défaut
 
-Le fichier JSON est un contrat lisible et versionnable, pas encore un format
-d'import Work Louder. Il ne doit donc pas être présenté comme un preset
-installable.
+- Retour/Entrée et envoi de message ;
+- approbation ou refus de permission ;
+- suppression ;
+- `git push` ;
+- déploiement ;
+- commande shell ou action destructive.
 
-## Prochaine étape
+Les validateurs échouent si l'une de ces actions apparaît dans un contrôle
+actif.
 
-La priorité V1 est de transformer ce contrat en expérience reproductible :
+## Compatibilité observée
 
-1. inventorier et sauvegarder la configuration Input réelle ;
-2. déterminer le mécanisme officiel ou vérifiable de partage ;
-3. créer un layer Claude dans un emplacement libre sans toucher au layer natif ;
-4. tester AppSense, les touches, la molette, le joystick et le retour arrière ;
-5. publier un artefact assaini accompagné d'une procédure d'installation et
-   de restauration.
+- macOS `26.5.2` arm64 ;
+- Work Louder Input `0.17.3` pour le générateur de profile ;
+- firmware Codex Micro `v0.4.1` ;
+- Claude Desktop `1.24012.9` ;
+- bundle Claude `com.anthropic.claudefordesktop` ;
+- bundle Input `it.focusense.input-app`.
 
-Si Input ne propose pas de format portable vérifiable, le dépôt conservera une
-procédure manuelle explicite au lieu de revendiquer un import automatique.
+Voir la [matrice de compatibilité](docs/compatibility.md) pour distinguer les
+faits, tests de fixture et validations matérielles manquantes.
 
-## Prérequis
+## Démarrage sans modification
 
-- un Mac avec Claude Desktop installé ;
-- un Codex Micro déjà fonctionnel avec sa connexion actuelle ;
-- une version de Work Louder Input compatible avec le matériel ;
-- Node.js 18 ou version ultérieure pour valider le profil ;
-- un inventaire ou une sauvegarde des layers, profils et liens AppSense avant
-  toute configuration réelle.
-
-La version Claude observée n'est pas présentée comme une version minimale
-garantie. Le projet n'installe ni Claude Desktop ni Work Louder Input.
-
-## Démarrage local sans modification
+Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
+sont verrouillées dans `package-lock.json`.
 
 ```sh
-./scripts/probe-macos.sh
-node scripts/validate-profile.mjs
-node scripts/check-doc-links.mjs
+git clone https://github.com/thannous/claude-codex-micro.git
+cd claude-codex-micro
+npm ci --no-audit --no-fund
+npm run check
+node scripts/input-layer.mjs doctor --json
+node scripts/input-layer.mjs install --dry-run --json
 ```
 
-Le premier script ne lance aucune application et ne change aucun réglage. Le
-deuxième vérifie les invariants de sécurité du preset. Le troisième vérifie les
-liens locaux de la documentation. Aucun n'écrit dans les réglages.
+La dernière commande reste bloquée sans inventaire local contenant exactement
+un layer `Claude`, ce qui est volontaire.
 
-Pour une future configuration réelle, lire
-[Installation et configuration](docs/installation.md). Les étapes qui ouvrent
-Input, créent un lien AppSense ou changent un mapping exigent un accord
-explicite et n'ont pas été exécutées dans ce projet.
+## Installation sûre
+
+Le parcours réel commence par un export officiel de profile et une sauvegarde
+vérifiée :
+
+```sh
+node scripts/input-layer.mjs backup \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --json
+
+node scripts/input-layer.mjs inventory \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --output .local/inventories/current.json \
+  --json
+
+node scripts/input-layer.mjs install \
+  --inventory .local/inventories/current.json \
+  --profile-export "$HOME/Downloads/Mac-profile.json" \
+  --dry-run \
+  --json
+
+npm run build:profile -- \
+  "$HOME/Downloads/Mac-profile.json" \
+  "$HOME/Downloads/Claude-macOS-profile.json"
+```
+
+Importer ensuite `Claude-macOS-profile.json` avec **Add New** dans Input. Le
+fichier source reste inchangé et aucune donnée n'est téléversée.
+
+Lire le [guide d'installation et de retour arrière](docs/installation.md) avant
+`--apply`.
+
+## Format de partage
+
+Input `0.17.2` expose un flux officiel au niveau layer et profile :
+
+- `*-layer.json` : `keyboard`, `language`, `layer`, actions et groupes ;
+- `*-profile.json` : même enveloppe avec `profile`.
+
+La preuve et ses limites sont documentées dans
+[`docs/research/input-0.17.2-sharing.md`](docs/research/input-0.17.2-sharing.md).
+
+Le manifeste communautaire n'imite pas ce format. Le parcours principal
+transforme localement un vrai `*-profile.json`. Un éventuel artefact layer
+public restera optionnel et devra être lié à son SHA-256, au mapping canonique
+et à une preuve de round-trip.
 
 ## Structure
 
 ```text
 profiles/
-  README.md                  conventions des presets
+  schema/v1/                schémas réutilisables
   claude-shortcuts/
-    macos.example.json      contrat AppSense et mapping logique
-    schema.json             structure attendue
-    README.md               niveaux de preuve
-.github/
-  ISSUE_TEMPLATE/            proposition de preset
-  PULL_REQUEST_TEMPLATE.md   contrôle avant contribution
+    manifest.json           identité, preuve et installation
+    mapping.json            mapping physique et sécurité
+    assets/layout.svg       aperçu original
+    artifacts/              futur export officiel assaini
+scripts/
+  build-input-profile.mjs   génération locale du profile importable
+  input-layer.mjs           diagnostic, sauvegarde et installation guidée
+shared/
+  input-profile.mjs         transformation canonique partagée avec le GUI
+  lib/                      fonctions testables
+  validate-profile.mjs      contrat Claude historique
+  validate-presets.mjs      invariants de la bibliothèque
+tests/
+  input-layer.test.mjs      sauvegarde, rollback, sanitation et idempotence
 docs/
-  vision.md                 objectif produit et principes
-  roadmap.md                étapes et portes de validation
-  installation.md           installation et association AppSense
-  scope-and-limitations.md  périmètre et preuves
-  publishing-checklist.md   portes avant publication
-  codex-micro/              guides et observation matérielle
-ble/                        étude Hardware Buddy non fonctionnelle
-scripts/                    validation et sonde locale en lecture seule
+  installation.md           procédure complète
+  compatibility.md          matrice de preuve
+  research/                 analyse Input assainie
+ble/                        piste Hardware Buddy séparée
 ```
 
-`work/` et `outputs/` restent locaux et sont ignorés par Git.
+Les sauvegardes, inventaires et sessions sont stockés sous `.local/`, ignoré
+par Git. `work/` et `outputs/` restent également locaux.
 
-## Sécurité
+## Validation
 
-Le profil initial exclut l'envoi de message et les décisions de permission.
-AppSense peut sélectionner le mauvais layer si la détection ou le focus ne se
-comportent pas comme attendu ; chaque raccourci doit donc être testé dans un
-contexte sans enjeu.
+```sh
+npm run check
+node scripts/check-doc-links.mjs
+git diff --check
+```
 
-La piste BLE ne contient ni firmware, ni outil d'appairage, ni commande
-d'approbation automatique. Lire [SECURITY.md](SECURITY.md) avant toute
-expérimentation.
+La CI exécute les mêmes contrôles. Les tests isolés prouvent le comportement de
+l'outil, pas celui d'Input ou du clavier réel.
+
+## Piste BLE Hardware Buddy
+
+Cette piste reste indépendante. La présence du Codex Micro en BLE HID ne prouve
+ni le Nordic UART Service, ni la coexistence HID + NUS, ni un firmware
+modifiable. Aucun firmware, outil de flash ou approbation automatique n'est
+publié.
+
+Lire [`ble/README.md`](ble/README.md) et
+[`ble/feasibility.md`](ble/feasibility.md).
 
 ## Documentation
 
-- [Vision du projet](docs/vision.md)
+- [Vision](docs/vision.md)
 - [Feuille de route](docs/roadmap.md)
-- [Installation et configuration pas à pas](docs/installation.md)
-- [Guide de démarrage](docs/getting-started.md)
-- [Configuration et préservation des layers](docs/codex-micro/configuration.md)
-- [Observation locale initiale](docs/codex-micro/local-observation-2026-07-27.md)
-- [Périmètre et limitations](docs/scope-and-limitations.md)
-- [Structure des profils et presets](profiles/README.md)
-- [Piste BLE expérimentale](ble/README.md)
-- [Matrice de faisabilité BLE](ble/feasibility.md)
+- [Installation et rollback](docs/installation.md)
+- [Compatibilité](docs/compatibility.md)
+- [Mécanisme Input 0.17.2](docs/research/input-0.17.2-sharing.md)
+- [Conventions des presets](profiles/README.md)
+- [Preset Claude](profiles/claude-shortcuts/README.md)
 - [Contribution](CONTRIBUTING.md)
-- [Licence MIT](LICENSING.md)
+- [Sécurité](SECURITY.md)
 
-## Sources de référence
+## Sources principales
 
 - [Work Louder — configuration officielle du Codex Micro](https://worklouder.cc/openai-micro-setup)
-- [Anthropic — saisie rapide Claude Desktop sur Mac](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
-- [Anthropic — exemple Claude Desktop Buddy](https://github.com/anthropics/claude-desktop-buddy)
-- [Anthropic — protocole Hardware Buddy BLE](https://github.com/anthropics/claude-desktop-buddy/blob/main/REFERENCE.md)
+- [Work Louder — releases Input](https://github.com/worklouder/input-releases/releases)
+- [Claude — saisie rapide sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
+- [Claude — ouvrir l'application avec un lien](https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link)
 
-## Contribuer
+## Licence
 
-Les propositions de presets doivent fournir leur compatibilité, leur mapping,
-leur niveau de validation et une méthode de retour arrière. Le
-[guide de contribution](CONTRIBUTING.md) et le modèle GitHub empêchent de
-présenter une simple proposition comme une configuration importable.
-
-Le projet est placé sous licence [MIT](LICENSE), copyright 2026 Thanh Chau.
-Consulter [LICENSING.md](LICENSING.md) et la
-[checklist de publication](docs/publishing-checklist.md).
+MIT, copyright 2026 Thanh Chau. Voir [LICENSE](LICENSE) et
+[LICENSING.md](LICENSING.md).

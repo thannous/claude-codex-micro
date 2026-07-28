@@ -1,0 +1,30 @@
+name: Validate presets
+
+on:
+  push:
+    branches:
+      - main
+      - codex/shareable-input-preset-v1
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Validate manifests, documentation and tests
+        run: npm run check
+      - name: Reject whitespace errors
+        run: git diff --check

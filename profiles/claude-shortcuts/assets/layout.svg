@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 980" role="img" aria-labelledby="title desc">
+  <title id="title">Codex Micro Claude Desktop layer mapping</title>
+  <desc id="desc">Top-view schematic showing the joystick at the upper left, the rotary encoder at the upper right, four Claude shortcuts, and unused controls left without an action.</desc>
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      .panel { fill: #f4f2ed; stroke: #242424; stroke-width: 4; }
+      .key { fill: #ffffff; stroke: #585858; stroke-width: 3; }
+      .mapped { fill: #d97757; stroke: #44251b; stroke-width: 4; }
+      .agent { fill: #e7e4dd; stroke: #8c887f; stroke-width: 3; }
+      .text { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; fill: #202020; }
+      .small { font-size: 22px; }
+      .medium { font-size: 28px; font-weight: 650; }
+      .large { font-size: 34px; font-weight: 750; }
+      .inverse { fill: #ffffff; }
+      .guide { fill: none; stroke: #d97757; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; }
+      .muted { fill: #68645d; }
+    </style>
+  </defs>
+
+  <rect x="55" y="45" width="990" height="815" rx="80" class="panel" filter="url(#shadow)"/>
+  <text x="550" y="92" text-anchor="middle" class="text small muted">TOP VIEW · CABLE AWAY FROM USER</text>
+
+  <!-- Joystick -->
+  <g transform="translate(-645 0)">
+    <circle cx="835" cy="190" r="73" fill="#262626" stroke="#000" stroke-width="5"/>
+    <path d="M835 128 V252 M773 190 H897" stroke="#f2f2f2" stroke-width="5" stroke-linecap="round"/>
+    <path d="M835 128 l-12 18 h24z M897 190 l-18 -12 v24z M835 252 l-12 -18 h24z M773 190 l18 -12 v24z" fill="#f2f2f2"/>
+    <text x="835" y="295" text-anchor="middle" class="text medium">NAV</text>
+    <text x="835" y="326" text-anchor="middle" class="text small muted">four arrow keys</text>
+  </g>
+
+  <!-- Top agent keys -->
+  <rect x="345" y="120" width="135" height="135" rx="24" class="agent"/>
+  <rect x="505" y="120" width="135" height="135" rx="24" class="agent"/>
+  <text x="412" y="193" text-anchor="middle" class="text medium muted">NO</text>
+  <text x="572" y="193" text-anchor="middle" class="text medium muted">NO</text>
+  <text x="412" y="221" text-anchor="middle" class="text small muted">ACTION</text>
+  <text x="572" y="221" text-anchor="middle" class="text small muted">ACTION</text>
+
+  <!-- Encoder -->
+  <g transform="translate(645 0)">
+    <circle cx="190" cy="190" r="76" fill="#ddd9d0" stroke="#333" stroke-width="5"/>
+    <path d="M154 145 L225 216" stroke="#777" stroke-width="12" stroke-linecap="round"/>
+    <path d="M117 115 C86 150 82 204 108 244" class="guide"/>
+    <path d="M104 235 L107 261 L130 248" class="guide"/>
+    <path d="M265 115 C296 150 300 204 274 244" class="guide"/>
+    <path d="M278 235 L275 261 L252 248" class="guide"/>
+    <text x="190" y="295" text-anchor="middle" class="text medium">PAGE</text>
+    <text x="190" y="326" text-anchor="middle" class="text small muted">↺ PageUp · ↻ PageDown</text>
+  </g>
+
+  <!-- Six agent keys, second row -->
+  <g>
+    <rect x="185" y="350" width="135" height="135" rx="24" class="agent"/>
+    <rect x="345" y="350" width="135" height="135" rx="24" class="agent"/>
+    <rect x="505" y="350" width="135" height="135" rx="24" class="agent"/>
+    <rect x="665" y="350" width="135" height="135" rx="24" class="agent"/>
+    <text x="252" y="420" text-anchor="middle" class="text small muted">NO ACTION</text>
+    <text x="412" y="420" text-anchor="middle" class="text small muted">NO ACTION</text>
+    <text x="572" y="420" text-anchor="middle" class="text small muted">NO ACTION</text>
+    <text x="732" y="420" text-anchor="middle" class="text small muted">NO ACTION</text>
+  </g>
+
+  <!-- Command row -->
+  <g>
+    <rect x="185" y="520" width="135" height="135" rx="24" class="mapped"/>
+    <rect x="345" y="520" width="135" height="135" rx="24" class="mapped"/>
+    <rect x="505" y="520" width="135" height="135" rx="24" class="mapped"/>
+    <rect x="665" y="520" width="135" height="135" rx="24" class="mapped"/>
+    <text x="252" y="575" text-anchor="middle" class="text small inverse">NEW</text>
+    <text x="252" y="620" text-anchor="middle" class="text large inverse">⌘ N</text>
+    <text x="412" y="575" text-anchor="middle" class="text small inverse">VOICE</text>
+    <text x="412" y="620" text-anchor="middle" class="text large inverse">⌘ D</text>
+    <text x="572" y="575" text-anchor="middle" class="text small inverse">DIFF</text>
+    <text x="572" y="620" text-anchor="middle" class="text large inverse">⌘ ⇧ D</text>
+    <text x="732" y="575" text-anchor="middle" class="text small inverse">CANCEL</text>
+    <text x="732" y="620" text-anchor="middle" class="text large inverse">ESC</text>
+  </g>
+
+  <!-- Bottom row -->
+  <circle cx="190" cy="745" r="45" fill="#202020" stroke="#000" stroke-width="4"/>
+  <text x="190" y="820" text-anchor="middle" class="text small muted">LAYER SENSOR</text>
+  <text x="190" y="844" text-anchor="middle" class="text small muted">reserved</text>
+  <rect x="345" y="690" width="295" height="112" rx="26" class="key"/>
+  <text x="492" y="742" text-anchor="middle" class="text medium muted">NO ACTION</text>
+  <text x="492" y="775" text-anchor="middle" class="text small muted">wide key</text>
+  <rect x="665" y="690" width="135" height="112" rx="24" class="key"/>
+  <text x="732" y="742" text-anchor="middle" class="text small muted">NO</text>
+  <text x="732" y="770" text-anchor="middle" class="text small muted">ACTION</text>
+
+  <!-- Legend -->
+  <rect x="55" y="890" width="34" height="34" rx="7" class="mapped"/>
+  <text x="105" y="916" class="text small">mapped in Claude layer</text>
+  <rect x="390" y="890" width="34" height="34" rx="7" class="agent"/>
+  <text x="440" y="916" class="text small">explicitly no action</text>
+  <text x="1045" y="916" text-anchor="end" class="text small muted">RGB #D97757 · exactly one existing Claude layer</text>
+</svg>

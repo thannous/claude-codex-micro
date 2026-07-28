@@ -1,0 +1,189 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
+  buildInputProfile,
+  DEFAULT_MAPPING,
+  inspectInputProfile,
+} from "../shared/input-profile.mjs";
+
+function sourceProfile() {
+  return {
+    keyboard: "codex_micro",
+    language: "us",
+    profile: {
+      id: 0,
+      name: "Default",
+      layers: [
+        {
+          id: 0,
+          name: "Layer 1",
+          layout: {
+            encoders: [[
+              { keycode: "KV_OAI_ENC_CC" },
+              { keycode: "KV_OAI_ENC_CW" },
+              { keycode: "KV_OAI_ENC_CLK" },
+            ]],
+            joystick: { type: "VENDOR", sectors: [] },
+            base: [[{ keycode: "KV_0" }]],
+          },
+        },
+        {
+          id: 1,
+          name: "Claude",
+          linkedAppId: 7,
+          layout: {
+            encoders: [[
+              { keycode: "KC_NONE" },
+              { keycode: "KC_NONE" },
+              { keycode: "KC_NONE" },
+            ]],
+            joystick: {
+              type: "RADIAL",
+              sectors: [
+                { k: "KI_X", a1: 0.1875, a2: 0.3125 },
+                { k: "KC_NONE", a1: 0.3125, a2: 0.1875 },
+              ],
+            },
+            base: [
+              [{ keycode: "KC_NONE" }, { keycode: "KC_NONE" }],
+              [
+                { keycode: "KC_NONE" },
+                { keycode: "KC_NONE" },
+                { keycode: "KC_NONE" },
+                { keycode: "KC_NONE" },
+              ],
+              [
+                { keycode: "KA_0" },
+                { keycode: "KA_1" },
+                { keycode: "KA_2" },
+                { keycode: "KC_ESC" },
+              ],
+              [
+                { keycode: "KC_NONE" },
+                { keycode: "KC_NONE" },
+                { keycode: "KC_NONE" },
+              ],
+            ],
+          },
+        },
+      ],
+    },
+    actions: [
+      {
+        id: 0,
+        name: "Claude New",
+        color: null,
+        keyInputs: [
+          { keycode: "KC_LGUI", delay: 0, actionType: 1 },
+          { keycode: "KC_N", delay: 0, actionType: 2 },
+          { keycode: "KC_LGUI", delay: 0, actionType: 0 },
+        ],
+      },
+    ],
+    multiactions: [],
+    smartActions: [],
+    actionGroups: [{ id: 0, name: "Default", actionIds: [0] }],
+    multiactionGroups: [],
+    smartActionGroups: [],
+  };
+}
+
+test("recognizes exactly one non-native Claude layer with AppSense", () => {
+  const report = inspectInputProfile(sourceProfile());
+  assert.equal(report.device, "codex_micro");
+  assert.equal(report.layerIndex, 1);
+  assert.equal(report.appSenseLinked, true);
+});
+
+test("builds the canonical mapping without touching the source or native layer", () => {
+  const source = sourceProfile();
+  const sourceSnapshot = structuredClone(source);
+  const nativeSnapshot = structuredClone(source.profile.layers[0]);
+  const { profile, report } = buildInputProfile(source, DEFAULT_MAPPING);
+  const claude = profile.profile.layers[1];
+
+  assert.deepEqual(source, sourceSnapshot);
+  assert.deepEqual(profile.profile.layers[0], nativeSnapshot);
+  assert.equal(claude.linkedAppId, 7);
+  assert.deepEqual(
+    claude.layout.base[2].map((entry) => entry.keycode),
+    ["KA_0", "KA_1", "KA_2", "KC_ESC"],
+  );
+  assert.deepEqual(
+    claude.layout.encoders[0].map((entry) => entry.keycode),
+    ["KC_PGUP", "KC_PGDN", "KC_NONE"],
+  );
+  assert.deepEqual(
+    claude.layout.joystick.sectors.map((sector) => sector.k),
+    ["KI_X", "KC_LEFT", "KC_DOWN", "KC_RGHT", "KC_UP"],
+  );
+  assert.equal(profile.profile.name, "Claude macOS");
+  assert.deepEqual(
+    profile.actionGroups,
+    [{ id: 0, name: "Claude Codex Micro", actionIds: [1, 2] }],
+  );
+  assert.equal(report.nativeLayerPreserved, true);
+  assert.equal(report.appSensePreserved, true);
+
+  const voice = profile.actions.find((action) => action.name === "Claude Voice");
+  const diff = profile.actions.find((action) => action.name === "Claude Diff");
+  assert.deepEqual(
+    voice.keyInputs.map(({ keycode, actionType }) => [keycode, actionType]),
+    [["KC_LGUI", 1], ["KC_D", 2], ["KC_LGUI", 0]],
+  );
+  assert.deepEqual(
+    diff.keyInputs.map(({ keycode, actionType }) => [keycode, actionType]),
+    [
+      ["KC_LGUI", 1],
+      ["KC_LSFT", 1],
+      ["KC_D", 2],
+      ["KC_LSFT", 0],
+      ["KC_LGUI", 0],
+    ],
+  );
+});
+
+test("supports explicitly unassigned controls", () => {
+  const { profile } = buildInputProfile(sourceProfile(), {
+    joystick: "none",
+    wheel: "none",
+    "key-1": "none",
+    "key-2": "voice",
+    "key-3": "diff",
+    "key-4": "stop",
+  });
+  const claude = profile.profile.layers[1];
+
+  assert.equal(claude.layout.base[2][0].keycode, "KC_NONE");
+  assert.deepEqual(
+    claude.layout.encoders[0].map((entry) => entry.keycode),
+    ["KC_NONE", "KC_NONE", "KC_NONE"],
+  );
+  assert.deepEqual(
+    claude.layout.joystick.sectors.map((sector) => sector.k),
+    ["KI_X", "KC_NONE"],
+  );
+});
+
+test("rejects the wrong device, an ambiguous layer, a native target, or missing AppSense", () => {
+  const wrongDevice = sourceProfile();
+  wrongDevice.keyboard = "creator_micro";
+  assert.throws(() => inspectInputProfile(wrongDevice), /Codex Micro/);
+
+  const ambiguous = sourceProfile();
+  ambiguous.profile.layers.push(structuredClone(ambiguous.profile.layers[1]));
+  assert.throws(() => inspectInputProfile(ambiguous), /Plusieurs layers/);
+
+  const nativeTarget = sourceProfile();
+  nativeTarget.profile.layers[0].name = "Claude";
+  nativeTarget.profile.layers.splice(1, 1);
+  assert.throws(() => inspectInputProfile(nativeTarget), /index 0/);
+
+  const withoutAppSense = sourceProfile();
+  delete withoutAppSense.profile.layers[1].linkedAppId;
+  assert.throws(() => inspectInputProfile(withoutAppSense), /AppSense/);
+
+  const malformedAppSense = sourceProfile();
+  malformedAppSense.profile.layers[1].linkedAppId = [];
+  assert.throws(() => inspectInputProfile(malformedAppSense), /AppSense/);
+});

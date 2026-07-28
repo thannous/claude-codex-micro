@@ -1,98 +1,119 @@
-# Configurer le Codex Micro pour Claude
-
-## Objectif du premier livrable
-
-Reproduire le comportement Work Louder Input/AppSense utilisé avec les
-applications créatives : quand Claude Desktop passe au premier plan, Input
-sélectionne automatiquement le layer qui lui est associé. Le Codex Micro
-continue ensuite d'émettre des raccourcis HID standards.
-
-Cette piste ne dépend pas de Hardware Buddy.
+# Configurer le Codex Micro pour Claude Desktop
 
 ## Flux cible
 
-1. L'utilisateur désigne un layer existant dont le mapping Claude est vérifié.
-2. AppSense associe ce layer à Claude Desktop.
-3. Claude passe au premier plan.
-4. Input active automatiquement le layer lié.
-5. Les touches, la molette et le joystick émettent les raccourcis du layer.
+1. exporter le profile Input actif et créer une sauvegarde vérifiée ;
+2. inventorier les layers sans publier les données privées ;
+3. protéger intégralement le layer natif à l'index `0` ;
+4. exiger exactement un layer `Claude` existant, hors index `0` ;
+5. conserver son lien AppSense dans une copie locale du profile ;
+6. appliquer le mapping physique documenté à cette copie ;
+7. tester chaque contrôle, la perte de focus et le redémarrage ;
+8. exporter le layer, l'assainir et vérifier son round-trip ;
+9. restaurer le profile original en cas d'écart.
 
-Le profil du dépôt décrit ce contrat. Ce n'est pas un profil fixe ni un
-automatisme autonome du clavier.
+Cette intégration utilise les raccourcis HID et AppSense. Elle ne dépend pas du
+protocole expérimental Hardware Buddy.
 
-## Politique de préservation
+## Préservation obligatoire
 
-Le fichier de profil est une **cible logique non appliquée** :
+Le preset et l'outil imposent les règles suivantes :
 
-- aucun layer ou preset n'est choisi ;
-- aucun contrôle non listé n'est modifié ;
-- les autres layers, profils et liens AppSense restent inchangés ;
-- le mapping du layer candidat est inspecté avant toute association ;
-- si aucun layer existant ne correspond, l'application du profil est bloquée.
+- index `0` protégé, sans remplacement ni modification ;
+- politique `exactly-one-existing-named-layer` ;
+- six emplacements au maximum ;
+- aucun autre profile, layer ou lien AppSense modifié ;
+- absence ou doublon `Claude` refusé ;
+- structure d'export inconnue refusée au lieu d'être interprétée ;
+- sauvegarde et vérification SHA-256 avant la session réelle ;
+- aucune écriture directe dans le stockage Input ou le périphérique.
 
-Le capteur tactile qui change de layer est réservé au fonctionnement Work
-Louder existant et n'est jamais remappé par ce projet.
+L'inventaire bloque la transformation si l'export officiel ne permet pas de
+prouver la présence du layer protégé à l'index `0` et d'un unique layer
+`Claude`.
 
-## Mapping minimal proposé
+## Mapping physique V1
 
-Le mapping source est
-[`profiles/claude-shortcuts/macos.example.json`](../../profiles/claude-shortcuts/macos.example.json).
-Les noms `key-1` à `key-4` sont logiques : ils ne désignent pas encore une
-position physique.
+Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 
-| Contrôle logique | Action proposée | Preuve | Risque |
-| --- | --- | --- | --- |
-| `key-1` | Nouvelle conversation, `⌘N` | Menu Claude local `1.24012.9` | Faible |
-| `key-2` | Rechercher, `⌘F` | Menu Claude local `1.24012.9` | Faible |
-| `key-3` | Réglages, `⌘,` | Menu Claude local `1.24012.9` | Faible |
-| `key-4` | Annuler/fermer, `Esc` | Comportement contextuel à tester | Moyen |
-| Molette | Défilement vertical | Capacité à confirmer dans Input | Faible |
-| Joystick | Flèches directionnelles | Capacité à confirmer dans Input | Faible |
+| Contrôle | Position | Action |
+| --- | --- | --- |
+| Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
+| Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
+| Touche 3 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
+| Touche 4 | même rangée, tout à droite | `Esc` — annuler ou fermer selon le contexte |
+| Cadran | coin supérieur droit | horaire : `PageDown` ; antihoraire : `PageUp` |
+| Joystick | coin supérieur gauche | flèches haut, droite, bas et gauche |
 
-Tous les autres contrôles du layer restent inchangés.
+![Schéma physique du mapping](../../profiles/claude-shortcuts/assets/layout.svg)
 
-## Raccourcis globaux hors du layer AppSense
+Les identifiants internes `inputControlId` restent `null` jusqu'à leur relevé
+dans Input sur le Codex Micro exact. Les positions ci-dessus sont donc une cible
+physique lisible, pas une affirmation sur le schéma interne de l'application.
 
-Anthropic documente la saisie rapide par double appui sur `Option` et la dictée
-par `Caps Lock` lorsqu'elles sont activées. Elles servent précisément quand une
-autre application peut être au premier plan. Les placer uniquement dans le
-layer Claude piloté par AppSense les rendrait alors indisponibles.
+## Apparence
 
-Ces deux actions sont donc documentées comme extension globale distincte, mais
-ne font pas partie du preset AppSense initial et ne sont appliquées nulle part.
+- nom du layer : `Claude` ;
+- couleur proposée : `#D97757` ;
+- autres contrôles : `no-action` ;
+- capteur tactile : réservé au changement de layer ;
+- appui du cadran : aucune action.
 
-## Actions exclues
+## AppSense
 
-- `Entrée` : un appui accidentel pourrait envoyer un message inachevé.
-- Approbation/refus de permission : décision conséquente, non adaptée à un
-  mapping initial.
-- Saisie rapide et dictée : raccourcis globaux hors du layer AppSense.
-- Modification des raccourcis Claude : réglage utilisateur hors périmètre.
-- Reset Work Louder : supprimerait les layers et actions existants.
+Le lien cible uniquement :
 
-## Ce qui est confirmé
+```text
+Claude
+com.anthropic.claudefordesktop
+```
 
-La documentation Work Louder confirme :
+Le lien doit exister avant l'export du profile. Le générateur conserve son
+`linkedAppId` dans la copie locale, refuse son absence et ne crée jamais un
+second lien. Les autres liens ne sont jamais modifiés.
 
-- jusqu'à six layers programmables ;
-- le changement manuel de layer par capteur tactile ;
-- l'association d'un logiciel à un layer via AppSense ;
-- la sélection automatique du layer lorsque l'application est au premier plan ;
-- la procédure `Auto detect` avec l'application ciblée gardée au focus pendant
-  cinq secondes.
+Le retour à un état sûr après perte de focus reste une validation matérielle
+obligatoire : il ne doit pas être supposé à partir de la seule documentation.
 
-## Ce qui reste à confirmer
+## Actions absentes par défaut
 
-- le critère exact utilisé pour identifier Claude ;
-- le retour au layer précédent quand Claude perd le focus ;
-- la priorité en cas de liens AppSense concurrents ;
-- le comportement avec plusieurs fenêtres ou bureaux macOS ;
-- le comportement de la saisie rapide Claude par-dessus une autre application ;
-- l'existence d'un format de preset importable dans Input ;
-- l'inventaire réel des layers et profils déjà présents ;
-- l'accord explicite pour créer le lien AppSense.
+- Retour/Entrée et envoi d'un message ;
+- approbation, refus ou rejet d'une permission ;
+- suppression ;
+- `git push` ;
+- déploiement ;
+- terminal, shell ou commande destructive ;
+- raccourci global Saisie rapide.
+
+Les raccourcis globaux sont volontairement hors du layer AppSense : ils doivent
+rester utilisables quand une autre application est au premier plan.
+
+## Partage officiel observé
+
+Input `0.17.2` contient les flux **Export layer**, **Import layer**, **Export
+Profile** et **Import Profile**. Un export de layer porte le suffixe
+`*-layer.json` et contient l'enveloppe décrite dans
+[`docs/research/input-0.17.2-sharing.md`](../research/input-0.17.2-sharing.md).
+
+Le dépôt ne fabrique pas les objets internes `layer`, `actions` et groupes. Le
+futur artefact doit provenir d'un vrai export du Codex Micro, être assaini, puis
+réimporté sur une configuration isolée.
+
+## Validation restante
+
+- [ ] export du profile réel et inventaire lisible ;
+- [ ] positions et identifiants physiques vérifiés dans Input ;
+- [x] transformation locale du layer existant sans modification de l'index `0` ;
+- [x] conservation du lien AppSense dans le profile généré ;
+- [ ] quatre touches, cadran et joystick testés ;
+- [ ] contrôles inutilisés confirmés sans action ;
+- [ ] état sûr après perte de focus ;
+- [ ] persistance après redémarrage ;
+- [ ] export/import du layer reproduit sur une copie isolée ;
+- [ ] doublon refusé ou traité idempotemment ;
+- [ ] profile original réimporté et périphérique vérifié.
 
 ## Sources
 
-- [Work Louder — Codex Micro : layers, AppSense et Input](https://worklouder.cc/openai-micro-setup)
-- [Anthropic — saisie rapide et dictée sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
+- [Work Louder — Codex Micro, layers et AppSense](https://worklouder.cc/openai-micro-setup)
+- [Claude — saisie rapide sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)

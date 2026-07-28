@@ -1,0 +1,198 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/schema/v1/layer-mapping.schema.json",
+  "title": "Codex Micro layer mapping v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "formatVersion",
+    "presetId",
+    "orientation",
+    "layer",
+    "activation",
+    "controls",
+    "unusedControls",
+    "excludedByDefault"
+  ],
+  "properties": {
+    "$schema": { "type": "string" },
+    "formatVersion": { "const": "1.0.0" },
+    "presetId": { "type": "string" },
+    "orientation": { "const": "top-view-cable-away-from-user" },
+    "layer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "rgb"],
+      "properties": {
+        "name": { "type": "string" },
+        "rgb": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hex", "label"],
+          "properties": {
+            "hex": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" },
+            "label": { "type": "string" }
+          }
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "provider",
+        "application",
+        "detection",
+        "linkPolicy",
+        "duplicatePolicy",
+        "focusLoss"
+      ],
+      "properties": {
+        "type": { "const": "appsense-foreground-application" },
+        "provider": { "const": "Work Louder Input" },
+        "application": {
+          "type": "object",
+          "required": ["name", "bundleId"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string" },
+            "bundleId": { "type": "string" }
+          }
+        },
+        "detection": { "const": "existing-link-required" },
+        "linkPolicy": { "const": "preserve-existing" },
+        "duplicatePolicy": { "const": "refuse" },
+        "focusLoss": { "const": "must-return-to-previous-safe-layer" }
+      }
+    },
+    "controls": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "inputControlId",
+          "physical",
+          "label",
+          "action",
+          "risk",
+          "physicalVerification"
+        ],
+        "properties": {
+          "id": { "type": "string" },
+          "inputControlId": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "integer" },
+              { "type": "null" }
+            ]
+          },
+          "physical": {
+            "type": "object",
+            "required": ["row", "column", "description"],
+            "additionalProperties": false,
+            "properties": {
+              "row": { "type": "integer", "minimum": 1 },
+              "column": { "type": "integer", "minimum": 1 },
+              "description": { "type": "string" }
+            }
+          },
+          "label": { "type": "string" },
+          "action": { "$ref": "#/$defs/action" },
+          "risk": { "enum": ["low", "medium", "high"] },
+          "physicalVerification": { "enum": ["required", "verified"] }
+        }
+      }
+    },
+    "unusedControls": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "behavior"],
+        "properties": {
+          "id": { "type": "string" },
+          "behavior": { "enum": ["no-action", "reserved"] }
+        }
+      }
+    },
+    "excludedByDefault": {
+      "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "reason"],
+        "properties": {
+          "action": { "type": "string" },
+          "reason": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "keys", "meaning"],
+          "properties": {
+            "type": { "const": "shortcut" },
+            "keys": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": { "enum": ["Meta", "Shift", "N", "D"] }
+            },
+            "meaning": {
+              "enum": ["new-conversation", "voice-dictation", "toggle-diff"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "keys", "meaning"],
+          "properties": {
+            "type": { "const": "key" },
+            "keys": {
+              "type": "array",
+              "prefixItems": [{ "const": "Escape" }],
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "meaning": { "const": "cancel-or-close-contextually" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "clockwise", "counterclockwise"],
+          "properties": {
+            "type": { "const": "page-navigation" },
+            "clockwise": { "const": "PageDown" },
+            "counterclockwise": { "const": "PageUp" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "up", "right", "down", "left"],
+          "properties": {
+            "type": { "const": "directional-keys" },
+            "up": { "const": "ArrowUp" },
+            "right": { "const": "ArrowRight" },
+            "down": { "const": "ArrowDown" },
+            "left": { "const": "ArrowLeft" }
+          }
+        }
+      ]
+    }
+  }
+}

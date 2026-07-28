@@ -1,8 +1,9 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://example.invalid/codex-micro-claude/shortcut-profile.schema.json",
-  "title": "Codex Micro Claude shortcut profile",
+  "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/claude-shortcuts/schema.json",
+  "title": "Codex Micro Claude shortcut profile v1",
   "type": "object",
+  "additionalProperties": false,
   "required": [
     "id",
     "status",
@@ -10,187 +11,244 @@
     "preservation",
     "activation",
     "layerBinding",
+    "appearance",
     "controls",
+    "unusedControls",
     "outsideAppLinkedLayer",
     "excludedByDefault"
   ],
   "properties": {
-    "id": {
-      "type": "string",
-      "minLength": 1
-    },
-    "status": {
-      "const": "proposal-not-applied"
-    },
+    "$schema": { "type": "string" },
+    "id": { "const": "claude-desktop-macos-codex-micro-v1" },
+    "status": { "const": "hardware-observed" },
     "target": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "platform",
         "appBundleId",
         "observedAppVersion",
-        "deviceFamily"
+        "deviceFamily",
+        "observedInputVersion",
+        "supportedInputVersions",
+        "observedFirmwareVersion"
       ],
-      "additionalProperties": false,
       "properties": {
-        "platform": {
-          "const": "macOS"
+        "platform": { "const": "macOS" },
+        "appBundleId": { "const": "com.anthropic.claudefordesktop" },
+        "observedAppVersion": { "type": "string" },
+        "deviceFamily": { "const": "Work Louder Codex Micro" },
+        "observedInputVersion": { "const": "0.17.3" },
+        "supportedInputVersions": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "const": "0.17.3" }
         },
-        "appBundleId": {
-          "const": "com.anthropic.claudefordesktop"
-        },
-        "observedAppVersion": {
-          "type": "string"
-        },
-        "deviceFamily": {
-          "type": "string"
-        }
+        "observedFirmwareVersion": { "type": "string" }
       }
     },
     "preservation": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "mode",
+        "protectedLayerIndexes",
         "unlistedControls",
         "touchLayerControl",
         "otherLayers",
         "otherProfiles",
         "otherAppSenseLinks"
       ],
-      "additionalProperties": false,
       "properties": {
-        "mode": {
-          "const": "do-not-replace-existing-layers"
+        "mode": { "const": "update-only-existing-layer" },
+        "protectedLayerIndexes": {
+          "type": "array",
+          "contains": { "const": 0 },
+          "minContains": 1,
+          "uniqueItems": true
         },
-        "unlistedControls": {
-          "const": "unchanged"
-        },
-        "touchLayerControl": {
-          "const": "reserved"
-        },
-        "otherLayers": {
-          "const": "unchanged"
-        },
-        "otherProfiles": {
-          "const": "unchanged"
-        },
-        "otherAppSenseLinks": {
-          "const": "unchanged"
-        }
+        "unlistedControls": { "const": "no-action-in-new-layer" },
+        "touchLayerControl": { "const": "reserved" },
+        "otherLayers": { "const": "unchanged" },
+        "otherProfiles": { "const": "unchanged" },
+        "otherAppSenseLinks": { "const": "unchanged" }
       }
     },
     "activation": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "type",
         "provider",
         "application",
         "detectionMethod",
-        "focusRequirementSeconds",
         "bindingStatus",
-        "focusLossBehavior"
+        "focusLossBehavior",
+        "duplicatePolicy"
       ],
-      "additionalProperties": false,
       "properties": {
-        "type": {
-          "const": "appsense-foreground-application"
-        },
-        "provider": {
-          "const": "Work Louder Input"
-        },
+        "type": { "const": "appsense-foreground-application" },
+        "provider": { "const": "Work Louder Input" },
         "application": {
           "type": "object",
-          "required": ["name", "bundleId"],
           "additionalProperties": false,
+          "required": ["name", "bundleId"],
           "properties": {
-            "name": {
-              "const": "Claude"
-            },
-            "bundleId": {
-              "const": "com.anthropic.claudefordesktop"
-            }
+            "name": { "const": "Claude" },
+            "bundleId": { "const": "com.anthropic.claudefordesktop" }
           }
         },
-        "detectionMethod": {
-          "const": "auto-detect"
-        },
-        "focusRequirementSeconds": {
-          "const": 5
-        },
-        "bindingStatus": {
-          "const": "proposal-not-applied"
-        },
-        "focusLossBehavior": {
-          "const": "manual-validation-required"
-        }
+        "detectionMethod": { "const": "preserve-existing" },
+        "bindingStatus": { "const": "existing-link-required" },
+        "focusLossBehavior": { "const": "manual-validation-required" },
+        "duplicatePolicy": { "const": "refuse" }
       }
     },
     "layerBinding": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "targetKind",
         "layerId",
+        "selectionPolicy",
         "selectionStatus",
         "overwriteMapping",
         "nativePresetImport"
       ],
-      "additionalProperties": false,
       "properties": {
-        "targetKind": {
-          "const": "existing-layer"
-        },
-        "layerId": {
-          "type": "null"
-        },
-        "selectionStatus": {
-          "const": "pending-inventory-and-approval"
-        },
-        "overwriteMapping": {
-          "const": false
-        },
-        "nativePresetImport": {
-          "const": "not-confirmed"
-        }
+        "targetKind": { "const": "existing-layer" },
+        "layerId": { "type": "null" },
+        "selectionPolicy": { "const": "exactly-one-layer-named-Claude" },
+        "selectionStatus": { "const": "existing-layer-required" },
+        "overwriteMapping": { "const": true },
+        "nativePresetImport": { "const": "local-profile-transform" }
+      }
+    },
+    "appearance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "rgb"],
+      "properties": {
+        "name": { "const": "Claude" },
+        "rgb": { "type": "string", "pattern": "^#[0-9A-Fa-f]{6}$" }
       }
     },
     "controls": {
       "type": "array",
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["control", "physicalPosition", "label", "action", "evidence", "risk"],
+        "properties": {
+          "control": { "type": "string" },
+          "physicalPosition": { "type": "string" },
+          "label": { "type": "string" },
+          "action": { "$ref": "#/$defs/action" },
+          "evidence": {
+            "enum": ["installed-bundle-menu", "anthropic-help-center", "manual-validation-required"]
+          },
+          "risk": { "enum": ["low", "medium", "high"] }
+        }
+      }
+    },
+    "unusedControls": {
+      "type": "array",
       "minItems": 1,
       "items": {
         "type": "object",
-        "required": ["control", "label", "action", "evidence", "risk"],
         "additionalProperties": false,
+        "required": ["control", "behavior"],
         "properties": {
-          "control": {
-            "type": "string",
-            "minLength": 1
-          },
-          "label": {
-            "type": "string",
-            "minLength": 1
-          },
-          "action": {
-            "type": "object"
-          },
-          "evidence": {
-            "enum": [
-              "installed-bundle-menu",
-              "anthropic-help-center",
-              "manual-validation-required"
-            ]
-          },
-          "risk": {
-            "enum": ["low", "medium", "high"]
-          }
+          "control": { "type": "string" },
+          "behavior": { "enum": ["no-action", "reserved"] }
         }
       }
     },
     "outsideAppLinkedLayer": {
       "type": "array",
-      "minItems": 2
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "documentedShortcut", "reason"],
+        "properties": {
+          "action": { "const": "quick-entry" },
+          "documentedShortcut": { "const": "DoublePressOption" },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
     },
     "excludedByDefault": {
       "type": "array",
-      "minItems": 2
+      "minItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["action", "reason"],
+        "properties": {
+          "action": { "type": "string", "minLength": 1 },
+          "reason": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "keys"],
+          "properties": {
+            "type": { "const": "shortcut" },
+            "keys": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": { "enum": ["Meta", "Shift", "N", "D"] }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "keys"],
+          "properties": {
+            "type": { "const": "key" },
+            "keys": {
+              "type": "array",
+              "prefixItems": [{ "const": "Escape" }],
+              "minItems": 1,
+              "maxItems": 1
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "clockwise", "counterclockwise"],
+          "properties": {
+            "type": { "const": "page-navigation" },
+            "clockwise": { "const": "PageDown" },
+            "counterclockwise": { "const": "PageUp" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "up", "right", "down", "left"],
+          "properties": {
+            "type": { "const": "directional-keys" },
+            "up": { "const": "ArrowUp" },
+            "right": { "const": "ArrowRight" },
+            "down": { "const": "ArrowDown" },
+            "left": { "const": "ArrowLeft" }
+          }
+        }
+      ]
     }
   }
 }

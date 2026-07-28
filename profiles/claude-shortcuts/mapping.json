@@ -1,0 +1,151 @@
+{
+  "$schema": "../schema/v1/layer-mapping.schema.json",
+  "formatVersion": "1.0.0",
+  "presetId": "claude-desktop-macos-codex-micro-v1",
+  "orientation": "top-view-cable-away-from-user",
+  "layer": {
+    "name": "Claude",
+    "rgb": {
+      "hex": "#D97757",
+      "label": "warm terracotta"
+    }
+  },
+  "activation": {
+    "type": "appsense-foreground-application",
+    "provider": "Work Louder Input",
+    "application": {
+      "name": "Claude",
+      "bundleId": "com.anthropic.claudefordesktop"
+    },
+    "detection": "existing-link-required",
+    "linkPolicy": "preserve-existing",
+    "duplicatePolicy": "refuse",
+    "focusLoss": "must-return-to-previous-safe-layer"
+  },
+  "controls": [
+    {
+      "id": "command-row-left",
+      "inputControlId": null,
+      "physical": {
+        "row": 3,
+        "column": 1,
+        "description": "leftmost square key in the four-key command row"
+      },
+      "label": "NEW",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Meta", "N"],
+        "meaning": "new-conversation"
+      },
+      "risk": "low",
+      "physicalVerification": "required"
+    },
+    {
+      "id": "command-row-center-left",
+      "inputControlId": null,
+      "physical": {
+        "row": 3,
+        "column": 2,
+        "description": "second square key from the left in the command row"
+      },
+      "label": "VOICE",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Meta", "D"],
+        "meaning": "voice-dictation"
+      },
+      "risk": "low",
+      "physicalVerification": "required"
+    },
+    {
+      "id": "command-row-center-right",
+      "inputControlId": null,
+      "physical": {
+        "row": 3,
+        "column": 3,
+        "description": "third square key from the left in the command row"
+      },
+      "label": "DIFF",
+      "action": {
+        "type": "shortcut",
+        "keys": ["Meta", "Shift", "D"],
+        "meaning": "toggle-diff"
+      },
+      "risk": "low",
+      "physicalVerification": "required"
+    },
+    {
+      "id": "command-row-right",
+      "inputControlId": null,
+      "physical": {
+        "row": 3,
+        "column": 4,
+        "description": "rightmost square key in the command row"
+      },
+      "label": "ESC",
+      "action": {
+        "type": "key",
+        "keys": ["Escape"],
+        "meaning": "cancel-or-close-contextually"
+      },
+      "risk": "medium",
+      "physicalVerification": "required"
+    },
+    {
+      "id": "encoder-rotate",
+      "inputControlId": null,
+      "physical": {
+        "row": 1,
+        "column": 4,
+        "description": "rotary encoder at the top right"
+      },
+      "label": "PAGE",
+      "action": {
+        "type": "page-navigation",
+        "clockwise": "PageDown",
+        "counterclockwise": "PageUp"
+      },
+      "risk": "low",
+      "physicalVerification": "required"
+    },
+    {
+      "id": "joystick",
+      "inputControlId": null,
+      "physical": {
+        "row": 1,
+        "column": 1,
+        "description": "planar joystick at the top left"
+      },
+      "label": "NAV",
+      "action": {
+        "type": "directional-keys",
+        "up": "ArrowUp",
+        "right": "ArrowRight",
+        "down": "ArrowDown",
+        "left": "ArrowLeft"
+      },
+      "risk": "low",
+      "physicalVerification": "required"
+    }
+  ],
+  "unusedControls": [
+    { "id": "agent-row-top-left", "behavior": "no-action" },
+    { "id": "agent-row-top-right", "behavior": "no-action" },
+    { "id": "agent-row-second-1", "behavior": "no-action" },
+    { "id": "agent-row-second-2", "behavior": "no-action" },
+    { "id": "agent-row-second-3", "behavior": "no-action" },
+    { "id": "agent-row-second-4", "behavior": "no-action" },
+    { "id": "bottom-wide-key", "behavior": "no-action" },
+    { "id": "bottom-right-key", "behavior": "no-action" },
+    { "id": "encoder-press", "behavior": "no-action" },
+    { "id": "touch-layer-sensor", "behavior": "reserved" }
+  ],
+  "excludedByDefault": [
+    { "action": "send-message", "reason": "An accidental Return could send unfinished content." },
+    { "action": "permission-approve-or-deny", "reason": "Permission decisions require deliberate review." },
+    { "action": "delete", "reason": "Deletion is consequential and difficult to reverse." },
+    { "action": "git-push", "reason": "Publishing code is outside the safe default layer." },
+    { "action": "deploy", "reason": "Deployment is outside the safe default layer." },
+    { "action": "destructive-command", "reason": "Shell or destructive commands are forbidden." }
+  ]
+}

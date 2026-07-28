@@ -1,0 +1,326 @@
+name: Analyze Input 0.17.2 layer format
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/inspect-input-0172-ast.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-format:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      INPUT_ARCHIVE_URL: https://github.com/worklouder/input-releases/releases/download/v0.17.2/input-0.17.2-arm64-mac.zip
+    steps:
+      - name: Extract official package
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "$INPUT_ARCHIVE_URL" \
+            --output "$RUNNER_TEMP/input.zip"
+          mkdir -p "$RUNNER_TEMP/input-app" "$RUNNER_TEMP/input-asar" "$RUNNER_TEMP/ast-tools"
+          ditto -x -k "$RUNNER_TEMP/input.zip" "$RUNNER_TEMP/input-app"
+          APP_PATH="$(find "$RUNNER_TEMP/input-app" -maxdepth 3 -name '*.app' -print -quit)"
+          test -n "$APP_PATH"
+          npx --yes @electron/asar@3.2.10 extract \
+            "$APP_PATH/Contents/Resources/app.asar" \
+            "$RUNNER_TEMP/input-asar"
+          cd "$RUNNER_TEMP/ast-tools"
+          npm init -y >/dev/null
+          npm install --no-audit --no-fund @babel/parser@7 @babel/traverse@7 @babel/types@7 >/dev/null
+
+      - name: Analyze import/export AST without retaining source
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ast-tools/analyze.cjs" <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const parser = require('@babel/parser');
+          const traverse = require('@babel/traverse').default;
+          const t = require('@babel/types');
+
+          const root = path.join(process.env.RUNNER_TEMP, 'input-asar');
+          const reportPath = path.join(process.env.RUNNER_TEMP, 'input-0172-layer-format.md');
+          const targets = [
+            ...fs.readdirSync(path.join(root, 'dist', 'assets'))
+              .filter((name) => /^device_config_data-.*\.js$/.test(name))
+              .map((name) => path.join(root, 'dist', 'assets', name)),
+            path.join(root, 'dist-electron', 'main', 'index.js'),
+            path.join(root, 'dist-electron', 'preload', 'preload.mjs'),
+          ].filter(fs.existsSync);
+
+          const markerPattern = /(?:layer|profile).*(?:import|export)|(?:import|export).*(?:layer|profile)|-layer\.json|-profile\.json/i;
+          const cleanTextPattern = /^[\x20-\x7e\u00a0-\u024f\u2000-\u206f]+$/u;
+          const keywordPattern = /layer|profile|import|export|backup|restore|preset|configuration|config|appsense|auto detect/i;
+
+          function memberName(node) {
+            if (!node) return '<none>';
+            if (t.isIdentifier(node)) return node.name;
+            if (t.isThisExpression(node)) return 'this';
+            if (t.isSuper(node)) return 'super';
+            if (t.isStringLiteral(node) || t.isNumericLiteral(node)) return String(node.value);
+            if (t.isMemberExpression(node) || t.isOptionalMemberExpression(node)) {
+              const object = memberName(node.object);
+              const property = node.computed ? `[${memberName(node.property)}]` : `.${memberName(node.property)}`;
+              return `${object}${property}`;
+            }
+            if (t.isCallExpression(node)) return `${memberName(node.callee)}()`;
+            return node.type;
+          }
+
+          function keyName(node) {
+            if (!node) return '<none>';
+            if (t.isIdentifier(node) || t.isPrivateName(node)) return node.name || memberName(node.id);
+            if (t.isStringLiteral(node) || t.isNumericLiteral(node)) return String(node.value);
+            return node.type;
+          }
+
+          function describeExpression(node, scope, depth = 0, seen = new Set()) {
+            if (!node || depth > 5) return { type: node?.type || 'null' };
+            if (t.isObjectExpression(node)) {
+              return {
+                type: 'ObjectExpression',
+                properties: node.properties.map((property) => {
+                  if (t.isSpreadElement(property)) {
+                    return { key: '<spread>', value: describeExpression(property.argument, scope, depth + 1, seen) };
+                  }
+                  return {
+                    key: keyName(property.key),
+                    value: describeExpression(property.value || property, scope, depth + 1, seen),
+                  };
+                }),
+              };
+            }
+            if (t.isArrayExpression(node)) {
+              return { type: 'ArrayExpression', length: node.elements.length, elements: node.elements.slice(0, 12).map((item) => describeExpression(item, scope, depth + 1, seen)) };
+            }
+            if (t.isIdentifier(node)) {
+              if (seen.has(node.name)) return { type: 'Identifier', name: node.name, cycle: true };
+              const binding = scope?.getBinding(node.name);
+              if (!binding) return { type: 'Identifier', name: node.name, binding: 'external-or-global' };
+              const nextSeen = new Set(seen);
+              nextSeen.add(node.name);
+              if (binding.path.isVariableDeclarator()) {
+                return {
+                  type: 'Identifier',
+                  name: node.name,
+                  binding: describeExpression(binding.path.node.init, binding.path.scope, depth + 1, nextSeen),
+                };
+              }
+              if (binding.kind === 'param') return { type: 'Identifier', name: node.name, binding: 'parameter' };
+              return { type: 'Identifier', name: node.name, binding: binding.path.type };
+            }
+            if (t.isCallExpression(node) || t.isOptionalCallExpression(node)) {
+              return {
+                type: node.type,
+                callee: memberName(node.callee),
+                arguments: node.arguments.slice(0, 8).map((argument) => describeExpression(argument, scope, depth + 1, seen)),
+              };
+            }
+            if (t.isNewExpression(node)) {
+              return { type: 'NewExpression', callee: memberName(node.callee), arguments: node.arguments.slice(0, 8).map((argument) => describeExpression(argument, scope, depth + 1, seen)) };
+            }
+            if (t.isMemberExpression(node) || t.isOptionalMemberExpression(node)) return { type: node.type, member: memberName(node) };
+            if (t.isStringLiteral(node) || t.isNumericLiteral(node) || t.isBooleanLiteral(node)) return { type: node.type, value: node.value };
+            if (t.isTemplateLiteral(node)) return { type: 'TemplateLiteral', quasis: node.quasis.map((item) => item.value.cooked || item.value.raw), expressions: node.expressions.map((item) => describeExpression(item, scope, depth + 1, seen)) };
+            if (t.isAwaitExpression(node)) return { type: 'AwaitExpression', argument: describeExpression(node.argument, scope, depth + 1, seen) };
+            if (t.isConditionalExpression(node)) return { type: 'ConditionalExpression', consequent: describeExpression(node.consequent, scope, depth + 1, seen), alternate: describeExpression(node.alternate, scope, depth + 1, seen) };
+            if (t.isLogicalExpression(node) || t.isBinaryExpression(node)) return { type: node.type, operator: node.operator, left: describeExpression(node.left, scope, depth + 1, seen), right: describeExpression(node.right, scope, depth + 1, seen) };
+            if (t.isUnaryExpression(node)) return { type: 'UnaryExpression', operator: node.operator, argument: describeExpression(node.argument, scope, depth + 1, seen) };
+            return { type: node.type };
+          }
+
+          function compact(value) {
+            return JSON.stringify(value, null, 2)
+              .split('\n')
+              .map((line) => `    ${line}`)
+              .join('\n');
+          }
+
+          const reports = [];
+          const exposedApis = new Set();
+          const relativeStoragePaths = new Set();
+          const dialogExtensions = new Set();
+          const cleanStrings = new Set();
+
+          for (const target of targets) {
+            const code = fs.readFileSync(target, 'utf8');
+            const ast = parser.parse(code, {
+              sourceType: 'unambiguous',
+              errorRecovery: true,
+              allowAwaitOutsideFunction: true,
+              allowReturnOutsideFunction: true,
+              plugins: ['jsx', 'dynamicImport', 'importMeta', 'topLevelAwait', 'classProperties', 'classPrivateProperties', 'classPrivateMethods', 'optionalChaining', 'nullishCoalescingOperator'],
+            });
+
+            const markerFunctions = new Map();
+            const rel = path.relative(root, target).replaceAll(path.sep, '/');
+
+            traverse(ast, {
+              StringLiteral(astPath) {
+                const value = astPath.node.value.trim();
+                if (value.length <= 240 && cleanTextPattern.test(value) && keywordPattern.test(value)) cleanStrings.add(value);
+                if (markerPattern.test(value)) {
+                  const fn = astPath.findParent((candidate) => candidate.isFunction());
+                  if (fn) markerFunctions.set(fn.node.start, fn);
+                }
+              },
+              TemplateElement(astPath) {
+                const value = (astPath.node.value.cooked || astPath.node.value.raw || '').trim();
+                if (value.length <= 240 && cleanTextPattern.test(value) && keywordPattern.test(value)) cleanStrings.add(value);
+                if (markerPattern.test(value)) {
+                  const fn = astPath.findParent((candidate) => candidate.isFunction());
+                  if (fn) markerFunctions.set(fn.node.start, fn);
+                }
+              },
+              CallExpression(astPath) {
+                const callee = memberName(astPath.node.callee);
+                if (/exposeInMainWorld$/.test(callee)) {
+                  const object = astPath.node.arguments[1];
+                  if (t.isObjectExpression(object)) {
+                    for (const property of object.properties) {
+                      if (t.isObjectProperty(property) || t.isObjectMethod(property)) exposedApis.add(keyName(property.key));
+                    }
+                  }
+                }
+                if (/showOpenDialog|showSaveDialog/.test(callee)) {
+                  astPath.traverse({
+                    StringLiteral(inner) {
+                      const value = inner.node.value;
+                      if (/^(json|input|layer|profile|config|backup)$/i.test(value) || /^\*?\.[a-z0-9]+$/i.test(value)) dialogExtensions.add(value);
+                    },
+                  });
+                }
+                if (/\.join$/.test(callee) || callee === 'join') {
+                  const literals = astPath.node.arguments
+                    .filter((argument) => t.isStringLiteral(argument))
+                    .map((argument) => argument.value);
+                  if (literals.some((value) => /input|config|backup|setting|storage|user/i.test(value))) relativeStoragePaths.add(literals.join('/'));
+                }
+              },
+            });
+
+            for (const fn of markerFunctions.values()) {
+              const strings = new Set();
+              const calls = new Set();
+              const objectKeys = new Set();
+              const jsonStringify = [];
+              const jsonParse = [];
+              const templates = new Set();
+
+              fn.traverse({
+                StringLiteral(astPath) {
+                  const value = astPath.node.value.trim();
+                  if (value.length <= 240 && cleanTextPattern.test(value) && keywordPattern.test(value)) strings.add(value);
+                },
+                TemplateElement(astPath) {
+                  const value = (astPath.node.value.cooked || astPath.node.value.raw || '').trim();
+                  if (value.length <= 240 && cleanTextPattern.test(value)) templates.add(value);
+                },
+                ObjectProperty(astPath) { objectKeys.add(keyName(astPath.node.key)); },
+                ObjectMethod(astPath) { objectKeys.add(keyName(astPath.node.key)); },
+                CallExpression(astPath) {
+                  const callee = memberName(astPath.node.callee);
+                  calls.add(callee);
+                  if (callee === 'JSON.stringify') {
+                    jsonStringify.push(describeExpression(astPath.node.arguments[0], astPath.scope));
+                  }
+                  if (callee === 'JSON.parse') {
+                    jsonParse.push(describeExpression(astPath.parentPath.node, astPath.parentPath.scope));
+                  }
+                },
+                NewExpression(astPath) { calls.add(`new ${memberName(astPath.node.callee)}`); },
+              });
+
+              reports.push({
+                file: rel,
+                start: fn.node.start,
+                async: Boolean(fn.node.async),
+                generator: Boolean(fn.node.generator),
+                parameterCount: fn.node.params.length,
+                strings: [...strings].sort(),
+                templates: [...templates].sort(),
+                calls: [...calls].filter((value) => /JSON|Blob|URL|download|file|dialog|layer|profile|config|backup|save|open|read|write|import|export/i.test(value)).sort(),
+                objectKeys: [...objectKeys].filter((value) => value.length <= 100).sort(),
+                jsonStringify,
+                jsonParse,
+              });
+            }
+          }
+
+          reports.sort((a, b) => a.file.localeCompare(b.file) || a.start - b.start);
+          const lines = [
+            '# Work Louder Input 0.17.2 — layer format AST report',
+            '',
+            '> This report contains structural metadata only. It does not reproduce bundled source code or proprietary assets.',
+            '',
+            '## Public preload API keys',
+            '',
+            ...([...exposedApis].sort().map((value) => `- \`${value}\``).length ? [...exposedApis].sort().map((value) => `- \`${value}\``) : ['- None detected.']),
+            '',
+            '## Relative storage path literals',
+            '',
+            ...([...relativeStoragePaths].sort().map((value) => `- \`${value}\``).length ? [...relativeStoragePaths].sort().map((value) => `- \`${value}\``) : ['- None detected.']),
+            '',
+            '## Dialog extension literals',
+            '',
+            ...([...dialogExtensions].sort().map((value) => `- \`${value}\``).length ? [...dialogExtensions].sort().map((value) => `- \`${value}\``) : ['- None detected.']),
+            '',
+            '## Relevant UI and warning strings',
+            '',
+            ...([...cleanStrings].filter((value) => markerPattern.test(value) || /Importing a layout|Auto detect/i.test(value)).sort().map((value) => `- \`${value.replaceAll('`', '\\`')}\``)),
+            '',
+            '## Marker function summaries',
+            '',
+          ];
+
+          for (const [index, item] of reports.entries()) {
+            lines.push(`### Function ${index + 1} in \`${item.file}\``);
+            lines.push('');
+            lines.push(`- Async: \`${item.async}\``);
+            lines.push(`- Parameters: \`${item.parameterCount}\``);
+            lines.push(`- Strings: ${item.strings.length ? item.strings.map((value) => `\`${value.replaceAll('`', '\\`')}\``).join(', ') : 'none'}`);
+            lines.push(`- Filename templates: ${item.templates.length ? item.templates.map((value) => `\`${value.replaceAll('`', '\\`')}\``).join(', ') : 'none'}`);
+            lines.push(`- Relevant calls: ${item.calls.length ? item.calls.map((value) => `\`${value}\``).join(', ') : 'none'}`);
+            lines.push(`- Object keys: ${item.objectKeys.length ? item.objectKeys.map((value) => `\`${value}\``).join(', ') : 'none'}`);
+            if (item.jsonStringify.length) {
+              lines.push('- `JSON.stringify` argument structure:');
+              for (const value of item.jsonStringify) lines.push(compact(value));
+            }
+            if (item.jsonParse.length) {
+              lines.push('- `JSON.parse` parent structure:');
+              for (const value of item.jsonParse) lines.push(compact(value));
+            }
+            lines.push('');
+          }
+
+          lines.push('## Evidence boundary', '');
+          lines.push('- Structural metadata can identify an official layer import/export path and candidate schema fields.');
+          lines.push('- Importability remains unverified until a real exported file is imported into an isolated configuration and restored.');
+          lines.push('');
+
+          fs.writeFileSync(reportPath, lines.join('\n'));
+          process.stdout.write(fs.readFileSync(reportPath, 'utf8'));
+          NODE
+          cd "$RUNNER_TEMP/ast-tools"
+          node analyze.cjs
+
+      - name: Upload sanitized AST report
+        uses: actions/upload-artifact@v4
+        with:
+          name: input-0.17.2-layer-format-ast
+          path: ${{ runner.temp }}/input-0172-layer-format.md
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Remove extracted proprietary files
+        if: always()
+        shell: bash
+        run: rm -rf "$RUNNER_TEMP/input-app" "$RUNNER_TEMP/input-asar" "$RUNNER_TEMP/input.zip" "$RUNNER_TEMP/ast-tools"

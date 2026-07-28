@@ -5,7 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const ignoredDirectories = new Set([".git", "node_modules", "outputs", "work"]);
+const ignoredDirectories = new Set([".git", ".local", "node_modules", "outputs", "work"]);
 const markdownFiles = [];
 const errors = [];
 
@@ -46,9 +46,7 @@ for (const markdownPath of markdownFiles) {
     try {
       await access(resolvedTarget);
     } catch {
-      errors.push(
-        `${path.relative(root, markdownPath)} -> missing ${rawTarget}`,
-      );
+      errors.push(`${path.relative(root, markdownPath)} -> missing ${rawTarget}`);
     }
   }
 }
