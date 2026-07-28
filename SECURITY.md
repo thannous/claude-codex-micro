@@ -60,11 +60,12 @@ localement, sans télémétrie applicative.
 
 Une connexion réseau peut toutefois être utilisée par
 `npm ci --no-audit --no-fund` pour télécharger depuis le registre configuré les
-versions verrouillées dans `package-lock.json`. Lors de sa première exécution,
-`npm run configure` peut de même lancer `npm ci` dans `prototype/` si les
-dépendances du GUI sont absentes. Une fois installées, le traitement des
-profils reste local. Toute nouvelle dépendance ou communication distante doit
-être justifiée, verrouillée, documentée et auditée avant publication.
+versions verrouillées dans `package-lock.json`. Lors de leur première
+exécution, `npm run configure` et `npm run check` peuvent de même lancer
+`npm ci --ignore-scripts` dans `prototype/` si les dépendances du GUI sont
+absentes. Une fois installées, le traitement des profils reste local. Toute
+nouvelle dépendance ou communication distante doit être justifiée, verrouillée,
+documentée et auditée avant publication.
 
 ## Sauvegarde et restauration
 

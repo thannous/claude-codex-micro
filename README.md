@@ -193,6 +193,7 @@ profiles/
     artifacts/              futur export officiel assaini
 scripts/
   configure.mjs             lancement local du configurateur graphique
+  prepare-gui.mjs           préparation verrouillée des dépendances du GUI
   build-input-profile.mjs   génération locale du profile importable
   input-layer.mjs           diagnostic, sauvegarde et installation guidée
   lib/                      fonctions de validation et de preset

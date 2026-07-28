@@ -1,38 +1,17 @@
-import { existsSync } from "node:fs";
-import { spawn, spawnSync } from "node:child_process";
+import { spawn } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { ensureGuiDependencies } from "./lib/gui-dependencies.mjs";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const guiDirectory = resolve(repositoryRoot, "prototype");
 const npmCommand = process.platform === "win32" ? "npm.cmd" : "npm";
-const viteExecutable = resolve(
-  guiDirectory,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "vite.cmd" : "vite",
-);
 
-if (!existsSync(resolve(guiDirectory, "package.json"))) {
-  console.error("Interface introuvable : prototype/package.json est absent.");
-  process.exit(1);
-}
-
-if (!existsSync(viteExecutable)) {
-  console.log("Première ouverture : préparation de l’interface…");
-  const install = spawnSync(npmCommand, ["ci", "--no-audit", "--no-fund"], {
-    cwd: guiDirectory,
-    stdio: "inherit",
-  });
-
-  if (install.error) {
-    console.error(`Impossible de préparer l’interface : ${install.error.message}`);
-    process.exit(1);
-  }
-
-  if (install.status !== 0) {
-    process.exit(install.status ?? 1);
-  }
+try {
+  ensureGuiDependencies(guiDirectory);
+} catch (error) {
+  console.error(error.message);
+  process.exit(error.exitCode ?? 1);
 }
 
 console.log("Ouverture du configurateur Codex Micro…");
