@@ -10,7 +10,7 @@
     "configure": "node scripts/configure.mjs",
     "build:profile": "node scripts/build-input-profile.mjs",
     "validate": "node scripts/validate-profile.mjs && node scripts/validate-presets.mjs && node scripts/check-doc-links.mjs",
-    "test": "node --test",
+    "test": "node --test tests/*.test.mjs",
     "build:gui": "npm --prefix prototype run build",
     "test:gui": "npm --prefix prototype run test:sites",
     "check": "npm run validate && npm test && npm run build:gui && npm run test:gui"
