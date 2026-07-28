@@ -15,6 +15,11 @@
 Cette intégration utilise les raccourcis HID et AppSense. Elle ne dépend pas du
 protocole expérimental Hardware Buddy.
 
+Le manifeste et le mapping V1 décrivent l'état observé du générateur. Le fichier
+logique `macos.example.json` reste `proposal-not-applied` et ne doit pas être
+importé tel quel. `npm run configure` fabrique uniquement un profile personnel
+à partir de l'export officiel de l'utilisateur.
+
 ## Préservation obligatoire
 
 Le preset et l'outil imposent les règles suivantes :
@@ -83,10 +88,12 @@ obligatoire : il ne doit pas être supposé à partir de la seule documentation.
 - `git push` ;
 - déploiement ;
 - terminal, shell ou commande destructive ;
-- raccourci global Saisie rapide.
+- raccourcis globaux Saisie rapide et Dictée.
 
 Les raccourcis globaux sont volontairement hors du layer AppSense : ils doivent
-rester utilisables quand une autre application est au premier plan.
+rester utilisables quand une autre application est au premier plan. Sur la
+configuration documentée, il s'agit du double appui sur Option pour la saisie
+rapide et de Verr. Maj. pour la dictée globale.
 
 ## Partage officiel observé
 

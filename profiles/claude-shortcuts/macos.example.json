@@ -1,7 +1,7 @@
 {
   "$schema": "./schema.json",
-  "id": "claude-desktop-macos-codex-micro-v1",
-  "status": "hardware-observed",
+  "id": "claude-desktop-macos-codex-micro-v0",
+  "status": "proposal-not-applied",
   "target": {
     "platform": "macOS",
     "appBundleId": "com.anthropic.claudefordesktop",
@@ -14,7 +14,7 @@
   "preservation": {
     "mode": "update-only-existing-layer",
     "protectedLayerIndexes": [0],
-    "unlistedControls": "no-action-in-new-layer",
+    "unlistedControls": "no-action-in-target-layer",
     "touchLayerControl": "reserved",
     "otherLayers": "unchanged",
     "otherProfiles": "unchanged",
@@ -128,6 +128,11 @@
       "action": "quick-entry",
       "documentedShortcut": "DoublePressOption",
       "reason": "Must remain reachable while another application is in the foreground."
+    },
+    {
+      "action": "voice-dictation",
+      "documentedShortcut": "CapsLock",
+      "reason": "Claude global dictation must remain independent from the AppSense-linked layer."
     }
   ],
   "excludedByDefault": [

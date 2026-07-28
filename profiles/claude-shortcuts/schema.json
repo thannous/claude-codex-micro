@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://github.com/thannous/claude-codex-micro/raw/main/profiles/claude-shortcuts/schema.json",
-  "title": "Codex Micro Claude shortcut profile v1",
+  "title": "Codex Micro Claude logical shortcut proposal v0",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -19,8 +19,8 @@
   ],
   "properties": {
     "$schema": { "type": "string" },
-    "id": { "const": "claude-desktop-macos-codex-micro-v1" },
-    "status": { "const": "hardware-observed" },
+    "id": { "const": "claude-desktop-macos-codex-micro-v0" },
+    "status": { "const": "proposal-not-applied" },
     "target": {
       "type": "object",
       "additionalProperties": false,
@@ -68,7 +68,7 @@
           "minContains": 1,
           "uniqueItems": true
         },
-        "unlistedControls": { "const": "no-action-in-new-layer" },
+        "unlistedControls": { "const": "no-action-in-target-layer" },
         "touchLayerControl": { "const": "reserved" },
         "otherLayers": { "const": "unchanged" },
         "otherProfiles": { "const": "unchanged" },
@@ -168,16 +168,56 @@
     },
     "outsideAppLinkedLayer": {
       "type": "array",
-      "minItems": 1,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["action", "documentedShortcut", "reason"],
-        "properties": {
-          "action": { "const": "quick-entry" },
-          "documentedShortcut": { "const": "DoublePressOption" },
-          "reason": { "type": "string", "minLength": 1 }
+      "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
+      "allOf": [
+        {
+          "contains": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+              "action": { "const": "quick-entry" }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
+        },
+        {
+          "contains": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+              "action": { "const": "voice-dictation" }
+            }
+          },
+          "minContains": 1,
+          "maxContains": 1
         }
+      ],
+      "items": {
+        "oneOf": [
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["action", "documentedShortcut", "reason"],
+            "properties": {
+              "action": { "const": "quick-entry" },
+              "documentedShortcut": { "const": "DoublePressOption" },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          },
+          {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["action", "documentedShortcut", "reason"],
+            "properties": {
+              "action": { "const": "voice-dictation" },
+              "documentedShortcut": { "const": "CapsLock" },
+              "reason": { "type": "string", "minLength": 1 }
+            }
+          }
+        ]
       }
     },
     "excludedByDefault": {

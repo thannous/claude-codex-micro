@@ -16,16 +16,18 @@ lié avec AppSense et distinct du layer Codex natif protégé à l'index `0`.
 - validation complète de toutes les commandes, de la perte de focus et du
   rollback matériel : **encore requise**.
 
-Le statut reste `hardware-observed`. Aucun artefact layer ne doit être présenté
-comme prêt à l'emploi avant le round-trip matériel et la vérification de son
-SHA-256.
+Le manifeste V1 reste `hardware-observed`. Le contrat logique
+`macos.example.json` reste séparément `proposal-not-applied`. Aucun des deux ne
+doit être présenté comme un fichier universel prêt à importer, et aucun
+artefact layer ne doit être publié avant le round-trip matériel et la
+vérification de son SHA-256.
 
 ## Fichiers
 
 ```text
 manifest.json             identité, compatibilité, preuve et installation
 mapping.json              mapping physique et règles de sécurité
-macos.example.json        contrat logique historique, aligné sur la V1
+macos.example.json        proposition logique V0 non importable
 schema.json               schéma du contrat historique
 assets/layout.svg         représentation originale du clavier
 artifacts/README.md       porte d'entrée du futur export officiel
@@ -63,6 +65,20 @@ com.anthropic.claudefordesktop
 
 La politique exige exactement un layer Claude et conserve son `linkedAppId`.
 L'outil ne crée pas de second lien et ne modifie jamais les autres liens.
+
+## Configurateur local
+
+```sh
+npm run configure
+```
+
+Le GUI charge un export officiel appartenant à l'utilisateur, permet de
+personnaliser les contrôles sûrs et génère un nouveau
+`Claude-macOS-profile.json`. Seul ce fichier personnel est destiné au flux
+**Add New** d'Input ; le contrat logique du dépôt ne l'est pas.
+
+Le double appui sur Option pour la saisie rapide et Verr. Maj. pour la dictée
+globale restent hors du layer AppSense.
 
 ## Sécurité
 

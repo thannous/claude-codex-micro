@@ -31,6 +31,7 @@ Le dépôt contient désormais :
 - un manifeste portable V1 et des schémas réutilisables ;
 - un mapping physique Claude avec couleur, cadran, joystick et AppSense ;
 - une représentation SVG originale du Codex Micro ;
+- un configurateur graphique local lancé par `npm run configure` ;
 - un outil Node.js de diagnostic, inventaire, sauvegarde, dry-run, sanitation et
   rollback ;
 - un générateur local de profile Input `0.17.3` qui préserve le layer natif et
@@ -44,9 +45,11 @@ L'analyse du package officiel confirme des commandes **Import layer** et
 attendue. Le vrai fichier Claude n'est volontairement pas fabriqué : ses objets
 internes doivent provenir d'un export réel du Codex Micro.
 
-Le preset est `hardware-observed` : le générateur a été validé sur un export
-Input `0.17.3`, mais le round-trip d'un artefact `*-layer.json` et la checklist
-matérielle complète restent ouverts.
+Le manifeste V1 est `hardware-observed` : le générateur a été validé sur un
+export Input `0.17.3`, mais le round-trip d'un artefact `*-layer.json` et la
+checklist matérielle complète restent ouverts. Le fichier logique
+`macos.example.json` reste séparément `proposal-not-applied` : ce n'est pas un
+preset universel à importer.
 
 ## Mapping Claude proposé
 
@@ -68,6 +71,10 @@ Couleur proposée : `#D97757`. Activation : Claude Desktop au premier plan via
 AppSense et `Auto detect`.
 
 ![Mapping physique Claude](profiles/claude-shortcuts/assets/layout.svg)
+
+Les raccourcis globaux de Claude restent hors du layer AppSense : double appui
+sur Option pour la saisie rapide et Verr. Maj. pour la dictée globale. Ils
+doivent rester disponibles quand une autre application est au premier plan.
 
 ## Ce qui est interdit par défaut
 
@@ -92,6 +99,23 @@ actif.
 
 Voir la [matrice de compatibilité](docs/compatibility.md) pour distinguer les
 faits, tests de fixture et validations matérielles manquantes.
+
+## Configurateur graphique
+
+```sh
+npm run configure
+```
+
+La première ouverture peut installer les dépendances verrouillées du GUI, puis
+lance l'interface uniquement sur `127.0.0.1` et ouvre le navigateur.
+
+Le parcours demande un export officiel Work Louder Input qui contient
+exactement un layer `Claude`, hors index `0`, déjà lié à Claude Desktop avec
+AppSense. L'utilisateur peut vérifier et personnaliser les quatre touches, le
+cadran et le joystick, puis télécharger son propre
+`Claude-macOS-profile.json`. Le fichier source, le layer natif, les autres
+layers et les autres liens AppSense sont conservés. Le JSON logique public
+n'est jamais présenté comme directement importable.
 
 ## Démarrage sans modification
 
@@ -168,13 +192,17 @@ profiles/
     assets/layout.svg       aperçu original
     artifacts/              futur export officiel assaini
 scripts/
+  configure.mjs             lancement local du configurateur graphique
+  prepare-gui.mjs           préparation verrouillée des dépendances du GUI
   build-input-profile.mjs   génération locale du profile importable
   input-layer.mjs           diagnostic, sauvegarde et installation guidée
+  lib/                      fonctions de validation et de preset
+  validate-profile.mjs      contrat logique Claude historique
+  validate-presets.mjs      invariants de la bibliothèque
+prototype/
+  src/                      interface locale du configurateur
 shared/
   input-profile.mjs         transformation canonique partagée avec le GUI
-  lib/                      fonctions testables
-  validate-profile.mjs      contrat Claude historique
-  validate-presets.mjs      invariants de la bibliothèque
 tests/
   input-layer.test.mjs      sauvegarde, rollback, sanitation et idempotence
 docs/

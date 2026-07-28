@@ -15,7 +15,8 @@ function sameAction(actual, expected) {
   return isDeepStrictEqual(actual, expected);
 }
 
-if (profile.status !== "hardware-observed") errors.push("status must remain hardware-observed until the full hardware checklist passes");
+if (profile.id !== "claude-desktop-macos-codex-micro-v0") errors.push("logical profile id must remain the V0 proposal");
+if (profile.status !== "proposal-not-applied") errors.push("logical profile status must remain proposal-not-applied");
 if (profile.target?.appBundleId !== "com.anthropic.claudefordesktop") errors.push("unexpected Claude bundle identifier");
 if (profile.target?.observedInputVersion !== "0.17.3") errors.push("observed Input version must be 0.17.3");
 if (!profile.target?.supportedInputVersions?.includes("0.17.3")) {
@@ -26,7 +27,7 @@ if (profile.target?.observedFirmwareVersion !== "v0.4.1") errors.push("observed 
 if (
   profile.preservation?.mode !== "update-only-existing-layer" ||
   !profile.preservation?.protectedLayerIndexes?.includes(0) ||
-  profile.preservation?.unlistedControls !== "no-action-in-new-layer" ||
+  profile.preservation?.unlistedControls !== "no-action-in-target-layer" ||
   profile.preservation?.touchLayerControl !== "reserved" ||
   profile.preservation?.otherLayers !== "unchanged" ||
   profile.preservation?.otherProfiles !== "unchanged" ||
@@ -115,7 +116,7 @@ if (!profile.unusedControls?.length || profile.unusedControls.some((entry) => ![
   errors.push("unused controls must be explicitly safe");
 }
 
-for (const action of ["quick-entry"]) {
+for (const action of ["quick-entry", "voice-dictation"]) {
   if (!profile.outsideAppLinkedLayer?.some((entry) => entry.action === action)) errors.push(`${action} must remain outside the AppSense layer`);
 }
 for (const action of ["send-message", "permission-approve-or-deny", "delete", "git-push", "deploy", "destructive-command"]) {
@@ -126,5 +127,5 @@ if (errors.length) {
   for (const error of errors) console.error(`ERROR: ${error}`);
   process.exitCode = 1;
 } else {
-  console.log("OK: Claude V1 logical profile validated; layer 0 protected and sensitive actions excluded");
+  console.log("OK: Claude logical proposal validated; layer 0 protected and sensitive actions excluded");
 }

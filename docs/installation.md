@@ -8,6 +8,29 @@ layer dans une copie et produit un nouveau `*-profile.json`.
 Il ne clique jamais à votre place, ne lance pas `Reset settings`, ne flashe
 aucun firmware et ne modifie aucun raccourci système.
 
+## Parcours GUI recommandé
+
+Depuis la racine du dépôt :
+
+```sh
+npm run configure
+```
+
+La première ouverture peut préparer les dépendances verrouillées de
+`prototype/`. Le configurateur s'ouvre ensuite localement dans le navigateur.
+
+1. exporter le profile actif depuis Work Louder Input ;
+2. déposer ce `*-profile.json` dans le configurateur ;
+3. vérifier l'unique layer `Claude`, son lien AppSense et l'index natif `0` ;
+4. personnaliser les quatre touches, le cadran et le joystick ;
+5. télécharger `Claude-macOS-profile.json` ;
+6. l'importer avec **Add New**, sans remplacer le profile source.
+
+La génération refuse un mauvais appareil, un layer Claude absent ou dupliqué,
+une cible à l'index `0` et un lien AppSense manquant. Elle conserve le layer
+natif, les autres layers, les autres profils et les autres liens AppSense. Le
+reste de ce guide décrit le même parcours avec les contrôles CLI détaillés.
+
 ## 1. Vérifier le dépôt
 
 Depuis la copie locale :
