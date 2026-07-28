@@ -80,9 +80,9 @@ Les artefacts CI contiennent uniquement : versions, sommes de contrôle,
 libellés bornés, noms de clés, suffixes et résumés AST. Ils ne contiennent ni
 code source packagé, ni image, ni firmware, ni identifiant local.
 
-## Décision d'architecture
+## Décision d'architecture initiale
 
-La V1 applique les règles suivantes :
+Cette inspection avait conduit au plan initial suivant :
 
 1. sauvegarde par export officiel du profile **et** copie de la configuration
    locale reconnue ;
@@ -93,6 +93,11 @@ La V1 applique les règles suivantes :
 6. rollback principal par réimport du profile officiel d'origine ;
 7. aucun patch direct de `input_storage.json`, Local Storage ou du périphérique
    avant preuve supplémentaire.
+
+Ce plan est conservé comme historique, mais il n'est plus le parcours V1
+courant. La V1 actuelle transforme localement un export `*-profile.json`
+Input `0.17.3` contenant exactement un layer `Claude` déjà lié avec AppSense.
+L'import de layer reste une validation de publication optionnelle.
 
 ## Points non encore prouvés
 

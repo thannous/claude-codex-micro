@@ -1,17 +1,18 @@
 {
   "$schema": "./schema.json",
   "id": "claude-desktop-macos-codex-micro-v1",
-  "status": "proposal-not-applied",
+  "status": "hardware-observed",
   "target": {
     "platform": "macOS",
     "appBundleId": "com.anthropic.claudefordesktop",
     "observedAppVersion": "1.24012.9",
     "deviceFamily": "Work Louder Codex Micro",
-    "observedInputVersion": "0.17.2",
+    "observedInputVersion": "0.17.3",
+    "supportedInputVersions": ["0.17.3"],
     "observedFirmwareVersion": "v0.4.1"
   },
   "preservation": {
-    "mode": "add-only-first-free-layer",
+    "mode": "update-only-existing-layer",
     "protectedLayerIndexes": [0],
     "unlistedControls": "no-action-in-new-layer",
     "touchLayerControl": "reserved",
@@ -26,19 +27,18 @@
       "name": "Claude",
       "bundleId": "com.anthropic.claudefordesktop"
     },
-    "detectionMethod": "auto-detect",
-    "focusRequirementSeconds": 5,
-    "bindingStatus": "proposal-not-applied",
+    "detectionMethod": "preserve-existing",
+    "bindingStatus": "existing-link-required",
     "focusLossBehavior": "manual-validation-required",
     "duplicatePolicy": "refuse"
   },
   "layerBinding": {
-    "targetKind": "new-layer",
+    "targetKind": "existing-layer",
     "layerId": null,
-    "slotPolicy": "first-free-after-protected",
-    "selectionStatus": "pending-local-inventory",
-    "overwriteMapping": false,
-    "nativePresetImport": "official-layer-json-observed-import-test-pending"
+    "selectionPolicy": "exactly-one-layer-named-Claude",
+    "selectionStatus": "existing-layer-required",
+    "overwriteMapping": true,
+    "nativePresetImport": "local-profile-transform"
   },
   "appearance": {
     "name": "Claude",
@@ -59,10 +59,10 @@
     {
       "control": "command-row-center-left",
       "physicalPosition": "third-row-left-to-right-2",
-      "label": "FIND",
+      "label": "VOICE",
       "action": {
         "type": "shortcut",
-        "keys": ["Meta", "F"]
+        "keys": ["Meta", "D"]
       },
       "evidence": "installed-bundle-menu",
       "risk": "low"
@@ -70,10 +70,10 @@
     {
       "control": "command-row-center-right",
       "physicalPosition": "third-row-left-to-right-3",
-      "label": "SET",
+      "label": "DIFF",
       "action": {
         "type": "shortcut",
-        "keys": ["Meta", "Comma"]
+        "keys": ["Meta", "Shift", "D"]
       },
       "evidence": "installed-bundle-menu",
       "risk": "low"
@@ -91,19 +91,19 @@
     },
     {
       "control": "encoder-rotate",
-      "physicalPosition": "top-left-rotary-encoder",
-      "label": "SCROLL",
+      "physicalPosition": "top-right-rotary-encoder",
+      "label": "PAGE",
       "action": {
-        "type": "vertical-scroll",
-        "clockwise": "scroll-down",
-        "counterclockwise": "scroll-up"
+        "type": "page-navigation",
+        "clockwise": "PageDown",
+        "counterclockwise": "PageUp"
       },
       "evidence": "manual-validation-required",
       "risk": "low"
     },
     {
       "control": "joystick",
-      "physicalPosition": "top-right-planar-joystick",
+      "physicalPosition": "top-left-planar-joystick",
       "label": "NAV",
       "action": {
         "type": "directional-keys",
@@ -128,11 +128,6 @@
       "action": "quick-entry",
       "documentedShortcut": "DoublePressOption",
       "reason": "Must remain reachable while another application is in the foreground."
-    },
-    {
-      "action": "voice-dictation",
-      "documentedShortcut": "CapsLock",
-      "reason": "Global shortcut; Claude AppSense layer may not be active from another application."
     }
   ],
   "excludedByDefault": [

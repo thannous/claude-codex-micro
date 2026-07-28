@@ -8,13 +8,14 @@ Le dépôt public contient désormais :
 - des schémas réutilisables pour les futurs presets ;
 - une représentation SVG originale ;
 - un outil d'inventaire, sauvegarde, dry-run, sanitation et rollback ;
+- un générateur local de profile Input `0.17.3` qui conserve AppSense ;
 - des tests transactionnels sur copies isolées ;
 - une analyse reproductible du format de partage d'Input `0.17.2` ;
 - une piste BLE séparée, explicitement non fonctionnelle.
 
-Le vrai export officiel Claude `*-layer.json` et la validation sur le Codex
-Micro réel restent manquants. Le preset conserve donc le statut
-`proposal-not-applied`.
+Le vrai export officiel Claude `*-layer.json` et la validation matérielle
+complète restent manquants. Le preset conserve donc le statut
+`hardware-observed`.
 
 ## V1 — preset Claude vérifié
 
@@ -23,15 +24,15 @@ natif.
 
 - [ ] exécuter `git status --short` dans la copie locale et préserver les
   modifications sans rapport ;
-- [ ] exporter le profile Input réel et inventorier profils, layers, actions et
+- [x] exporter le profile Input réel et inventorier profils, layers, actions et
   liens AppSense ;
 - [x] fournir une sauvegarde locale vérifiée et un rollback transactionnel ;
 - [x] identifier les flux officiels Import/Export layer et profile d'Input
   `0.17.2` ;
 - [x] définir le manifeste, le mapping physique, la couleur et les exclusions ;
-- [x] protéger l'index `0`, choisir le premier emplacement libre et refuser les
-  doublons dans l'outil ;
-- [ ] créer le layer Claude sur le matériel réel ;
+- [x] protéger l'index `0`, exiger un unique layer Claude existant et conserver
+  son AppSense ;
+- [x] générer localement un nouveau profile Input `0.17.3` ;
 - [ ] vérifier les positions, les touches, le cadran et le joystick ;
 - [ ] vérifier AppSense, la perte de focus et les liens concurrents ;
 - [ ] vérifier la persistance après redémarrage d'Input ;
@@ -50,7 +51,7 @@ stables :
 
 - [x] manifeste commun et schémas V1 ;
 - [x] simulation, sauvegarde, sanitation et tests de rollback sur fixtures ;
-- [x] sélection du premier emplacement libre et refus de doublon ;
+- [x] sélection d'un unique layer existant et refus de l'absence/duplication ;
 - [x] aperçu visuel du mapping ;
 - [ ] prise en charge d'un artefact officiel vérifié ;
 - [ ] comparaison structurelle avant/après depuis de vrais exports ;

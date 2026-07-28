@@ -27,6 +27,8 @@ export const REQUIRED_PROFILE_EXPORT_KEYS = Object.freeze([
   "smartActionGroups",
 ]);
 
+export const CODEX_MICRO_KEYBOARD = "codex_micro";
+
 const ARRAY_EXPORT_KEYS = new Set([
   "actions",
   "multiactions",
@@ -50,6 +52,65 @@ const SUSPICIOUS_KEY = /(?:^|_)(?:serial(?:number)?|bluetooth(?:address)?|macadd
 const ABSOLUTE_PATH = /^(?:\/Users\/|\/home\/|\/private\/|[A-Za-z]:\\|~\/)/;
 const DEVICE_PORT = /^(?:\/dev\/(?:cu|tty)\.|COM\d+$)/i;
 const HARDWARE_ADDRESS = /^(?:[0-9A-F]{2}[:-]){5}[0-9A-F]{2}$/i;
+
+function safeRelativePath(root, relativePath, label) {
+  if (typeof relativePath !== "string" || !relativePath.trim()) {
+    throw new Error(`${label} must be a non-empty relative path.`);
+  }
+  if (path.isAbsolute(relativePath)) throw new Error(`${label} must be relative.`);
+  const absoluteRoot = path.resolve(root);
+  const absolute = path.resolve(absoluteRoot, relativePath);
+  const relative = path.relative(absoluteRoot, absolute);
+  if (!relative || relative === ".." || relative.startsWith(`..${path.sep}`) || path.isAbsolute(relative)) {
+    throw new Error(`${label} must stay inside ${absoluteRoot}.`);
+  }
+  return { absolute, relative };
+}
+
+export async function assertSafeRestoreDestination(
+  configRoot,
+  { allowedConfigRoots = [], forbiddenRoots = [] } = {},
+) {
+  if (typeof configRoot !== "string" || !configRoot.trim()) {
+    throw new Error("Restore destination must be a non-empty path.");
+  }
+  const resolved = path.resolve(configRoot);
+  const broadTargets = new Set([
+    path.parse(resolved).root,
+    path.resolve(os.homedir()),
+    ...forbiddenRoots.filter(Boolean).map((value) => path.resolve(value)),
+  ]);
+  if (broadTargets.has(resolved)) {
+    throw new Error(`Refusing broad restore destination: ${resolved}`);
+  }
+
+  const allowed = allowedConfigRoots.filter(Boolean).map((value) => path.resolve(value));
+  if (!allowed.includes(resolved)) {
+    throw new Error("Restore destination must exactly match a detected Work Louder Input configuration root.");
+  }
+
+  const stat = await fs.lstat(resolved);
+  if (stat.isSymbolicLink() || !stat.isDirectory()) {
+    throw new Error("Restore destination must be a real Work Louder Input configuration directory.");
+  }
+  const realDestination = await fs.realpath(resolved);
+  const realAllowed = [];
+  for (const candidate of allowed) {
+    if (await pathExists(candidate)) realAllowed.push(await fs.realpath(candidate));
+  }
+  if (!realAllowed.includes(realDestination)) {
+    throw new Error("Restore destination resolves outside the approved Work Louder Input roots.");
+  }
+  return realDestination;
+}
+
+function requireCodexMicro(inspection, label) {
+  if (inspection.payload.keyboard !== CODEX_MICRO_KEYBOARD) {
+    throw new Error(
+      `${label} targets keyboard ${JSON.stringify(inspection.payload.keyboard)}; expected ${CODEX_MICRO_KEYBOARD}.`,
+    );
+  }
+}
 
 export function redactHome(value, home = os.homedir()) {
   if (typeof value !== "string" || !home) return value;
@@ -105,6 +166,9 @@ function findSuspiciousFields(value, currentPath = "$", findings = []) {
 
   for (const [key, child] of Object.entries(value)) {
     const childPath = `${currentPath}.${key}`;
+    if (key === "linkedAppId" && child !== null && child !== undefined) {
+      findings.push({ path: childPath, reason: "local-linked-app-id" });
+    }
     if (SUSPICIOUS_KEY.test(key)) {
       findings.push({ path: childPath, reason: "suspicious-key" });
     }
@@ -195,6 +259,7 @@ export async function sanitizeOfficialLayerExport(inputPath, outputPath) {
   if (inspection.errors.length) {
     throw new Error(`Layer export validation failed: ${inspection.errors.join(" ")}`);
   }
+  requireCodexMicro(inspection, "Layer export");
   if (inspection.suspiciousFields.length) {
     const details = inspection.suspiciousFields
       .map((item) => `${item.path} (${item.reason})`)
@@ -254,6 +319,7 @@ export async function createRestorableBackup({
   if (profileInspection.kind !== "profile" || profileInspection.errors.length) {
     throw new Error(`A readable official *-profile.json export is required before installation.`);
   }
+  requireCodexMicro(profileInspection, "Profile export");
 
   const id = backupId(now);
   const destination = path.join(backupRoot, id);
@@ -320,7 +386,12 @@ export async function verifyBackup(backupDir) {
   }
 
   const expectedPaths = new Set();
-  for (const file of manifest.files ?? []) {
+  if (!Array.isArray(manifest.files)) errors.push("Backup manifest files must be an array.");
+  for (const file of Array.isArray(manifest.files) ? manifest.files : []) {
+    if (!file || typeof file.path !== "string") {
+      errors.push("Backup manifest contains a file entry without a path.");
+      continue;
+    }
     const normalized = path.normalize(file.path);
     if (path.isAbsolute(file.path) || normalized === ".." || normalized.startsWith(`..${path.sep}`)) {
       errors.push(`Unsafe backup manifest path: ${file.path}`);
@@ -338,6 +409,26 @@ export async function verifyBackup(backupDir) {
     if (digest !== file.sha256) errors.push(`SHA-256 mismatch: ${file.path}`);
   }
 
+  let storageSnapshotPath = null;
+  try {
+    const resolved = safeRelativePath(
+      backupDir,
+      manifest.restore?.storageSnapshot,
+      "restore.storageSnapshot",
+    );
+    storageSnapshotPath = resolved.absolute;
+    const snapshotPrefix = `${resolved.relative.split(path.sep).join("/")}/`;
+    if (![...expectedPaths].some((filePath) => filePath.startsWith(snapshotPrefix))) {
+      errors.push("restore.storageSnapshot does not contain any inventoried backup file.");
+    }
+    const stat = await fs.lstat(storageSnapshotPath);
+    if (stat.isSymbolicLink() || !stat.isDirectory()) {
+      errors.push("restore.storageSnapshot must reference a real directory inside the backup.");
+    }
+  } catch (error) {
+    errors.push(error.message);
+  }
+
   const actualPaths = (await walkFiles(backupDir))
     .map((value) => value.split(path.sep).join("/"))
     .filter((value) => value !== "backup-manifest.json");
@@ -345,34 +436,44 @@ export async function verifyBackup(backupDir) {
     if (!expectedPaths.has(actual)) errors.push(`Unexpected backup file: ${actual}`);
   }
 
-  return { ok: errors.length === 0, errors, manifest };
+  return { ok: errors.length === 0, errors, manifest, storageSnapshotPath };
 }
 
-export async function restoreStorageSnapshot({ backupDir, configRoot, dryRun = true, now = new Date() }) {
+export async function restoreStorageSnapshot({
+  backupDir,
+  configRoot,
+  allowedConfigRoots = [],
+  forbiddenRoots = [],
+  dryRun = true,
+  now = new Date(),
+}) {
   const verification = await verifyBackup(backupDir);
   if (!verification.ok) throw new Error(`Backup verification failed: ${verification.errors.join(" ")}`);
-  const snapshot = path.join(backupDir, verification.manifest.restore.storageSnapshot);
+  const snapshot = verification.storageSnapshotPath;
   if (!(await pathExists(snapshot))) throw new Error(`Storage snapshot not found: ${snapshot}`);
+  const safeConfigRoot = await assertSafeRestoreDestination(configRoot, {
+    allowedConfigRoots,
+    forbiddenRoots,
+  });
 
-  const safetyCopy = `${configRoot}.before-codex-restore-${backupId(now)}`;
+  const safetyCopy = `${safeConfigRoot}.before-codex-restore-${backupId(now)}`;
   const plan = {
     dryRun,
     source: snapshot,
-    destination: configRoot,
+    destination: safeConfigRoot,
     safetyCopy,
     preferredRestore: verification.manifest.restore.preferred,
     warning: verification.manifest.restore.warning,
   };
   if (dryRun) return plan;
-  if (!(await pathExists(configRoot))) throw new Error(`Current Input configuration root not found: ${configRoot}`);
   if (await pathExists(safetyCopy)) throw new Error(`Safety copy already exists: ${safetyCopy}`);
 
-  await fs.rename(configRoot, safetyCopy);
+  await fs.rename(safeConfigRoot, safetyCopy);
   try {
-    await fs.cp(snapshot, configRoot, { recursive: true, preserveTimestamps: true });
+    await fs.cp(snapshot, safeConfigRoot, { recursive: true, preserveTimestamps: true });
   } catch (error) {
-    await fs.rm(configRoot, { recursive: true, force: true });
-    await fs.rename(safetyCopy, configRoot);
+    await fs.rm(safeConfigRoot, { recursive: true, force: true });
+    await fs.rename(safetyCopy, safeConfigRoot);
     throw new Error(`Storage restore failed and the original directory was put back: ${error.message}`);
   }
   return plan;
@@ -404,6 +505,7 @@ export async function inventoryFromProfileExport(profileExportPath, { maxLayers 
   if (inspection.kind !== "profile" || inspection.errors.length) {
     throw new Error("A valid official Work Louder profile export is required for inventory.");
   }
+  requireCodexMicro(inspection, "Profile export");
 
   const profile = inspection.payload.profile;
   if (!profile || typeof profile !== "object" || Array.isArray(profile)) {
@@ -431,6 +533,7 @@ export async function inventoryFromProfileExport(profileExportPath, { maxLayers 
       color: typeof layer.color === "string" ? layer.color : null,
       protected: index === 0,
       occupied: true,
+      appSenseLinked: Number.isInteger(layer.linkedAppId) && layer.linkedAppId >= 0,
       appSenseFields: collectAppSenseCandidates(layer),
     };
   });

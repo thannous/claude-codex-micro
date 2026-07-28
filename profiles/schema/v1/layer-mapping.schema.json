@@ -44,7 +44,7 @@
         "provider",
         "application",
         "detection",
-        "focusSeconds",
+        "linkPolicy",
         "duplicatePolicy",
         "focusLoss"
       ],
@@ -60,8 +60,8 @@
             "bundleId": { "type": "string" }
           }
         },
-        "detection": { "const": "auto-detect" },
-        "focusSeconds": { "const": 5 },
+        "detection": { "const": "existing-link-required" },
+        "linkPolicy": { "const": "preserve-existing" },
         "duplicatePolicy": { "const": "refuse" },
         "focusLoss": { "const": "must-return-to-previous-safe-layer" }
       }
@@ -83,7 +83,13 @@
         ],
         "properties": {
           "id": { "type": "string" },
-          "inputControlId": { "type": ["string", "integer", "null"] },
+          "inputControlId": {
+            "oneOf": [
+              { "type": "string" },
+              { "type": "integer" },
+              { "type": "null" }
+            ]
+          },
           "physical": {
             "type": "object",
             "required": ["row", "column", "description"],
@@ -95,7 +101,7 @@
             }
           },
           "label": { "type": "string" },
-          "action": { "type": "object" },
+          "action": { "$ref": "#/$defs/action" },
           "risk": { "enum": ["low", "medium", "high"] },
           "physicalVerification": { "enum": ["required", "verified"] }
         }
@@ -126,6 +132,67 @@
           "reason": { "type": "string" }
         }
       }
+    }
+  },
+  "$defs": {
+    "action": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "keys", "meaning"],
+          "properties": {
+            "type": { "const": "shortcut" },
+            "keys": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 3,
+              "uniqueItems": true,
+              "items": { "enum": ["Meta", "Shift", "N", "D"] }
+            },
+            "meaning": {
+              "enum": ["new-conversation", "voice-dictation", "toggle-diff"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "keys", "meaning"],
+          "properties": {
+            "type": { "const": "key" },
+            "keys": {
+              "type": "array",
+              "prefixItems": [{ "const": "Escape" }],
+              "minItems": 1,
+              "maxItems": 1
+            },
+            "meaning": { "const": "cancel-or-close-contextually" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "clockwise", "counterclockwise"],
+          "properties": {
+            "type": { "const": "page-navigation" },
+            "clockwise": { "const": "PageDown" },
+            "counterclockwise": { "const": "PageUp" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["type", "up", "right", "down", "left"],
+          "properties": {
+            "type": { "const": "directional-keys" },
+            "up": { "const": "ArrowUp" },
+            "right": { "const": "ArrowRight" },
+            "down": { "const": "ArrowDown" },
+            "left": { "const": "ArrowLeft" }
+          }
+        }
+      ]
     }
   }
 }

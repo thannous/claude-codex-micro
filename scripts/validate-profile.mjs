@@ -2,20 +2,29 @@
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { isDeepStrictEqual } from "node:util";
 import { fileURLToPath } from "node:url";
+import { validateLogicalProfileSchema } from "./lib/schema-validation.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const profilePath = path.join(root, "profiles", "claude-shortcuts", "macos.example.json");
 const profile = JSON.parse(await readFile(profilePath, "utf8"));
-const errors = [];
+const errors = validateLogicalProfileSchema(profile);
 
-if (profile.status !== "proposal-not-applied") errors.push("status must remain proposal-not-applied until hardware validation");
+function sameAction(actual, expected) {
+  return isDeepStrictEqual(actual, expected);
+}
+
+if (profile.status !== "hardware-observed") errors.push("status must remain hardware-observed until the full hardware checklist passes");
 if (profile.target?.appBundleId !== "com.anthropic.claudefordesktop") errors.push("unexpected Claude bundle identifier");
-if (profile.target?.observedInputVersion !== "0.17.2") errors.push("observed Input version must be 0.17.2");
+if (profile.target?.observedInputVersion !== "0.17.3") errors.push("observed Input version must be 0.17.3");
+if (!profile.target?.supportedInputVersions?.includes("0.17.3")) {
+  errors.push("supported Input versions must include 0.17.3");
+}
 if (profile.target?.observedFirmwareVersion !== "v0.4.1") errors.push("observed firmware version must be v0.4.1");
 
 if (
-  profile.preservation?.mode !== "add-only-first-free-layer" ||
+  profile.preservation?.mode !== "update-only-existing-layer" ||
   !profile.preservation?.protectedLayerIndexes?.includes(0) ||
   profile.preservation?.unlistedControls !== "no-action-in-new-layer" ||
   profile.preservation?.touchLayerControl !== "reserved" ||
@@ -30,22 +39,22 @@ if (
   profile.activation?.type !== "appsense-foreground-application" ||
   profile.activation?.provider !== "Work Louder Input" ||
   profile.activation?.application?.bundleId !== "com.anthropic.claudefordesktop" ||
-  profile.activation?.detectionMethod !== "auto-detect" ||
-  profile.activation?.focusRequirementSeconds !== 5 ||
-  profile.activation?.bindingStatus !== "proposal-not-applied" ||
+  profile.activation?.detectionMethod !== "preserve-existing" ||
+  profile.activation?.bindingStatus !== "existing-link-required" ||
   profile.activation?.duplicatePolicy !== "refuse"
 ) {
   errors.push("AppSense foreground activation contract is incomplete");
 }
 
 if (
-  profile.layerBinding?.targetKind !== "new-layer" ||
+  profile.layerBinding?.targetKind !== "existing-layer" ||
   profile.layerBinding?.layerId !== null ||
-  profile.layerBinding?.slotPolicy !== "first-free-after-protected" ||
-  profile.layerBinding?.selectionStatus !== "pending-local-inventory" ||
-  profile.layerBinding?.overwriteMapping !== false
+  profile.layerBinding?.selectionPolicy !== "exactly-one-layer-named-Claude" ||
+  profile.layerBinding?.selectionStatus !== "existing-layer-required" ||
+  profile.layerBinding?.overwriteMapping !== true ||
+  profile.layerBinding?.nativePresetImport !== "local-profile-transform"
 ) {
-  errors.push("new layer must target the first free slot without replacement");
+  errors.push("the transform must target exactly one existing Claude layer");
 }
 
 if (profile.appearance?.name !== "Claude" || !/^#[0-9A-F]{6}$/i.test(profile.appearance?.rgb ?? "")) {
@@ -73,24 +82,40 @@ for (const control of controls) {
 }
 for (const id of expectedIds) if (!names.has(id)) errors.push(`missing required control: ${id}`);
 
-const shortcut = (id) => JSON.stringify(controls.find((control) => control.control === id)?.action ?? {});
-if (!shortcut("command-row-left").includes('"Meta"') || !shortcut("command-row-left").includes('"N"')) errors.push("new conversation must be Meta+N");
-if (!shortcut("command-row-center-left").includes('"Meta"') || !shortcut("command-row-center-left").includes('"F"')) errors.push("search must be Meta+F");
-if (!shortcut("command-row-center-right").includes('"Meta"') || !shortcut("command-row-center-right").includes('"Comma"')) errors.push("settings must be Meta+Comma");
-if (!shortcut("command-row-right").includes('"Escape"')) errors.push("cancel must be Escape");
+const action = (id) => controls.find((control) => control.control === id)?.action;
+if (!sameAction(action("command-row-left"), { type: "shortcut", keys: ["Meta", "N"] })) {
+  errors.push("new conversation must be exactly Meta+N");
+}
+if (!sameAction(action("command-row-center-left"), { type: "shortcut", keys: ["Meta", "D"] })) {
+  errors.push("voice dictation must be exactly Meta+D");
+}
+if (!sameAction(action("command-row-center-right"), { type: "shortcut", keys: ["Meta", "Shift", "D"] })) {
+  errors.push("diff must be exactly Meta+Shift+D");
+}
+if (!sameAction(action("command-row-right"), { type: "key", keys: ["Escape"] })) {
+  errors.push("cancel must be exactly Escape");
+}
 
 const encoder = controls.find((control) => control.control === "encoder-rotate")?.action;
-if (encoder?.clockwise !== "scroll-down" || encoder?.counterclockwise !== "scroll-up") errors.push("encoder must provide vertical scrolling");
+if (!sameAction(encoder, { type: "page-navigation", clockwise: "PageDown", counterclockwise: "PageUp" })) {
+  errors.push("encoder must exactly provide PageDown/PageUp navigation");
+}
 const joystick = controls.find((control) => control.control === "joystick")?.action;
-for (const [direction, key] of Object.entries({ up: "ArrowUp", right: "ArrowRight", down: "ArrowDown", left: "ArrowLeft" })) {
-  if (joystick?.[direction] !== key) errors.push(`joystick ${direction} must be ${key}`);
+if (!sameAction(joystick, {
+  type: "directional-keys",
+  up: "ArrowUp",
+  right: "ArrowRight",
+  down: "ArrowDown",
+  left: "ArrowLeft",
+})) {
+  errors.push("joystick action must exactly match the four arrow directions");
 }
 
 if (!profile.unusedControls?.length || profile.unusedControls.some((entry) => !["no-action", "reserved"].includes(entry.behavior))) {
   errors.push("unused controls must be explicitly safe");
 }
 
-for (const action of ["quick-entry", "voice-dictation"]) {
+for (const action of ["quick-entry"]) {
   if (!profile.outsideAppLinkedLayer?.some((entry) => entry.action === action)) errors.push(`${action} must remain outside the AppSense layer`);
 }
 for (const action of ["send-message", "permission-approve-or-deny", "delete", "git-push", "deploy", "destructive-command"]) {

@@ -4,14 +4,22 @@ import os from "node:os";
 import path from "node:path";
 import test from "node:test";
 import {
+  assertSafeRestoreDestination,
   createRestorableBackup,
   inspectOfficialExport,
   inventoryFromProfileExport,
   restoreStorageSnapshot,
   sanitizeOfficialLayerExport,
+  sha256File,
   verifyBackup,
 } from "../scripts/lib/input-export.mjs";
-import { applyFixturePatch, buildInstallPlan, loadPreset, validatePreset } from "../scripts/lib/preset.mjs";
+import {
+  buildInstallPlan,
+  evaluateInstallCompatibility,
+  findBundledArtifact,
+  loadPreset,
+  validatePreset,
+} from "../scripts/lib/preset.mjs";
 
 const projectRoot = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 
@@ -28,6 +36,7 @@ function officialProfileExport() {
       name: "Mac",
       layers: [
         { index: 0, name: "Codex", color: "#FFFFFF", appSense: [] },
+        { index: 1, name: "Claude", color: "#D97757", linkedAppId: 4 },
         { index: 2, name: "Browser", color: "#336699", appSense: ["com.apple.Safari"] },
       ],
     },
@@ -55,10 +64,81 @@ function officialLayerExport(extra = {}) {
   };
 }
 
+function canonicalLayerExport() {
+  const none = () => ({ keycode: "KC_NONE" });
+  return {
+    keyboard: "codex_micro",
+    language: "en-US",
+    layer: {
+      name: "Claude",
+      layout: {
+        encoders: [[
+          { keycode: "KC_PGUP" },
+          { keycode: "KC_PGDN" },
+          { keycode: "KC_NONE" },
+        ]],
+        joystick: {
+          type: "RADIAL",
+          sectors: ["KI_X", "KC_LEFT", "KC_DOWN", "KC_RGHT", "KC_UP"].map((key) => ({ k: key })),
+        },
+        base: [
+          [none(), none()],
+          [none(), none(), none(), none()],
+          [
+            { keycode: "KA_0" },
+            { keycode: "KA_1" },
+            { keycode: "KA_2" },
+            { keycode: "KC_ESC" },
+          ],
+          [none(), none(), none()],
+        ],
+      },
+    },
+    actions: [
+      {
+        id: 0,
+        keyInputs: [
+          { keycode: "KC_LGUI", delay: 0, actionType: 1 },
+          { keycode: "KC_N", delay: 0, actionType: 2 },
+          { keycode: "KC_LGUI", delay: 0, actionType: 0 },
+        ],
+      },
+      {
+        id: 1,
+        keyInputs: [
+          { keycode: "KC_LGUI", delay: 0, actionType: 1 },
+          { keycode: "KC_D", delay: 0, actionType: 2 },
+          { keycode: "KC_LGUI", delay: 0, actionType: 0 },
+        ],
+      },
+      {
+        id: 2,
+        keyInputs: [
+          { keycode: "KC_LGUI", delay: 0, actionType: 1 },
+          { keycode: "KC_LSFT", delay: 0, actionType: 1 },
+          { keycode: "KC_D", delay: 0, actionType: 2 },
+          { keycode: "KC_LSFT", delay: 0, actionType: 0 },
+          { keycode: "KC_LGUI", delay: 0, actionType: 0 },
+        ],
+      },
+    ],
+    multiactions: [],
+    smartActions: [],
+    actionGroups: [],
+    multiactionGroups: [],
+    smartActionGroups: [],
+  };
+}
+
 test("manifest and mapping enforce safe V1 invariants", async () => {
   const { manifest, mapping } = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
   const result = validatePreset(manifest, mapping);
   assert.equal(result.ok, true, result.errors.join("\n"));
+  assert.equal(manifest.preservation.targetLayerPolicy, "exactly-one-existing-named-layer");
+  assert.ok(manifest.validation.required.includes("existing-claude-layer-confirmed"));
+  assert.ok(!manifest.validation.required.includes("first-free-layer-confirmed"));
+  assert.equal(mapping.controls.find((control) => control.id === "joystick").physical.column, 1);
+  assert.equal(mapping.controls.find((control) => control.id === "encoder-rotate").physical.column, 4);
 });
 
 
@@ -76,17 +156,26 @@ test("validators reject a sensitive key and an unprotected native layer", async 
   const preservationResult = validatePreset(unsafeManifest, mapping);
   assert.equal(preservationResult.ok, false);
   assert.match(preservationResult.errors.join(" "), /index 0 must be protected/);
+
+  const staleManifest = structuredClone(manifest);
+  staleManifest.validation.required = staleManifest.validation.required.map((item) =>
+    item === "existing-claude-layer-confirmed" ? "first-free-layer-confirmed" : item
+  );
+  const staleResult = validatePreset(staleManifest, mapping);
+  assert.equal(staleResult.ok, false);
+  assert.match(staleResult.errors.join(" "), /first-free layer selection is forbidden/);
 });
 
-test("official profile export inventory protects index 0 and selects index 1", async (t) => {
+test("official profile export inventory protects index 0 and finds one existing Claude layer", async (t) => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-inventory-"));
   t.after(() => fs.rm(temp, { recursive: true, force: true }));
   const exportPath = path.join(temp, "Mac-profile.json");
   await writeJson(exportPath, officialProfileExport());
   const inventory = await inventoryFromProfileExport(exportPath);
   assert.deepEqual(inventory.protectedLayerIndexes, [0]);
-  assert.equal(inventory.firstFreeAfterProtected, 1);
-  assert.deepEqual(inventory.layers.map((layer) => layer.name), ["Codex", "Browser"]);
+  assert.equal(inventory.firstFreeAfterProtected, 3);
+  assert.equal(inventory.layers[1].appSenseLinked, true);
+  assert.deepEqual(inventory.layers.map((layer) => layer.name), ["Codex", "Claude", "Browser"]);
 });
 
 test("backup is readable, hash-verified and restorable on an isolated copy", async (t) => {
@@ -104,7 +193,7 @@ test("backup is readable, hash-verified and restorable on an isolated copy", asy
     configRoot,
     profileExportPath: exportPath,
     backupRoot,
-    inputVersion: "0.17.2",
+    inputVersion: "0.17.3",
     firmwareVersion: "v0.4.1",
     now: new Date("2026-07-27T12:00:00.000Z"),
   });
@@ -114,14 +203,18 @@ test("backup is readable, hash-verified and restorable on an isolated copy", asy
   await assert.rejects(fs.access(path.join(backup.destination, "input-user-data", "Cache", "ignored.json")));
 
   await writeJson(path.join(configRoot, "input_storage.json"), { marker: "mutated" });
-  const dryRun = await restoreStorageSnapshot({ backupDir: backup.destination, configRoot, dryRun: true });
+  const restoreOptions = {
+    backupDir: backup.destination,
+    configRoot,
+    allowedConfigRoots: [configRoot],
+  };
+  const dryRun = await restoreStorageSnapshot({ ...restoreOptions, dryRun: true });
   assert.equal(dryRun.dryRun, true);
   const stillMutated = JSON.parse(await fs.readFile(path.join(configRoot, "input_storage.json"), "utf8"));
   assert.equal(stillMutated.marker, "mutated");
 
   const restoredPlan = await restoreStorageSnapshot({
-    backupDir: backup.destination,
-    configRoot,
+    ...restoreOptions,
     dryRun: false,
     now: new Date("2026-07-27T12:30:00.000Z"),
   });
@@ -129,6 +222,16 @@ test("backup is readable, hash-verified and restorable on an isolated copy", asy
   assert.equal(restored.marker, "original");
   const safety = JSON.parse(await fs.readFile(path.join(restoredPlan.safetyCopy, "input_storage.json"), "utf8"));
   assert.equal(safety.marker, "mutated");
+
+  const manifestPath = path.join(backup.destination, "backup-manifest.json");
+  const backupManifest = JSON.parse(await fs.readFile(manifestPath, "utf8"));
+  backupManifest.restore.storageSnapshot = "../../outside";
+  await writeJson(manifestPath, backupManifest);
+  const escaped = await verifyBackup(backup.destination);
+  assert.equal(escaped.ok, false);
+  assert.match(escaped.errors.join(" "), /must stay inside/);
+  backupManifest.restore.storageSnapshot = "input-user-data";
+  await writeJson(manifestPath, backupManifest);
 
   await writeJson(path.join(backup.destination, "unexpected.json"), { injected: true });
   const tampered = await verifyBackup(backup.destination);
@@ -168,33 +271,217 @@ test("sanitizer accepts a clean layer export and rejects local identifiers", asy
   const unsafe = path.join(temp, "unsafe-layer.json");
   await writeJson(unsafe, officialLayerExport({ metadata: { serialNumber: "ABC", localPath: "/Users/example/private" } }));
   await assert.rejects(() => sanitizeOfficialLayerExport(unsafe, path.join(temp, "unsafe-public.json")), /Refusing to publish/);
+
+  const locallyLinked = path.join(temp, "locally-linked-layer.json");
+  await writeJson(locallyLinked, officialLayerExport({
+    layer: { name: "Claude", color: "#D97757", linkedAppId: 0 },
+  }));
+  const linkedInspection = await inspectOfficialExport(locallyLinked);
+  assert.deepEqual(linkedInspection.suspiciousFields, [
+    { path: "$.layer.linkedAppId", reason: "local-linked-app-id" },
+  ]);
+  await assert.rejects(
+    () => sanitizeOfficialLayerExport(locallyLinked, path.join(temp, "locally-linked-public.json")),
+    /local-linked-app-id/,
+  );
+
+  const wrongDevice = path.join(temp, "wrong-device-layer.json");
+  await writeJson(wrongDevice, officialLayerExport({ keyboard: "creator_micro" }));
+  await assert.rejects(
+    () => sanitizeOfficialLayerExport(wrongDevice, path.join(temp, "wrong-device-public.json")),
+    /expected codex_micro/,
+  );
 });
 
-test("transaction fixture adds the first free layer, preserves layer 0 and refuses a duplicate", () => {
-  const original = {
-    layers: [
-      { index: 0, name: "Codex", controls: [{ id: "native", action: "unchanged" }] },
-      { index: 2, name: "Browser", controls: [] },
-    ],
-  };
-  const native = JSON.stringify(original.layers[0]);
-  const first = applyFixturePatch(original);
-  assert.equal(first.changed, true);
-  assert.equal(first.targetIndex, 1);
-  assert.equal(JSON.stringify(first.config.layers.find((layer) => layer.index === 0)), native);
-  const second = applyFixturePatch(first.config);
-  assert.equal(second.changed, false);
-  assert.equal(second.reason, "duplicate");
+test("rollback accepts only an exact approved Input root", async (t) => {
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-restore-root-"));
+  t.after(() => fs.rm(temp, { recursive: true, force: true }));
+  const inputRoot = path.join(temp, "input");
+  const unrelated = path.join(temp, "unrelated");
+  await fs.mkdir(inputRoot);
+  await fs.mkdir(unrelated);
+
+  assert.equal(
+    await assertSafeRestoreDestination(inputRoot, { allowedConfigRoots: [inputRoot] }),
+    await fs.realpath(inputRoot),
+  );
+  await assert.rejects(
+    () => assertSafeRestoreDestination(unrelated, { allowedConfigRoots: [inputRoot] }),
+    /must exactly match/,
+  );
+  await assert.rejects(
+    () => assertSafeRestoreDestination(os.homedir(), { allowedConfigRoots: [os.homedir()] }),
+    /broad restore destination/,
+  );
 });
 
-test("install plan refuses to pretend an artifact exists", async () => {
+test("install plan requires exactly one existing Claude layer outside protected index 0", async () => {
   const { manifest, mapping } = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
   const inventory = {
-    layers: [{ index: 0, name: "Codex" }],
-    firstFreeAfterProtected: 1,
+    format: "codex-micro-input-inventory/v1",
+    keyboard: "codex_micro",
+    layers: [
+      { index: 0, name: "Codex", appSenseLinked: false },
+      { index: 1, name: "Claude", appSenseLinked: true },
+    ],
   };
-  const plan = buildInstallPlan({ manifest, mapping, inventory, artifactPath: null });
-  assert.equal(plan.canApplyOfficialImport, false);
-  assert.match(plan.blockers.join(" "), /No verified official/);
+  const plan = buildInstallPlan({ manifest, mapping, inventory });
+  assert.equal(plan.canGenerateProfile, true);
+  assert.deepEqual(plan.blockers, []);
   assert.equal(plan.targetLayerIndex, 1);
+
+  const missing = buildInstallPlan({
+    manifest,
+    mapping,
+    inventory: { ...inventory, layers: [{ index: 0, name: "Codex" }] },
+  });
+  assert.equal(missing.canGenerateProfile, false);
+  assert.match(missing.blockers.join(" "), /No existing layer named Claude/);
+
+  const duplicate = buildInstallPlan({
+    manifest,
+    mapping,
+    inventory: {
+      ...inventory,
+      layers: [{ index: 0, name: "Codex" }, { index: 1, name: "Claude" }, { index: 2, name: "claude" }],
+    },
+  });
+  assert.match(duplicate.blockers.join(" "), /Multiple layers named Claude/);
+
+  const withoutAppSense = buildInstallPlan({
+    manifest,
+    mapping,
+    inventory: {
+      ...inventory,
+      layers: [
+        { index: 0, name: "Codex", appSenseLinked: false },
+        { index: 1, name: "Claude", appSenseLinked: false, appSenseFields: [] },
+      ],
+    },
+  });
+  assert.match(withoutAppSense.blockers.join(" "), /no provable AppSense link/);
+});
+
+test("artifact verification binds digest and canonical action semantics", async (t) => {
+  const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-artifact-"));
+  t.after(() => fs.rm(temp, { recursive: true, force: true }));
+  const artifactPath = path.join(temp, "artifacts", "Claude-layer.json");
+  const { manifest: sourceManifest, mapping } = await loadPreset(
+    path.join(projectRoot, "profiles", "claude-shortcuts"),
+  );
+  const manifest = structuredClone(sourceManifest);
+  await writeJson(artifactPath, canonicalLayerExport());
+  manifest.installation.layerArtifact = "artifacts/Claude-layer.json";
+  manifest.installation.layerArtifactStatus = "roundtrip-verified";
+  manifest.installation.layerArtifactSha256 = await sha256File(artifactPath);
+  manifest.validation.completed.push("official-layer-export-roundtrip");
+
+  const verified = await findBundledArtifact(temp, manifest, mapping);
+  assert.equal(verified.verifiedForImport, true);
+
+  const changed = canonicalLayerExport();
+  changed.actions[1].keyInputs[1].keycode = "KC_ENT";
+  await writeJson(artifactPath, changed);
+  await assert.rejects(
+    () => findBundledArtifact(temp, manifest, mapping),
+    /SHA-256 does not match/,
+  );
+
+  manifest.installation.layerArtifactSha256 = await sha256File(artifactPath);
+  await assert.rejects(
+    () => findBundledArtifact(temp, manifest, mapping),
+    /does not match the canonical safe mapping/,
+  );
+});
+
+test("validation is property-order independent and rejects undeclared fields", async () => {
+  const { manifest, mapping } = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
+  const reordered = structuredClone(mapping);
+  reordered.controls[0].action = {
+    meaning: "new-conversation",
+    keys: ["Meta", "N"],
+    type: "shortcut",
+  };
+  assert.equal(validatePreset(manifest, reordered).ok, true);
+
+  const extra = structuredClone(manifest);
+  extra.unexpectedProperty = true;
+  const result = validatePreset(extra, mapping);
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join(" "), /additional properties/);
+});
+
+test("compatibility reports malformed profile inspections without throwing", async () => {
+  const { manifest } = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
+  const result = evaluateInstallCompatibility({
+    manifest,
+    installedInputApps: [{ bundleId: "it.focusense.input-app", version: "0.17.3" }],
+    profileInspection: {
+      kind: "unknown",
+      errors: ["Expected profile"],
+      payload: null,
+      sha256: "0".repeat(64),
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join(" "), /invalid/);
+  assert.match(result.errors.join(" "), /expected codex_micro/);
+});
+
+test("compatibility rejects a real profile whose Claude layer lost AppSense", async () => {
+  const { manifest } = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
+  const payload = officialProfileExport();
+  delete payload.profile.layers[1].linkedAppId;
+  const result = evaluateInstallCompatibility({
+    manifest,
+    installedInputApps: [{ bundleId: "it.focusense.input-app", version: "0.17.3" }],
+    profileInspection: {
+      kind: "profile",
+      errors: [],
+      payload,
+      sha256: "0".repeat(64),
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join(" "), /no valid AppSense link/);
+
+  payload.profile.layers[1].linkedAppId = [];
+  const malformed = evaluateInstallCompatibility({
+    manifest,
+    installedInputApps: [{ bundleId: "it.focusense.input-app", version: "0.17.3" }],
+    profileInspection: {
+      kind: "profile",
+      errors: [],
+      payload,
+      sha256: "0".repeat(64),
+    },
+  });
+  assert.equal(malformed.ok, false);
+  assert.match(malformed.errors.join(" "), /no valid AppSense link/);
+});
+
+test("compatibility binds inventory hash and Claude layer index to the profile export", async () => {
+  const { manifest } = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
+  const result = evaluateInstallCompatibility({
+    manifest,
+    installedInputApps: [{ bundleId: "it.focusense.input-app", version: "0.17.3" }],
+    inventory: {
+      format: "codex-micro-input-inventory/v1",
+      keyboard: "codex_micro",
+      source: { sha256: "1".repeat(64) },
+      layers: [
+        { index: 0, name: "Codex", appSenseLinked: false },
+        { index: 2, name: "Claude", appSenseLinked: true },
+      ],
+    },
+    profileInspection: {
+      kind: "profile",
+      errors: [],
+      payload: officialProfileExport(),
+      sha256: "0".repeat(64),
+    },
+  });
+  assert.equal(result.ok, false);
+  assert.match(result.errors.join(" "), /disagree on the Claude layer index/);
+  assert.match(result.errors.join(" "), /hashes do not match/);
 });

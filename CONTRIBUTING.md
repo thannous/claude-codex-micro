@@ -40,10 +40,11 @@ séparée sous `ble/`.
 
 ## Préparer l'environnement
 
-Prérequis : Node.js 18 ou version ultérieure. Aucune dépendance d'exécution
-n'est installée.
+Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
+sont épinglées par `package-lock.json`.
 
 ```sh
+npm ci --no-audit --no-fund
 npm run check
 git diff --check
 ```
@@ -62,8 +63,8 @@ Ils ne modifient ni Input, ni le clavier, ni macOS.
 1. conserver `proposal-not-applied` sans preuve matérielle ;
 2. protéger l'index `0` et ne jamais supposer qu'un identifiant local est
    universel ;
-3. sélectionner le premier emplacement libre après inventaire ;
-4. conserver `replaceExisting: false` ;
+3. exiger exactement un layer cible existant, hors index `0` ;
+4. conserver son lien AppSense dans la copie locale sans le publier ;
 5. laisser les contrôles non utilisés sans action ou réservés ;
 6. exclure envoi, permissions, suppression, push, déploiement et commandes
    destructrices ;
@@ -91,9 +92,11 @@ Le fichier public doit ensuite subir :
 
 1. import dans une configuration isolée ;
 2. comparaison contrôle par contrôle au mapping ;
-3. second import prouvant l'idempotence ou un refus propre ;
-4. rollback par le profile d'origine ;
-5. nouvelle exportation et comparaison des sommes/structures.
+3. liaison du fichier au SHA-256 déclaré dans le manifeste ;
+4. validation sémantique contre le mapping canonique ;
+5. second import prouvant l'idempotence ou un refus propre ;
+6. rollback par le profile d'origine ;
+7. nouvelle exportation et comparaison des sommes/structures.
 
 La copie brute, le profile original, les captures privées, les chemins locaux,
 ports, adresses Bluetooth, numéros de série, identifiants matériels et secrets
@@ -105,7 +108,7 @@ Pour AppSense, documenter au minimum :
 
 - versions d'Input, firmware, macOS et application ;
 - nom affiché et application détectée ;
-- index du nouveau layer et preuve que l'index `0` est intact ;
+- index de l'unique layer Claude et preuve que l'index `0` est intact ;
 - résultat de chaque touche, du cadran et du joystick ;
 - layer actif avec et sans focus Claude ;
 - persistance après redémarrage ;

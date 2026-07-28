@@ -3,13 +3,19 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadPreset, validatePreset } from "./lib/preset.mjs";
+import { findBundledArtifact, loadPreset, validatePreset } from "./lib/preset.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const profileDir = path.join(root, "profiles", "claude-shortcuts");
 const { manifest, mapping } = await loadPreset(profileDir);
 const result = validatePreset(manifest, mapping);
 const errors = [...result.errors];
+
+try {
+  await findBundledArtifact(profileDir, manifest, mapping);
+} catch (error) {
+  errors.push(error.message);
+}
 
 for (const relative of [manifest.files?.mapping, manifest.files?.visual, manifest.files?.artifactDirectory]) {
   if (!relative) {

@@ -8,6 +8,7 @@ la configuration d'Input.
 
 ```sh
 git status --short
+npm ci --no-audit --no-fund
 npm run check
 ```
 
@@ -37,16 +38,19 @@ Comparer avec
 - [`macos.example.json`](../profiles/claude-shortcuts/macos.example.json) :
   contrat logique historique aligné sur V1.
 
-Le manifeste communautaire n'est pas un export Input. Input `0.17.2` utilise
-son propre format officiel `*-layer.json`.
+Le manifeste communautaire n'est pas un export Input. Le parcours principal
+transforme localement un export officiel `*-profile.json` d'Input `0.17.3`.
+L'étude du format `*-layer.json` d'Input `0.17.2` reste une preuve historique.
 
 ## 4. Exporter et sauvegarder avant toute modification
 
 Dans Input :
 
-1. inventorier visuellement profils, layers et liens ;
-2. utiliser **Export Profile** ;
-3. quitter Input.
+1. vérifier qu'il existe exactement un layer `Claude`, hors index `0` ;
+2. vérifier que ce layer est déjà lié à Claude Desktop avec AppSense ;
+3. inventorier visuellement les autres profils, layers et liens ;
+4. utiliser **Export Profile** ;
+5. quitter Input.
 
 Puis :
 
@@ -73,8 +77,8 @@ node scripts/input-layer.mjs install \
   --json
 ```
 
-Le plan doit protéger l'index `0`, choisir le premier emplacement libre et
-refuser un layer `Claude` déjà présent.
+Le plan doit protéger l'index `0`, sélectionner exactement le layer `Claude`
+existant et refuser son absence ou sa duplication.
 
 ## 6. Installation guidée
 
@@ -89,14 +93,22 @@ node scripts/input-layer.mjs install \
   --json
 ```
 
-Tant que le vrai `*-layer.json` n'est pas vérifié, reproduire manuellement le
-mapping dans un nouveau layer vide. Ne jamais dupliquer ou remplacer l'index
-`0`.
+Générer ensuite le nouveau profile sans modifier la sauvegarde source :
+
+```sh
+npm run build:profile -- \
+  "$HOME/Downloads/Mac-profile.json" \
+  "$HOME/Downloads/Claude-macOS-profile.json"
+```
+
+Importer `Claude-macOS-profile.json` avec **Add New**. Ne jamais utiliser
+`Reset settings`, remplacer l'index `0` ou recréer un lien AppSense.
 
 ## 7. Validation et retour arrière
 
 Tester AppSense, les quatre touches, le cadran, le joystick, la perte de focus
-et le redémarrage. Exporter ensuite le layer pour sanitation et round-trip.
+et le redémarrage. L'export de layer reste une validation de publication
+optionnelle, distincte du profile généré.
 
 Le rollback principal consiste à réimporter le `*-profile.json` original dans
 Input. La copie brute du stockage n'est qu'un recours secondaire explicite.

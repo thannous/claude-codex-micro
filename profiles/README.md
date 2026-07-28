@@ -44,7 +44,7 @@ quitte `proposal-not-applied`.
 - les versions observées ;
 - le niveau de preuve ;
 - les layers protégés ;
-- la politique de premier emplacement libre ;
+- la politique de sélection d'un unique layer existant ;
 - le mécanisme d'installation ;
 - l'artefact officiel éventuel ;
 - les validations requises et réalisées.
@@ -75,7 +75,7 @@ Pour atteindre `export-format-verified` :
 
 1. exporter le profile d'origine ;
 2. créer et vérifier une sauvegarde locale ;
-3. installer le layer sur le premier emplacement libre ;
+3. transformer une copie du profile contenant exactement un layer cible ;
 4. exporter le layer ;
 5. assainir l'export avec `scripts/input-layer.mjs sanitize-export` ;
 6. l'importer dans une configuration isolée ;
@@ -113,7 +113,8 @@ git diff --check
 
 - l'index `0` du layer Codex natif reste protégé ;
 - aucun autre profile, layer ou lien AppSense n'est remplacé implicitement ;
-- le premier emplacement libre est choisi après inventaire ;
+- le layer cible existe une seule fois, hors index `0`, avant la transformation ;
+- son lien AppSense existant est conservé ;
 - dry-run et sauvegarde précèdent toute installation ;
 - Retour/Entrée, permissions, suppression, push, déploiement et commandes
   destructrices restent absents par défaut ;

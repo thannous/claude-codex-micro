@@ -7,8 +7,12 @@
     "node": ">=18"
   },
   "scripts": {
+    "build:profile": "node scripts/build-input-profile.mjs",
     "validate": "node scripts/validate-profile.mjs && node scripts/validate-presets.mjs && node scripts/check-doc-links.mjs",
     "test": "node --test",
     "check": "npm run validate && npm test"
+  },
+  "devDependencies": {
+    "ajv": "8.17.1"
   }
 }

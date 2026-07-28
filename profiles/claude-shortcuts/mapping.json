@@ -17,8 +17,8 @@
       "name": "Claude",
       "bundleId": "com.anthropic.claudefordesktop"
     },
-    "detection": "auto-detect",
-    "focusSeconds": 5,
+    "detection": "existing-link-required",
+    "linkPolicy": "preserve-existing",
     "duplicatePolicy": "refuse",
     "focusLoss": "must-return-to-previous-safe-layer"
   },
@@ -48,11 +48,11 @@
         "column": 2,
         "description": "second square key from the left in the command row"
       },
-      "label": "FIND",
+      "label": "VOICE",
       "action": {
         "type": "shortcut",
-        "keys": ["Meta", "F"],
-        "meaning": "search"
+        "keys": ["Meta", "D"],
+        "meaning": "voice-dictation"
       },
       "risk": "low",
       "physicalVerification": "required"
@@ -65,11 +65,11 @@
         "column": 3,
         "description": "third square key from the left in the command row"
       },
-      "label": "SET",
+      "label": "DIFF",
       "action": {
         "type": "shortcut",
-        "keys": ["Meta", "Comma"],
-        "meaning": "settings"
+        "keys": ["Meta", "Shift", "D"],
+        "meaning": "toggle-diff"
       },
       "risk": "low",
       "physicalVerification": "required"
@@ -96,14 +96,14 @@
       "inputControlId": null,
       "physical": {
         "row": 1,
-        "column": 1,
-        "description": "rotary encoder at the top left"
+        "column": 4,
+        "description": "rotary encoder at the top right"
       },
-      "label": "SCROLL",
+      "label": "PAGE",
       "action": {
-        "type": "vertical-scroll",
-        "clockwise": "scroll-down",
-        "counterclockwise": "scroll-up"
+        "type": "page-navigation",
+        "clockwise": "PageDown",
+        "counterclockwise": "PageUp"
       },
       "risk": "low",
       "physicalVerification": "required"
@@ -113,8 +113,8 @@
       "inputControlId": null,
       "physical": {
         "row": 1,
-        "column": 4,
-        "description": "planar joystick at the top right"
+        "column": 1,
+        "description": "planar joystick at the top left"
       },
       "label": "NAV",
       "action": {

@@ -3,11 +3,11 @@
 ## Flux cible
 
 1. exporter le profile Input actif et créer une sauvegarde vérifiée ;
-2. inventorier les six emplacements sans publier les données privées ;
+2. inventorier les layers sans publier les données privées ;
 3. protéger intégralement le layer natif à l'index `0` ;
-4. créer `Claude` dans le premier emplacement réellement libre après `0` ;
-5. appliquer le mapping physique documenté ;
-6. lier uniquement Claude Desktop au nouveau layer avec AppSense ;
+4. exiger exactement un layer `Claude` existant, hors index `0` ;
+5. conserver son lien AppSense dans une copie locale du profile ;
+6. appliquer le mapping physique documenté à cette copie ;
 7. tester chaque contrôle, la perte de focus et le redémarrage ;
 8. exporter le layer, l'assainir et vérifier son round-trip ;
 9. restaurer le profile original en cas d'écart.
@@ -20,16 +20,17 @@ protocole expérimental Hardware Buddy.
 Le preset et l'outil imposent les règles suivantes :
 
 - index `0` protégé, sans remplacement ni modification ;
-- politique `first-free-after-protected` ;
+- politique `exactly-one-existing-named-layer` ;
 - six emplacements au maximum ;
 - aucun autre profile, layer ou lien AppSense modifié ;
-- doublon `Claude` refusé ;
+- absence ou doublon `Claude` refusé ;
 - structure d'export inconnue refusée au lieu d'être interprétée ;
 - sauvegarde et vérification SHA-256 avant la session réelle ;
 - aucune écriture directe dans le stockage Input ou le périphérique.
 
-L'inventaire refuse de proposer un emplacement si l'export officiel ne permet
-pas de prouver la présence du layer protégé à l'index `0`.
+L'inventaire bloque la transformation si l'export officiel ne permet pas de
+prouver la présence du layer protégé à l'index `0` et d'un unique layer
+`Claude`.
 
 ## Mapping physique V1
 
@@ -38,11 +39,11 @@ Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 | Contrôle | Position | Action |
 | --- | --- | --- |
 | Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
-| Touche 2 | même rangée, deuxième | `⌘F` — recherche |
-| Touche 3 | même rangée, troisième | `⌘,` — réglages |
+| Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
+| Touche 3 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
 | Touche 4 | même rangée, tout à droite | `Esc` — annuler ou fermer selon le contexte |
-| Cadran | coin supérieur gauche | horaire : descendre ; antihoraire : monter |
-| Joystick | coin supérieur droit | flèches haut, droite, bas et gauche |
+| Cadran | coin supérieur droit | horaire : `PageDown` ; antihoraire : `PageUp` |
+| Joystick | coin supérieur gauche | flèches haut, droite, bas et gauche |
 
 ![Schéma physique du mapping](../../profiles/claude-shortcuts/assets/layout.svg)
 
@@ -67,10 +68,9 @@ Claude
 com.anthropic.claudefordesktop
 ```
 
-Le flux documenté est : icône de lien du nouveau layer, `Auto detect`, puis
-Claude Desktop au premier plan pendant cinq secondes. Un lien Claude déjà
-présent bloque la création automatique d'un second lien. Les autres liens ne
-sont jamais modifiés.
+Le lien doit exister avant l'export du profile. Le générateur conserve son
+`linkedAppId` dans la copie locale, refuse son absence et ne crée jamais un
+second lien. Les autres liens ne sont jamais modifiés.
 
 Le retour à un état sûr après perte de focus reste une validation matérielle
 obligatoire : il ne doit pas être supposé à partir de la seule documentation.
@@ -83,7 +83,7 @@ obligatoire : il ne doit pas être supposé à partir de la seule documentation.
 - `git push` ;
 - déploiement ;
 - terminal, shell ou commande destructive ;
-- raccourcis globaux Saisie rapide et Dictée.
+- raccourci global Saisie rapide.
 
 Les raccourcis globaux sont volontairement hors du layer AppSense : ils doivent
 rester utilisables quand une autre application est au premier plan.
@@ -103,8 +103,8 @@ réimporté sur une configuration isolée.
 
 - [ ] export du profile réel et inventaire lisible ;
 - [ ] positions et identifiants physiques vérifiés dans Input ;
-- [ ] création du nouveau layer sans modification de l'index `0` ;
-- [ ] détection Claude par AppSense ;
+- [x] transformation locale du layer existant sans modification de l'index `0` ;
+- [x] conservation du lien AppSense dans le profile généré ;
 - [ ] quatre touches, cadran et joystick testés ;
 - [ ] contrôles inutilisés confirmés sans action ;
 - [ ] état sûr après perte de focus ;

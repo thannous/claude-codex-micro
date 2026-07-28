@@ -15,6 +15,7 @@ présentée comme un layer matériel validé.
 ## Contrôles applicables à chaque contribution
 
 - [ ] `npm run check` réussi.
+- [ ] `npm ci --no-audit --no-fund` utilise le lockfile sans modifier l'arbre.
 - [ ] `git diff --check` réussi.
 - [ ] Sources externes vérifiées manuellement.
 - [ ] Niveau de preuve exact dans le manifeste et le README.
@@ -37,19 +38,20 @@ présentée comme un layer matériel validé.
 - [x] Flux officiels Import/Export layer et profile identifiés dans Input
   `0.17.2`.
 - [x] Manifeste, mapping, schémas et représentation visuelle publiables.
-- [x] Sauvegarde, vérification SHA-256, dry-run, refus de doublon et rollback
+- [x] Sauvegarde, vérification SHA-256, dry-run, sélection unique et rollback
   testés sur copies isolées.
-- [ ] `git status --short` et configuration locale réelle inventoriés.
-- [ ] Export officiel du profile d'origine conservé hors Git.
-- [ ] Premier emplacement libre confirmé ; index `0` comparé avant/après.
+- [x] Configuration locale réelle inventoriée sans publier les valeurs AppSense.
+- [x] Export officiel du profile d'origine conservé hors Git.
+- [x] Unique layer Claude confirmé ; index `0` comparé avant/après.
+- [x] Profile Input `0.17.3` généré localement avec AppSense conservé.
 - [ ] Positions physiques et identifiants Input vérifiés.
-- [ ] Layer Claude créé sur le Codex Micro réel.
 - [ ] AppSense, touches, cadran, joystick et perte de focus testés.
 - [ ] Persistance après redémarrage d'Input vérifiée.
 - [ ] Vrai `*-layer.json` exporté, assaini et ajouté avec sa somme SHA-256.
+- [ ] SHA-256 déclaré identique et contenu conforme au mapping canonique.
 - [ ] Import dans une configuration isolée et second import testés.
 - [ ] Profile original réimporté et périphérique vérifié.
 - [ ] Matrice de compatibilité mise à jour avec les résultats.
 
 Tant que les cases matérielles restent ouvertes, le preset conserve le statut
-`proposal-not-applied` et la pull request reste brouillon.
+`hardware-observed` et ne peut pas être présenté comme entièrement validé.

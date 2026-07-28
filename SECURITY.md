@@ -2,9 +2,11 @@
 
 ## Statut
 
-Le projet n'est pas encore publié et ne possède ni version supportée ni canal
-public de signalement. Ne publiez pas de vulnérabilité contenant des données
-privées. Un canal privé devra être défini avant la publication.
+Le dépôt est public, mais le projet reste expérimental et ne possède pas encore
+de version supportée ni de canal privé de signalement. Ne publiez jamais de
+secret, de profil personnel ou de détail permettant d'exploiter une
+vulnérabilité. En l'absence de canal privé, ouvrez seulement un signalement
+minimal demandant un moyen de contact confidentiel.
 
 ## Modèle de risque
 
@@ -52,7 +54,20 @@ Tant que la piste n'est pas auditée :
 
 ## Dépendances et scripts
 
-Les scripts actuels utilisent uniquement Node.js et les outils macOS fournis
-par le système. Ils ne téléchargent rien et n'écrivent pas dans les réglages.
-Toute future dépendance doit être justifiée, verrouillée et auditée avant
-publication.
+Le projet ne transmet pas les profils ou exports Work Louder à un service
+distant. Le générateur et les validateurs les traitent localement.
+
+Une connexion réseau peut toutefois être utilisée par
+`npm ci --no-audit --no-fund` pour télécharger depuis le registre configuré les
+versions verrouillées dans `package-lock.json`. Toute nouvelle dépendance ou
+communication distante doit être justifiée, verrouillée, documentée et auditée
+avant publication.
+
+## Sauvegarde et restauration
+
+Le retour arrière principal reste l'import du profile officiel d'origine dans
+Input. La restauration brute du stockage est secondaire et exige plusieurs
+confirmations explicites. Sa destination doit correspondre exactement à un
+chemin Input détecté ou à `WORK_LOUDER_INPUT_USER_DATA`. L'outil refuse la
+racine du système, le dossier utilisateur, le dépôt, les liens symboliques et
+tout dossier non approuvé.

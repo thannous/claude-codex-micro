@@ -3,8 +3,8 @@
   "formatVersion": "1.0.0",
   "id": "claude-desktop-macos-codex-micro-v1",
   "name": "Claude Desktop for Codex Micro",
-  "status": "proposal-not-applied",
-  "summary": "A safe Claude Desktop layer activated by AppSense while preserving the native Codex layer at index 0.",
+  "status": "hardware-observed",
+  "summary": "A local transform for one existing Claude layer that preserves its AppSense link and the native Codex layer at index 0.",
   "target": {
     "platform": "macOS",
     "deviceFamily": "Work Louder Codex Micro",
@@ -15,7 +15,10 @@
   },
   "compatibility": {
     "input": {
-      "observedVersion": "0.17.2",
+      "observedVersion": "0.17.3",
+      "supportedVersions": [
+        "0.17.3"
+      ],
       "bundleId": "it.focusense.input-app",
       "sharingMechanism": {
         "kind": "official-layer-json",
@@ -32,7 +35,7 @@
           "multiactionGroups",
           "smartActionGroups"
         ],
-        "importTest": "pending-real-device"
+        "importTest": "profile-generator-validated-on-0.17.3; official-layer-roundtrip-pending"
       }
     },
     "firmware": {
@@ -49,7 +52,9 @@
   },
   "preservation": {
     "protectedLayerIndexes": [0],
-    "slotPolicy": "first-free-after-protected",
+    "targetLayerPolicy": "exactly-one-existing-named-layer",
+    "targetLayerName": "Claude",
+    "targetAppSenseLink": "preserve-existing",
     "maxLayers": 6,
     "replaceExisting": false,
     "otherProfiles": "unchanged",
@@ -57,10 +62,13 @@
     "otherAppSenseLinks": "unchanged"
   },
   "installation": {
-    "mechanism": "work-louder-input-layer-json",
+    "mechanism": "local-profile-transform",
     "applyMode": "guided-ui",
-    "artifact": null,
-    "artifactStatus": "pending-real-export",
+    "sourceArtifact": "official-profile-json",
+    "outputArtifact": "generated-profile-json",
+    "layerArtifact": null,
+    "layerArtifactSha256": null,
+    "layerArtifactStatus": "pending-real-export",
     "backupRequired": true,
     "rollback": "official-profile-import",
     "directStoragePatch": "forbidden-until-format-verified"
@@ -73,7 +81,7 @@
   "validation": {
     "required": [
       "official-profile-export-backup",
-      "first-free-layer-confirmed",
+      "existing-claude-layer-confirmed",
       "physical-control-ids-confirmed",
       "appsense-focus-test",
       "focus-loss-test",
@@ -85,7 +93,8 @@
       "logical-mapping-validation",
       "sensitive-action-policy-validation",
       "isolated-transaction-fixture-tests",
-      "input-0.17.2-sharing-mechanism-inspection"
+      "input-0.17.2-sharing-mechanism-inspection",
+      "input-0.17.3-profile-generator-validation"
     ]
   }
 }

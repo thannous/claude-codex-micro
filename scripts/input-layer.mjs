@@ -16,7 +16,12 @@ import {
   sanitizeOfficialLayerExport,
   verifyBackup,
 } from "./lib/input-export.mjs";
-import { buildInstallPlan, findBundledArtifact, loadPreset, validatePreset } from "./lib/preset.mjs";
+import {
+  buildInstallPlan,
+  evaluateInstallCompatibility,
+  loadPreset,
+  validatePreset,
+} from "./lib/preset.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const defaultProfileDir = path.join(root, "profiles", "claude-shortcuts");
@@ -32,14 +37,14 @@ Commands:
   inventory                   Build a local inventory from an official profile export
   backup                      Copy Input user data and an official profile export to .local/
   verify-backup               Re-hash every file in a backup
-  install                     Produce a dry-run or guided installation session
+  install                     Produce a dry-run or local profile-transform session
   rollback                    Prepare rollback; storage restore requires explicit opt-in
 
 Common options:
   --profile-dir <path>        Preset directory (default profiles/claude-shortcuts)
   --json                      Print machine-readable JSON
   --dry-run                   Never modify local state (default for install/rollback)
-  --apply                     Create backup/session state; never clicks Input UI automatically
+  --apply                     Create backup/session state; profile generation remains local and explicit
 `);
 }
 
@@ -84,8 +89,17 @@ function candidateConfigRoots() {
 }
 
 async function findConfigRoot(explicit) {
-  if (explicit) return path.resolve(explicit);
-  for (const candidate of candidateConfigRoots()) {
+  const candidates = candidateConfigRoots().map((candidate) => path.resolve(candidate));
+  if (explicit) {
+    const resolved = path.resolve(explicit);
+    if (!candidates.includes(resolved)) {
+      throw new Error(
+        "Explicit --config-root must exactly match a detected Input path or WORK_LOUDER_INPUT_USER_DATA.",
+      );
+    }
+    return resolved;
+  }
+  for (const candidate of candidates) {
     if (await pathExists(candidate)) return candidate;
   }
   return null;
@@ -93,7 +107,11 @@ async function findConfigRoot(explicit) {
 
 function inputIsRunning() {
   if (process.platform !== "darwin") return false;
-  const result = spawnSync("/usr/bin/pgrep", ["-f", "/input\\.app/Contents/MacOS/input($|[[:space:]])"], { encoding: "utf8" });
+  const result = spawnSync(
+    "/usr/bin/pgrep",
+    ["-f", "/[Ii]nput\\.app/Contents/MacOS/[Ii]nput($|[[:space:]])"],
+    { encoding: "utf8" },
+  );
   return result.status === 0 && result.stdout.trim().length > 0;
 }
 
@@ -119,20 +137,39 @@ async function inspectApp(appPath) {
   };
 }
 
-async function doctor(args) {
+async function inspectInstalledApps(candidates) {
+  const apps = [];
+  const seen = new Set();
+  for (const candidate of candidates) {
+    const value = await inspectApp(candidate);
+    if (!value) continue;
+
+    let identity;
+    try {
+      const stats = await fs.stat(candidate);
+      identity = `${stats.dev}:${stats.ino}`;
+    } catch {
+      identity = `${value.bundleId}:${path.resolve(candidate).toLowerCase()}`;
+    }
+    if (seen.has(identity)) continue;
+
+    seen.add(identity);
+    apps.push(value);
+  }
+  return apps;
+}
+
+async function doctor(args, suppliedManifest = null) {
   const home = os.homedir();
   const inputApps = ["/Applications/input.app", "/Applications/Input.app", path.join(home, "Applications", "input.app")];
   const claudeApps = ["/Applications/Claude.app", path.join(home, "Applications", "Claude.app")];
-  const input = [];
-  const claude = [];
-  for (const candidate of inputApps) {
-    const value = await inspectApp(candidate);
-    if (value) input.push(value);
-  }
-  for (const candidate of claudeApps) {
-    const value = await inspectApp(candidate);
-    if (value) claude.push(value);
-  }
+  const [input, claude] = await Promise.all([
+    inspectInstalledApps(inputApps),
+    inspectInstalledApps(claudeApps),
+  ]);
+  const manifest = suppliedManifest
+    ?? (await loadPreset(path.resolve(args["profile-dir"] ?? defaultProfileDir))).manifest;
+  const compatibility = evaluateInstallCompatibility({ manifest, installedInputApps: input });
   const roots = [];
   for (const candidate of candidateConfigRoots()) {
     if (await pathExists(candidate)) roots.push(redactHome(candidate));
@@ -146,10 +183,15 @@ async function doctor(args) {
     configurationRoots: roots,
     inputRunning: inputIsRunning(),
     expected: {
-      inputBundleId: "it.focusense.input-app",
-      inputVersion: "0.17.2",
-      claudeBundleId: "com.anthropic.claudefordesktop",
-      firmwareVersion: "v0.4.1",
+      inputBundleId: manifest.compatibility.input.bundleId,
+      supportedInputVersions: manifest.compatibility.input.supportedVersions,
+      claudeBundleId: manifest.target.application.bundleId,
+      observedFirmwareVersion: manifest.compatibility.firmware.observedVersion,
+    },
+    compatibility: {
+      ok: compatibility.ok,
+      errors: compatibility.errors,
+      warnings: compatibility.warnings,
     },
     facts: [
       "No settings were changed.",
@@ -184,7 +226,7 @@ async function commandBackup(args) {
     configRoot,
     profileExportPath,
     backupRoot,
-    inputVersion: args["input-version"] ?? "0.17.2",
+    inputVersion: args["input-version"] ?? "0.17.3",
     firmwareVersion: args["firmware-version"] ?? "v0.4.1",
   });
   const verification = await verifyBackup(result.destination);
@@ -198,17 +240,44 @@ async function commandInstall(args) {
   const validation = validatePreset(manifest, mapping);
   if (!validation.ok) throw new Error(validation.errors.join(" "));
   const inventory = args.inventory ? await readJson(path.resolve(args.inventory)) : null;
-  const artifact = await findBundledArtifact(profileDir, manifest);
-  const plan = buildInstallPlan({ manifest, mapping, inventory, artifactPath: artifact?.path ?? null });
-  plan.artifactPath = plan.artifactPath ? redactHome(plan.artifactPath) : null;
+  const plan = buildInstallPlan({ manifest, mapping, inventory });
 
   const apply = Boolean(args.apply);
+  if (apply && !inventory) {
+    throw new Error("--apply requires --inventory generated from the official profile export.");
+  }
+  const profileExportPath = args["profile-export"]
+    ? path.resolve(args["profile-export"])
+    : apply
+      ? requireOption(args, "profile-export")
+      : null;
+  let profileInspection = null;
+  let compatibility = null;
+  if (profileExportPath) {
+    const localDoctor = await doctor(args, manifest);
+    profileInspection = await inspectOfficialExport(profileExportPath);
+    compatibility = evaluateInstallCompatibility({
+      manifest,
+      installedInputApps: localDoctor.input,
+      inventory,
+      profileInspection,
+      allowUnverifiedInputVersion: Boolean(args["allow-unverified-input-version"]),
+    });
+    plan.compatibility = {
+      ok: compatibility.ok,
+      errors: compatibility.errors,
+      warnings: compatibility.warnings,
+      inputVersion: compatibility.installedInput?.version ?? null,
+      supportedVersions: compatibility.supportedVersions,
+      profileExportSha256: profileInspection.sha256,
+    };
+    plan.blockers.push(...compatibility.errors);
+    plan.canGenerateProfile = plan.blockers.length === 0;
+  }
+
   if (!apply) return { dryRun: true, plan };
-  if (!inventory) throw new Error("--apply requires --inventory generated from the official profile export.");
-  const nonArtifactBlockers = plan.blockers.filter((blocker) => !blocker.startsWith("No verified official"));
-  if (nonArtifactBlockers.length) throw new Error(`Installation blocked: ${nonArtifactBlockers.join(" ")}`);
+  if (plan.blockers.length) throw new Error(`Installation blocked: ${plan.blockers.join(" ")}`);
   requireInputStopped();
-  const profileExportPath = requireOption(args, "profile-export");
   const configRoot = await findConfigRoot(args["config-root"]);
   if (!configRoot) throw new Error("--apply requires a detected or explicit --config-root");
   const sessionRoot = path.join(localRoot, "sessions");
@@ -233,7 +302,15 @@ async function commandInstall(args) {
     format: "codex-micro-install-session/v1",
     presetId: manifest.id,
     createdAt: new Date().toISOString(),
-    status: "pending-manual-input-steps",
+    status: "ready-for-local-profile-transform",
+    compatibility: {
+      inputVersion: compatibility.installedInput.version,
+      supportedVersions: compatibility.supportedVersions,
+      overrideUsed: compatibility.overrideUsed,
+      warnings: compatibility.warnings,
+      profileExportSha256: profileInspection.sha256,
+      inventorySha256: inventory.source.sha256,
+    },
     backupId: backup.id,
     backupPath: redactHome(backup.destination),
     plan,
@@ -263,7 +340,13 @@ async function commandRollback(args) {
   }
   if (apply && restoreStorage) requireInputStopped();
   const storagePlan = configRoot
-    ? await restoreStorageSnapshot({ backupDir, configRoot, dryRun: !(apply && restoreStorage) })
+    ? await restoreStorageSnapshot({
+        backupDir,
+        configRoot,
+        allowedConfigRoots: candidateConfigRoots(),
+        forbiddenRoots: [root],
+        dryRun: !(apply && restoreStorage),
+      })
     : null;
 
   let sessionUpdated = null;

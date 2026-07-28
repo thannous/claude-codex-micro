@@ -15,7 +15,7 @@ Une personne doit pouvoir :
 2. vérifier sa compatibilité ;
 3. sauvegarder la configuration Input existante ;
 4. simuler le changement ;
-5. ajouter uniquement le layer demandé ;
+5. transformer uniquement le layer `Claude` existant dans une copie locale ;
 6. tester AppSense et chaque contrôle ;
 7. restaurer l'état précédent ;
 8. contribuer un autre preset avec le même niveau d'exigence.
@@ -33,6 +33,8 @@ Le dépôt contient désormais :
 - une représentation SVG originale du Codex Micro ;
 - un outil Node.js de diagnostic, inventaire, sauvegarde, dry-run, sanitation et
   rollback ;
+- un générateur local de profile Input `0.17.3` qui préserve le layer natif et
+  le lien AppSense existant ;
 - des tests transactionnels sur copies isolées ;
 - une analyse reproductible du mécanisme de partage d'Input `0.17.2` ;
 - une procédure permettant de capturer ensuite le véritable export officiel.
@@ -42,23 +44,24 @@ L'analyse du package officiel confirme des commandes **Import layer** et
 attendue. Le vrai fichier Claude n'est volontairement pas fabriqué : ses objets
 internes doivent provenir d'un export réel du Codex Micro.
 
-Le preset reste donc `proposal-not-applied` tant que la création du layer,
-AppSense, le round-trip d'import et le rollback ne sont pas testés sur le
-matériel.
+Le preset est `hardware-observed` : le générateur a été validé sur un export
+Input `0.17.3`, mais le round-trip d'un artefact `*-layer.json` et la checklist
+matérielle complète restent ouverts.
 
 ## Mapping Claude proposé
 
-Le layer natif Codex situé à l'index `0` est protégé. Le layer `Claude` cible le
-premier emplacement libre strictement supérieur à `0`.
+Le layer natif Codex situé à l'index `0` est protégé. Le profile source doit
+contenir exactement un layer `Claude`, différent de l'index `0` et déjà lié à
+Claude Desktop avec AppSense.
 
 | Contrôle | Action |
 | --- | --- |
 | rangée des quatre touches carrées, gauche | `⌘N` — nouvelle conversation |
-| même rangée, deuxième | `⌘F` — recherche |
-| même rangée, troisième | `⌘,` — réglages |
+| même rangée, deuxième | `⌘D` — mode vocal |
+| même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
 | même rangée, droite | `Esc` — annuler ou fermer selon le contexte |
-| cadran | défilement vertical |
-| joystick | quatre flèches directionnelles |
+| cadran, coin supérieur droit | `PageUp` / `PageDown` |
+| joystick, coin supérieur gauche | quatre flèches directionnelles |
 | autres contrôles | aucune action ; capteur de layer réservé |
 
 Couleur proposée : `#D97757`. Activation : Claude Desktop au premier plan via
@@ -81,7 +84,7 @@ actif.
 ## Compatibilité observée
 
 - macOS `26.5.2` arm64 ;
-- Work Louder Input `0.17.2` ;
+- Work Louder Input `0.17.3` pour le générateur de profile ;
 - firmware Codex Micro `v0.4.1` ;
 - Claude Desktop `1.24012.9` ;
 - bundle Claude `com.anthropic.claudefordesktop` ;
@@ -92,18 +95,20 @@ faits, tests de fixture et validations matérielles manquantes.
 
 ## Démarrage sans modification
 
-Prérequis : Node.js 18 ou version ultérieure. Le projet n'a aucune dépendance
-d'exécution.
+Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
+sont verrouillées dans `package-lock.json`.
 
 ```sh
 git clone https://github.com/thannous/claude-codex-micro.git
 cd claude-codex-micro
+npm ci --no-audit --no-fund
 npm run check
 node scripts/input-layer.mjs doctor --json
 node scripts/input-layer.mjs install --dry-run --json
 ```
 
-La dernière commande reste bloquée sans inventaire local, ce qui est volontaire.
+La dernière commande reste bloquée sans inventaire local contenant exactement
+un layer `Claude`, ce qui est volontaire.
 
 ## Installation sûre
 
@@ -125,7 +130,14 @@ node scripts/input-layer.mjs install \
   --profile-export "$HOME/Downloads/Mac-profile.json" \
   --dry-run \
   --json
+
+npm run build:profile -- \
+  "$HOME/Downloads/Mac-profile.json" \
+  "$HOME/Downloads/Claude-macOS-profile.json"
 ```
+
+Importer ensuite `Claude-macOS-profile.json` avec **Add New** dans Input. Le
+fichier source reste inchangé et aucune donnée n'est téléversée.
 
 Lire le [guide d'installation et de retour arrière](docs/installation.md) avant
 `--apply`.
@@ -140,9 +152,10 @@ Input `0.17.2` expose un flux officiel au niveau layer et profile :
 La preuve et ses limites sont documentées dans
 [`docs/research/input-0.17.2-sharing.md`](docs/research/input-0.17.2-sharing.md).
 
-Le manifeste communautaire n'imite pas ce format. Il décrit la compatibilité,
-le mapping et les règles d'installation. Un vrai export officiel sera ajouté
-uniquement après sanitation, import isolé, test de doublon et rollback.
+Le manifeste communautaire n'imite pas ce format. Le parcours principal
+transforme localement un vrai `*-profile.json`. Un éventuel artefact layer
+public restera optionnel et devra être lié à son SHA-256, au mapping canonique
+et à une preuve de round-trip.
 
 ## Structure
 
@@ -155,7 +168,10 @@ profiles/
     assets/layout.svg       aperçu original
     artifacts/              futur export officiel assaini
 scripts/
+  build-input-profile.mjs   génération locale du profile importable
   input-layer.mjs           diagnostic, sauvegarde et installation guidée
+shared/
+  input-profile.mjs         transformation canonique partagée avec le GUI
   lib/                      fonctions testables
   validate-profile.mjs      contrat Claude historique
   validate-presets.mjs      invariants de la bibliothèque
