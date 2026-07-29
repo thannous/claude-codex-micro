@@ -47,8 +47,8 @@ Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 | Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
 | Touche 3 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
 | Touche 4 | même rangée, tout à droite | `Esc` — annuler ou fermer selon le contexte |
-| Cadran | coin supérieur droit | horaire : `PageDown` ; antihoraire : `PageUp` |
-| Joystick | coin supérieur gauche | flèches haut, droite, bas et gauche |
+| Molette cliquable | coin supérieur gauche | horaire : `PageDown` ; antihoraire : `PageUp` ; clic configurable |
+| Joystick sans clic | coin supérieur droit | flèches haut, droite, bas et gauche |
 
 ![Schéma physique du mapping](../../profiles/claude-shortcuts/assets/layout.svg)
 

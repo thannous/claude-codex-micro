@@ -137,8 +137,8 @@ test("manifest and mapping enforce safe V1 invariants", async () => {
   assert.equal(manifest.preservation.targetLayerPolicy, "exactly-one-existing-named-layer");
   assert.ok(manifest.validation.required.includes("existing-claude-layer-confirmed"));
   assert.ok(!manifest.validation.required.includes("first-free-layer-confirmed"));
-  assert.equal(mapping.controls.find((control) => control.id === "joystick").physical.column, 1);
-  assert.equal(mapping.controls.find((control) => control.id === "encoder-rotate").physical.column, 4);
+  assert.equal(mapping.controls.find((control) => control.id === "joystick").physical.column, 4);
+  assert.equal(mapping.controls.find((control) => control.id === "encoder-rotate").physical.column, 1);
 });
 
 

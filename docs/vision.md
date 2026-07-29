@@ -34,7 +34,9 @@ Claude Desktop sur macOS sert de premier cas complet :
 - raccourcis courants et réversibles ;
 - molette pour le défilement ;
 - joystick pour la navigation ;
-- exclusion de l'envoi, des permissions et des actions destructrices.
+- exclusion par défaut de l'envoi, des permissions et des actions
+  destructrices ; le GUI personnel peut proposer l'envoi uniquement sur choix
+  explicite.
 
 Ce premier preset doit définir les conventions réutilisables par les futurs
 layers IDE, navigateur, création graphique ou workflows spécialisés.

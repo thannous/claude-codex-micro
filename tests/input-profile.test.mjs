@@ -3,6 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import {
   ACTION_DEFINITIONS,
+  addClaudeLayer,
   buildInputProfile,
   DEFAULT_MAPPING,
   deriveMappingFromProfile,
@@ -115,7 +116,7 @@ test("builds the canonical mapping without touching the source or native layer",
   );
   assert.deepEqual(
     claude.layout.encoders[0].map((entry) => entry.keycode),
-    ["KC_PGUP", "KC_PGDN", "KC_NONE"],
+    ["KC_PGDN", "KC_PGUP", "KC_NONE"],
   );
   assert.deepEqual(
     claude.layout.joystick.sectors.map((sector) => sector.k),
@@ -145,6 +146,19 @@ test("builds the canonical mapping without touching the source or native layer",
       ["KC_LGUI", 0],
     ],
   );
+});
+
+test("does not claim that AppSense was preserved when the Claude layer is not linked", () => {
+  const source = sourceProfile();
+  delete source.profile.layers[1].linkedAppId;
+
+  const { profile, report } = buildInputProfile(source, DEFAULT_MAPPING, {
+    requireAppSense: false,
+  });
+
+  assert.equal(profile.profile.layers[1].linkedAppId, undefined);
+  assert.equal(report.appSenseLinked, false);
+  assert.equal(report.appSensePreserved, false);
 });
 
 test("supports explicitly unassigned controls", () => {
@@ -216,6 +230,36 @@ test("builds a custom shortcut as a reusable action and a bare key directly", ()
   assert.equal(claude.layout.base[2][1].keycode, "KC_F5");
 });
 
+test("builds the two explicit Claude send actions without opening Enter to custom shortcuts", () => {
+  const { profile } = buildInputProfile(sourceProfile(), {
+    ...DEFAULT_MAPPING,
+    "key-1": "send",
+    "key-2": "sendInDuplicateSession",
+  });
+  const claude = profile.profile.layers[1];
+  const duplicateSession = profile.actions.find(
+    (action) => action.name === "Claude Send in Duplicate Session",
+  );
+
+  assert.equal(claude.layout.base[2][0].keycode, "KC_ENT");
+  assert.ok(duplicateSession, "duplicated-session send becomes a named action");
+  assert.equal(claude.layout.base[2][1].keycode, `KA_${duplicateSession.id}`);
+  assert.deepEqual(
+    duplicateSession.keyInputs.map(({ keycode, actionType }) => [keycode, actionType]),
+    [
+      ["KC_LALT", 1],
+      ["KC_LGUI", 1],
+      ["KC_ENT", 2],
+      ["KC_LGUI", 0],
+      ["KC_LALT", 0],
+    ],
+  );
+
+  const derived = deriveMappingFromProfile(profile);
+  assert.equal(derived.mapping["key-1"], "send");
+  assert.equal(derived.mapping["key-2"], "sendInDuplicateSession");
+});
+
 test("refuses forbidden keys and bare printable keys", () => {
   for (const key of FORBIDDEN_KEYS) {
     assert.throws(
@@ -242,39 +286,88 @@ test("supports the additional wheel modes", () => {
   const lines = buildInputProfile(sourceProfile(), { ...DEFAULT_MAPPING, wheel: "lines" });
   assert.deepEqual(
     lines.profile.profile.layers[1].layout.encoders[0].map((entry) => entry.keycode),
-    ["KC_UP", "KC_DOWN", "KC_NONE"],
+    ["KC_DOWN", "KC_UP", "KC_NONE"],
   );
 
   const volume = buildInputProfile(sourceProfile(), { ...DEFAULT_MAPPING, wheel: "volume" });
   assert.deepEqual(
     volume.profile.profile.layers[1].layout.encoders[0].map((entry) => entry.keycode),
-    ["KC_VOLD", "KC_VOLU", "KC_NONE"],
+    ["KC_VOLU", "KC_VOLD", "KC_NONE"],
   );
+
+  const effort = buildInputProfile(sourceProfile(), { ...DEFAULT_MAPPING, wheel: "effort" });
+  const effortEncoder = effort.profile.profile.layers[1].layout.encoders[0];
+  assert.match(effortEncoder[0].keycode, /^KA_\d+$/);
+  assert.match(effortEncoder[1].keycode, /^KA_\d+$/);
+  assert.equal(effortEncoder[2].keycode, "KC_NONE");
+
+  const effortDown = effort.profile.actions.find(
+    (action) => action.name === "Claude Effort Down",
+  );
+  const effortUp = effort.profile.actions.find(
+    (action) => action.name === "Claude Effort Up",
+  );
+  assert.ok(effortDown);
+  assert.ok(effortUp);
+  assert.equal(effortEncoder[0].keycode, `KA_${effortUp.id}`);
+  assert.equal(effortEncoder[1].keycode, `KA_${effortDown.id}`);
+  assert.deepEqual(
+    effortDown.keyInputs.map(({ keycode, delay, actionType }) => [
+      keycode,
+      delay,
+      actionType,
+    ]),
+    [
+      ["KC_LGUI", 0, 1],
+      ["KC_LSFT", 0, 1],
+      ["KC_E", 0, 2],
+      ["KC_LSFT", 0, 0],
+      ["KC_LGUI", 80, 0],
+      ["KC_LEFT", 0, 2],
+      ["KC_ESC", 10, 2],
+    ],
+  );
+  assert.equal(effortUp.keyInputs[5].keycode, "KC_RGHT");
+  assert.equal(deriveMappingFromProfile(effort.profile).mapping.wheel, "effort");
 });
 
-test("writes the advanced row only on explicit opt-in", () => {
-  const untouched = buildInputProfile(sourceProfile(), DEFAULT_MAPPING);
-  assert.deepEqual(
-    untouched.profile.profile.layers[1].layout.base[1].map((entry) => entry.keycode),
-    ["KC_NONE", "KC_NONE", "KC_NONE", "KC_NONE"],
-  );
-  assert.equal(untouched.report.advancedAssignments, 0);
-
-  const advanced = buildInputProfile(sourceProfile(), {
+test("maps all 13 switches while preserving the layer sensor", () => {
+  const source = sourceProfile();
+  source.profile.layers[1].layout.base[3][0].keycode = "KV_LAYER_SENSOR";
+  const configured = buildInputProfile(source, {
     ...DEFAULT_MAPPING,
-    "key-5": "newSession",
-    "key-6": "none",
+    "key-9": "settings",
+    "key-10": "find",
+    "key-5": "findNext",
+    "key-8": "findPrevious",
+    "key-11": "back",
+    "key-12": "forward",
+    "key-13": "reload",
   });
-  const row = advanced.profile.profile.layers[1].layout.base[1];
-  assert.match(row[0].keycode, /^KA_\d+$/);
-  assert.equal(row[1].keycode, "KC_NONE");
-  assert.equal(advanced.report.advancedAssignments, 2);
+  const layout = configured.profile.profile.layers[1].layout;
 
-  const shortRow = sourceProfile();
-  shortRow.profile.layers[1].layout.base[1] = [{ keycode: "KC_NONE" }];
+  assert.match(layout.base[0][0].keycode, /^KA_\d+$/);
+  assert.match(layout.base[0][1].keycode, /^KA_\d+$/);
+  assert.match(layout.base[1][0].keycode, /^KA_\d+$/);
+  assert.match(layout.base[1][3].keycode, /^KA_\d+$/);
+  assert.equal(layout.base[3][0].keycode, "KV_LAYER_SENSOR");
+  assert.match(layout.base[3][1].keycode, /^KA_\d+$/);
+  assert.match(layout.base[3][2].keycode, /^KA_\d+$/);
+  assert.match(layout.encoders[0][2].keycode, /^KA_\d+$/);
+  assert.equal(configured.report.assignedSwitches, 11);
+
+  const shortTopRow = sourceProfile();
+  shortTopRow.profile.layers[1].layout.base[0] = [{ keycode: "KC_NONE" }];
   assert.throws(
-    () => buildInputProfile(shortRow, { ...DEFAULT_MAPPING, "key-5": "stop" }),
-    (error) => error.code === "BAD_ADVANCED_ROW",
+    () => buildInputProfile(shortTopRow, DEFAULT_MAPPING),
+    (error) => error.code === "BAD_TOP_ROW",
+  );
+
+  const shortBottomRow = sourceProfile();
+  shortBottomRow.profile.layers[1].layout.base[3] = [{ keycode: "KC_NONE" }];
+  assert.throws(
+    () => buildInputProfile(shortBottomRow, DEFAULT_MAPPING),
+    (error) => error.code === "BAD_BOTTOM_ROW",
   );
 });
 
@@ -283,6 +376,9 @@ test("derives the existing layer mapping back from a built profile", () => {
     ...DEFAULT_MAPPING,
     "key-2": { type: "custom", keys: ["Command", "Option", "L"] },
     "key-5": "voice",
+    "key-9": "settings",
+    "key-11": "find",
+    "key-13": "closeWindow",
     wheel: "lines",
   };
   const { profile } = buildInputProfile(sourceProfile(), requested);
@@ -296,13 +392,46 @@ test("derives the existing layer mapping back from a built profile", () => {
   assert.equal(derived.mapping["key-3"], "diff");
   assert.equal(derived.mapping["key-4"], "stop");
   assert.equal(derived.mapping["key-5"], "voice");
+  assert.equal(derived.mapping["key-9"], "settings");
+  assert.equal(derived.mapping["key-11"], "find");
+  assert.equal(derived.mapping["key-13"], "closeWindow");
   assert.equal(derived.mapping.wheel, "lines");
   assert.equal(derived.mapping.joystick, "navigation");
-  assert.equal(derived.advancedInUse, true);
 
   const fresh = deriveMappingFromProfile(sourceProfile());
   assert.equal(fresh.mapping["key-4"], "stop");
-  assert.equal(fresh.advancedInUse, false);
+  assert.equal(fresh.mapping["key-12"], "none");
+  assert.equal(fresh.mapping["key-13"], "none");
+});
+
+test("builds the expanded Claude shortcut catalog", () => {
+  const { profile } = buildInputProfile(sourceProfile(), {
+    ...DEFAULT_MAPPING,
+    "key-9": "settings",
+    "key-10": "find",
+    "key-5": "findNext",
+    "key-6": "findPrevious",
+    "key-7": "back",
+    "key-8": "forward",
+    "key-11": "zoomIn",
+    "key-12": "zoomOut",
+    "key-13": "resetZoom",
+  });
+  const actionNames = new Set(profile.actions.map((action) => action.name));
+
+  for (const expected of [
+    "Claude Settings",
+    "Claude Find",
+    "Claude Find Next",
+    "Claude Find Previous",
+    "Claude Back",
+    "Claude Forward",
+    "Claude Zoom In",
+    "Claude Zoom Out",
+    "Claude Reset Zoom",
+  ]) {
+    assert.ok(actionNames.has(expected), `${expected} should be generated`);
+  }
 });
 
 test("shared action definitions stay in sync with the canonical mapping.json", () => {
@@ -320,4 +449,71 @@ test("shared action definitions stay in sync with the canonical mapping.json", (
   assert.deepEqual(normalize(byMeaning["voice-dictation"]), ACTION_DEFINITIONS.voice.keys);
   assert.deepEqual(normalize(byMeaning["toggle-diff"]), ACTION_DEFINITIONS.diff.keys);
   assert.deepEqual(byMeaning["cancel-or-close-contextually"], [ACTION_DEFINITIONS.stop.key]);
+});
+
+test("addClaudeLayer clones a template layer, neutralized and without AppSense", () => {
+  const source = sourceProfile();
+  source.profile.layers[1].name = "Codex";
+  source.profile.layers[1].layout.base[3][0].keycode = "KV_LAYER_SENSOR";
+  const snapshot = structuredClone(source);
+
+  const { source: augmented, templateName, layerIndex } = addClaudeLayer(source);
+
+  assert.deepEqual(source, snapshot);
+  assert.equal(templateName, "Codex");
+  assert.equal(layerIndex, 2);
+
+  const layer = augmented.profile.layers[2];
+  assert.equal(layer.name, "Claude");
+  assert.equal(layer.linkedAppId, undefined);
+  assert.equal(layer.layout.base[3][0].keycode, "KV_LAYER_SENSOR");
+  assert.ok(
+    layer.layout.base
+      .flatMap((row, rowIndex) =>
+        row.filter((_, columnIndex) => !(rowIndex === 3 && columnIndex === 0)),
+      )
+      .every((cell) => cell.keycode === "KC_NONE"),
+  );
+  assert.ok(layer.layout.encoders[0].every((cell) => cell.keycode === "KC_NONE"));
+
+  const inspection = inspectInputProfile(augmented, { requireAppSense: false });
+  assert.equal(inspection.appSenseLinked, false);
+  assert.equal(inspection.layerIndex, 2);
+
+  const { profile, report } = buildInputProfile(augmented, DEFAULT_MAPPING, {
+    requireAppSense: false,
+  });
+  assert.equal(report.appSenseLinked, false);
+  assert.equal(profile.profile.layers[2].linkedAppId, undefined);
+  assert.deepEqual(
+    profile.profile.layers[2].layout.base[2].map((entry) => entry.keycode),
+    ["KA_0", "KA_1", "KA_2", "KC_ESC"],
+  );
+});
+
+test("addClaudeLayer refuses duplicates, full profiles, and missing templates", () => {
+  assert.throws(() => addClaudeLayer(sourceProfile()), /existe déjà/);
+
+  const codex = sourceProfile();
+  codex.profile.layers[1].name = "Codex";
+
+  const full = structuredClone(codex);
+  while (full.profile.layers.length < 6) {
+    full.profile.layers.push(structuredClone(full.profile.layers[1]));
+  }
+  assert.throws(() => addClaudeLayer(full), /six layers/);
+
+  const nativeOnly = structuredClone(codex);
+  nativeOnly.profile.layers = [nativeOnly.profile.layers[0]];
+  assert.throws(() => addClaudeLayer(nativeOnly), /modèle/);
+});
+
+test("inspection requires AppSense by default but can report its absence", () => {
+  const source = sourceProfile();
+  delete source.profile.layers[1].linkedAppId;
+
+  assert.throws(() => inspectInputProfile(source), /AppSense/);
+
+  const inspection = inspectInputProfile(source, { requireAppSense: false });
+  assert.equal(inspection.appSenseLinked, false);
 });

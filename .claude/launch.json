@@ -3,9 +3,10 @@
   "configurations": [
     {
       "name": "configurateur",
-      "runtimeExecutable": "npm",
-      "runtimeArgs": ["--prefix", "prototype", "run", "dev", "--", "--host", "127.0.0.1", "--port", "5174"],
-      "port": 5174
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "npm --prefix prototype run dev -- --host 127.0.0.1 --port \"$PORT\""],
+      "port": 5174,
+      "autoPort": true
     }
   ]
 }

@@ -9,31 +9,39 @@ export default {
     localProcessing: "Procesamiento local",
     backupVerified: "Copia de seguridad verificada",
     languageLabel: "Idioma",
+    theme: {
+      auto: "Tema: sistema. Cambiar al tema claro",
+      light: "Tema: claro. Cambiar al tema oscuro",
+      dark: "Tema: oscuro. Volver al tema del sistema",
+    },
   },
   hero: {
-    eyebrow: "Controlador para Claude Desktop",
-    title: "Tus atajos de Claude, al alcance de la mano.",
     subtitle:
       "Elige una tecla del Codex Micro y asígnale la acción de Claude que más usas.",
   },
   device: {
-    alt: "Codex Micro translúcido con cuatro teclas, un joystick y una rueda",
-    reservedTip: "Reservado — seguro por defecto",
-    advancedTip: "Reservado — activa los controles avanzados en el paso 2",
+    alt:
+      "Codex Micro translúcido con una rueda pulsable arriba a la izquierda y un joystick direccional arriba a la derecha",
+    reservedTip: "Sensor de layer — reservado",
     reservedNote:
-      "Los controles sin indicador permanecen sin acción a propósito: seguridad por defecto.",
+      "Los 13 switches, incluida la pulsación de la rueda, su rotación en ambos sentidos y el joystick sin clic son configurables. Solo el sensor de layer queda reservado.",
   },
   controls: {
-    joystick: "Joystick",
-    wheel: "Rueda",
-    "key-1": "Tecla 1",
-    "key-2": "Tecla 2",
-    "key-3": "Tecla 3",
-    "key-4": "Tecla 4",
-    "key-5": "Tecla avanzada 1",
-    "key-6": "Tecla avanzada 2",
-    "key-7": "Tecla avanzada 3",
-    "key-8": "Tecla avanzada 4",
+    joystick: "Joystick direccional — sin clic",
+    wheel: "Rotación de la rueda — izquierda o derecha",
+    "key-1": "Tecla Comando 1",
+    "key-2": "Tecla Comando 2",
+    "key-3": "Tecla Comando 3",
+    "key-4": "Tecla Comando 4",
+    "key-5": "Tecla Agente 3",
+    "key-6": "Tecla Agente 4",
+    "key-7": "Tecla Agente 5",
+    "key-8": "Tecla Agente 6",
+    "key-9": "Tecla Agente 1",
+    "key-10": "Tecla Agente 2",
+    "key-11": "Tecla Comando 5",
+    "key-12": "Tecla Comando 6",
+    "key-13": "Clic de la rueda",
   },
   actions: {
     navigation: {
@@ -48,6 +56,10 @@ export default {
       label: "Desplazamiento línea por línea",
       description: "Enviar flecha arriba o abajo en cada paso",
     },
+    effort: {
+      label: "Esfuerzo de Claude",
+      description: "Bajar o subir un nivel de esfuerzo disponible en cada paso",
+    },
     volume: {
       label: "Volumen",
       description: "Ajustar el volumen del Mac",
@@ -55,6 +67,14 @@ export default {
     newSession: {
       label: "Nueva sesión",
       description: "Abrir una nueva sesión de Claude",
+    },
+    send: {
+      label: "Enviar",
+      description: "Enviar inmediatamente el prompt actual",
+    },
+    sendInDuplicateSession: {
+      label: "Enviar en una sesión duplicada",
+      description: "Duplicar la sesión y enviar allí el prompt",
     },
     voice: {
       label: "Modo de voz",
@@ -67,6 +87,32 @@ export default {
     stop: {
       label: "Detener la respuesta",
       description: "Interrumpir la respuesta en curso",
+    },
+    settings: { label: "Ajustes", description: "Abrir los ajustes de Claude" },
+    find: { label: "Buscar", description: "Buscar texto en la conversación" },
+    findNext: {
+      label: "Resultado siguiente",
+      description: "Ir al siguiente resultado de búsqueda",
+    },
+    findPrevious: {
+      label: "Resultado anterior",
+      description: "Volver al resultado de búsqueda anterior",
+    },
+    back: { label: "Atrás", description: "Volver a la vista anterior" },
+    forward: { label: "Adelante", description: "Ir a la vista siguiente" },
+    reload: {
+      label: "Recargar Claude",
+      description: "Recargar la ventana de Claude Desktop",
+    },
+    closeWindow: {
+      label: "Cerrar ventana",
+      description: "Cerrar la ventana activa de Claude",
+    },
+    zoomIn: { label: "Acercar", description: "Aumentar el tamaño de la interfaz" },
+    zoomOut: { label: "Alejar", description: "Reducir el tamaño de la interfaz" },
+    resetZoom: {
+      label: "Restablecer zoom",
+      description: "Restablecer la interfaz al 100 %",
     },
     custom: {
       label: "Atajo personalizado",
@@ -87,28 +133,28 @@ export default {
     download: "Descargar el JSON",
     replace: "Reemplazar",
     chooseJson: "Elegir el JSON",
+    goExport: "Verificar y exportar",
   },
   wizard: {
-    title: "Layer Claude",
     step1Title: "Cargar la exportación de Input",
-    step2Title: "Personalizar los controles",
     step3Title: "Verificar y generar",
   },
   help: {
     summary: "¿Cómo preparo mi exportación de Input?",
     step1:
-      "En Work Louder Input, crea un layer llamado « Claude » (nunca en la primera posición).",
+      "Exporta el perfil activo desde Work Louder Input (Share → Export profile).",
     step2:
-      "Vincula ese layer a Claude Desktop con AppSense y « Auto detect ».",
+      "Carga aquí el archivo JSON: si no hay un layer « Claude », el configurador lo crea por ti.",
     step3:
-      "Exporta el perfil activo (Share → Export profile) y carga aquí el archivo JSON.",
+      "Tras importar el perfil generado, vincula el layer Claude a Claude Desktop mediante AppSense (« Auto detect »).",
     guideLink: "Guía de instalación detallada",
     releasesLink: "Descargar Work Louder Input",
   },
   dialog: {
     kicker: "Configuración de Claude",
+    exportTitle: "Perfil y exportación",
     close: "Cerrar el configurador",
-    chooseControl: "Elegir un control",
+    miniMapLabel: "Vista del teclado — tecla en edición",
     actionTitle: "Acción",
     mappingLabel: "Asignación actual",
     scrimClose: "Cerrar el configurador",
@@ -124,12 +170,7 @@ export default {
     customHint:
       "Una letra, un número o Espacio debe combinarse con al menos un modificador.",
     customSafety:
-      "Retorno, Intro, Suprimir y Retroceso están excluidos por seguridad.",
-  },
-  advanced: {
-    title: "Controles avanzados",
-    hint:
-      "Desbloquea la fila de cuatro teclas iluminadas. No validado en el hardware: prueba con cuidado y conserva tu copia de seguridad.",
+      "Retorno e Intro solo están disponibles mediante las acciones Enviar dedicadas. Suprimir y Retroceso siguen excluidos.",
   },
   loader: {
     titleLoad: "Cargar la copia de seguridad de Input",
@@ -138,15 +179,31 @@ export default {
     meta: "{file} · layer {layer} · AppSense {appSense}",
     appSenseKept: "conservado",
     appSenseNotLinked: "sin vincular",
+    safetyNote:
+      "Tus layers existentes (nativo, Codex…) nunca se modifican: el perfil generado se importa por separado y tu copia de seguridad original permanece intacta.",
+  },
+  conflict: {
+    message:
+      "Este layer Claude ya contiene una asignación distinta de tu personalización actual. ¿Cuál quieres conservar?",
+    keep: "Mantener mi personalización",
+    adopt: "Usar la asignación del layer",
+  },
+  notice: {
+    layerCreated:
+      "Layer « Claude » creado automáticamente (estructura copiada del layer « {template} », teclas neutralizadas).",
+    appSenseTodo:
+      "Después de importar en Input: abre el layer Claude y vincúlalo a Claude Desktop mediante AppSense (« Auto detect »).",
   },
   review: {
     needProfile: "Carga primero tu exportación de Input en el paso 1.",
     ready: "Verifica el resultado antes de descargar el perfil.",
     nativePreserved: "Layer nativo de Work Louder preservado",
     appSensePreserved: "Vínculo AppSense conservado",
+    appSenseTodo:
+      "Pendiente tras la importación: vincular el layer Claude mediante AppSense (Auto detect)",
     layersPreserved: "{count} layer(s) adicional(es) intacto(s)",
     createdActions: "{count} acción(es) creada(s) en la biblioteca",
-    advancedAssigned: "{count} control(es) avanzado(s) asignado(s)",
+    switchesAssigned: "{count} switch(es) asignado(s)",
     shaLabel: "Huella SHA-256 del archivo",
   },
   panelNote:
@@ -158,6 +215,8 @@ export default {
     loaded: "Copia de seguridad de Input reconocida. El perfil puede generarse.",
     loadedMapping:
       "Copia de seguridad reconocida: se recuperó la asignación existente del layer Claude.",
+    keptMapping:
+      "Personalización conservada: no se aplicó la asignación del layer.",
     needProfile: "Carga primero la copia de seguridad oficial de tu perfil de Input.",
     generated: "Perfil de Input creado. Impórtalo con « Add New » en Input.",
   },
@@ -181,12 +240,20 @@ export default {
       "El layer Claude no puede reemplazar el layer nativo en el índice 0.",
     BAD_KEY_ROW:
       "El layer Claude no tiene la disposición esperada para las cuatro teclas.",
+    BAD_TOP_ROW:
+      "El layer Claude no tiene la disposición esperada para la fila superior.",
+    BAD_AGENT_ROW:
+      "El layer Claude no tiene la disposición esperada para las teclas Agente.",
+    BAD_BOTTOM_ROW:
+      "El layer Claude no tiene la disposición esperada para la fila inferior.",
     BAD_ENCODERS: "El layer Claude no tiene la disposición esperada para la rueda.",
-    BAD_ADVANCED_ROW:
-      "El layer Claude no tiene la disposición esperada para la fila avanzada.",
     MISSING_JOYSTICK: "El layer Claude no contiene joystick.",
     MISSING_APPSENSE:
       "El layer Claude debe estar ya asociado a Claude con un identificador AppSense válido.",
+    LAYER_LIMIT:
+      "El perfil ya contiene seis layers: libera un espacio en Input antes de crear el layer Claude.",
+    NO_TEMPLATE_LAYER:
+      "Ningún layer existente puede servir de modelo para crear el layer Claude.",
     FORBIDDEN_KEY:
       "Retorno, Intro, Suprimir y Retroceso están prohibidos por seguridad.",
     PRINTABLE_NEEDS_MODIFIER:
@@ -206,5 +273,9 @@ export default {
       "Conecta el Codex Micro, selecciónalo en Input y vuelve a exportar el perfil.",
     CLAUDE_LAYER_NATIVE:
       "Crea el layer « Claude » además del layer nativo: nunca debe ocupar la primera posición.",
+    LAYER_LIMIT:
+      "Elimina o combina un layer en Input y vuelve a exportar.",
+    NO_TEMPLATE_LAYER:
+      "Crea un layer « Claude » manualmente en Input y vuelve a exportar.",
   },
 };

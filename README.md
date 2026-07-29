@@ -35,9 +35,15 @@ Codex layer.
 
 ## What works today
 
-- guided three-step setup with English, French, Spanish, and German interfaces;
-- visual mapping for the joystick, dial, and Claude shortcut keys;
-- safe custom shortcuts with destructive keys rejected by construction;
+- guided key-editing and profile-export modes with English, French, Spanish,
+  and German interfaces;
+- visual mapping for all 13 switches, wheel rotation, and the joystick;
+- expanded Claude Desktop catalog for sessions, voice, diff, search,
+  navigation, settings, window controls, zoom, and two explicit send actions;
+- experimental wheel mode that moves through Claude's available effort levels
+  one notch at a time;
+- safe custom shortcuts with Return/Enter, Delete, and Backspace rejected by
+  construction;
 - preservation checks for the native layer, other layers, and AppSense link;
 - local JSON generation with a SHA-256 fingerprint and no upload.
 
@@ -115,8 +121,8 @@ Claude Desktop avec AppSense.
 | même rangée, deuxième | `⌘D` — mode vocal |
 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
 | même rangée, droite | `Esc` — annuler ou fermer selon le contexte |
-| cadran, coin supérieur droit | `PageUp` / `PageDown` |
-| joystick, coin supérieur gauche | quatre flèches directionnelles |
+| molette cliquable, coin supérieur gauche | `PageUp` / `PageDown` ; clic configurable |
+| joystick sans clic, coin supérieur droit | quatre flèches directionnelles |
 | autres contrôles | aucune action ; capteur de layer réservé |
 
 Couleur proposée : `#D97757`. Activation : Claude Desktop au premier plan via
@@ -177,12 +183,17 @@ Le configurateur relit le mapping déjà présent dans le layer Claude chargé,
 mémorise localement la configuration en cours, suit le thème clair ou sombre
 du système et propose :
 
-- les quatre actions Claude canoniques, plus des raccourcis personnalisés
-  restreints aux touches sûres (Retour/Entrée, Suppression et Retour arrière
-  restent interdits par construction) ;
-- trois modes de molette (pages, lignes, volume expérimental) ;
-- en option explicitement marquée expérimentale et non validée sur matériel,
-  la rangée de quatre touches lumineuses (`base[1]`).
+- les 13 switches physiques, y compris l'appui de la molette, ainsi que sa
+  rotation et le joystick ; seul le capteur tactile de changement de layer
+  reste réservé ;
+- un catalogue étendu de raccourcis Claude Desktop : session, voix, diff,
+  recherche, navigation, réglages, fenêtre, zoom et deux actions d'envoi
+  explicites ;
+- des raccourcis personnalisés restreints aux touches sûres (Retour/Entrée,
+  Suppression et Retour arrière restent interdits dans l'éditeur
+  personnalisé) ;
+- quatre modes de molette (pages, lignes, effort Claude expérimental, volume
+  expérimental).
 
 ### Démarrage sans modification
 

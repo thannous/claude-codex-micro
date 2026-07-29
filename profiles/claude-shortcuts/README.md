@@ -45,14 +45,15 @@ Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 | Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
 | Touche 3 | même rangée, troisième | `⌘⇧D` — afficher/masquer le diff |
 | Touche 4 | même rangée, tout à droite | `Esc` — annuler/fermer selon le contexte |
-| Cadran | coin supérieur droit | horaire : `PageDown` ; antihoraire : `PageUp` |
-| Joystick | coin supérieur gauche | quatre flèches directionnelles |
+| Molette cliquable | coin supérieur gauche | horaire : `PageDown` ; antihoraire : `PageUp` ; clic configurable |
+| Joystick sans clic | coin supérieur droit | quatre flèches directionnelles |
 
 ![Schéma du layer Claude](assets/layout.svg)
 
-Les six touches agents, la touche large du bas, la touche inférieure droite et
-l'appui du cadran sont explicitement sans action. Le capteur tactile reste
-réservé au changement de layer.
+Ce preset V1 laisse par défaut les six touches agents, la touche large du bas,
+la touche inférieure droite et l'appui du cadran sans action. Ces contrôles
+restent configurables dans le GUI ; seul le capteur tactile est réservé au
+changement de layer.
 
 ## AppSense
 
@@ -77,14 +78,27 @@ personnaliser les contrôles sûrs et génère un nouveau
 `Claude-macOS-profile.json`. Seul ce fichier personnel est destiné au flux
 **Add New** d'Input ; le contrat logique du dépôt ne l'est pas.
 
+Le catalogue du GUI propose aussi deux actions d'envoi sur choix explicite :
+Retour pour envoyer, et `⌥⌘Retour` pour envoyer dans une session dupliquée.
+Entrée reste indisponible dans l'éditeur de combinaison personnalisée et ces
+actions ne font pas partie du preset public par défaut.
+
+La rotation de la molette peut aussi recevoir le mode expérimental **Effort
+Claude** : chaque cran ouvre le sélecteur avec `⌘⇧E`, déplace son curseur d'un
+niveau avec `←` ou `→`, puis le referme avec `Esc`, sans utiliser `Entrée`.
+`⌘⇧E` étant une bascule, ce `Esc` est obligatoire. La macro attend 80 ms que le
+sélecteur apparaisse, puis 10 ms qu'il affiche le niveau atteint avant de le
+refermer, soit environ 90 ms par cran payés dans le firmware.
+
 Le double appui sur Option pour la saisie rapide et Verr. Maj. pour la dictée
 globale restent hors du layer AppSense.
 
 ## Sécurité
 
-Le validateur interdit dans les contrôles actifs : Retour/Entrée, envoi,
-approbation ou refus de permission, suppression, `git push`, déploiement et
-commande destructive.
+Le validateur du preset logique public interdit dans les contrôles actifs :
+Retour/Entrée, envoi, approbation ou refus de permission, suppression,
+`git push`, déploiement et commande destructive. Les deux actions d'envoi du
+GUI personnel restent donc un choix local explicite.
 
 Valider le preset :
 

@@ -9,31 +9,39 @@ export default {
     localProcessing: "Local processing",
     backupVerified: "Backup verified",
     languageLabel: "Language",
+    theme: {
+      auto: "Theme: system. Switch to light theme",
+      light: "Theme: light. Switch to dark theme",
+      dark: "Theme: dark. Switch to system theme",
+    },
   },
   hero: {
-    eyebrow: "Controller for Claude Desktop",
-    title: "Your Claude shortcuts, close at hand.",
     subtitle:
       "Pick a Codex Micro key and assign it the Claude action you use the most.",
   },
   device: {
-    alt: "Translucent Codex Micro with four keys, a joystick, and a wheel",
-    reservedTip: "Reserved — safe by default",
-    advancedTip: "Reserved — enable advanced controls in step 2",
+    alt:
+      "Translucent Codex Micro with a clickable wheel at the upper left and a directional joystick at the upper right",
+    reservedTip: "Layer sensor — reserved",
     reservedNote:
-      "Controls without a badge are intentionally left without an action: safe by default.",
+      "All 13 switches, including the wheel press, wheel rotation in both directions, and the non-clickable joystick are configurable. Only the layer sensor stays reserved.",
   },
   controls: {
-    joystick: "Joystick",
-    wheel: "Wheel",
-    "key-1": "Key 1",
-    "key-2": "Key 2",
-    "key-3": "Key 3",
-    "key-4": "Key 4",
-    "key-5": "Advanced key 1",
-    "key-6": "Advanced key 2",
-    "key-7": "Advanced key 3",
-    "key-8": "Advanced key 4",
+    joystick: "Directional joystick — no press",
+    wheel: "Wheel rotation — left or right",
+    "key-1": "Command key 1",
+    "key-2": "Command key 2",
+    "key-3": "Command key 3",
+    "key-4": "Command key 4",
+    "key-5": "Agent key 3",
+    "key-6": "Agent key 4",
+    "key-7": "Agent key 5",
+    "key-8": "Agent key 6",
+    "key-9": "Agent key 1",
+    "key-10": "Agent key 2",
+    "key-11": "Command key 5",
+    "key-12": "Command key 6",
+    "key-13": "Wheel press",
   },
   actions: {
     navigation: {
@@ -48,6 +56,10 @@ export default {
       label: "Line-by-line scrolling",
       description: "Send arrow up or down on each notch",
     },
+    effort: {
+      label: "Claude effort",
+      description: "Move one available effort level down or up at each notch",
+    },
     volume: {
       label: "Volume",
       description: "Adjust the Mac volume",
@@ -55,6 +67,14 @@ export default {
     newSession: {
       label: "New session",
       description: "Open a new Claude session",
+    },
+    send: {
+      label: "Send",
+      description: "Send the current prompt immediately",
+    },
+    sendInDuplicateSession: {
+      label: "Send in a duplicated session",
+      description: "Duplicate the session and send the prompt there",
     },
     voice: {
       label: "Voice mode",
@@ -67,6 +87,50 @@ export default {
     stop: {
       label: "Stop response",
       description: "Interrupt the current response",
+    },
+    settings: {
+      label: "Settings",
+      description: "Open Claude settings",
+    },
+    find: {
+      label: "Find",
+      description: "Find text in the conversation",
+    },
+    findNext: {
+      label: "Next result",
+      description: "Go to the next search result",
+    },
+    findPrevious: {
+      label: "Previous result",
+      description: "Go back to the previous search result",
+    },
+    back: {
+      label: "Back",
+      description: "Return to the previous view",
+    },
+    forward: {
+      label: "Forward",
+      description: "Move to the next view",
+    },
+    reload: {
+      label: "Reload Claude",
+      description: "Reload the Claude Desktop window",
+    },
+    closeWindow: {
+      label: "Close window",
+      description: "Close the active Claude window",
+    },
+    zoomIn: {
+      label: "Zoom in",
+      description: "Make the Claude interface larger",
+    },
+    zoomOut: {
+      label: "Zoom out",
+      description: "Make the Claude interface smaller",
+    },
+    resetZoom: {
+      label: "Reset zoom",
+      description: "Restore the interface to 100%",
     },
     custom: {
       label: "Custom shortcut",
@@ -87,28 +151,28 @@ export default {
     download: "Download the JSON",
     replace: "Replace",
     chooseJson: "Choose JSON",
+    goExport: "Review and export",
   },
   wizard: {
-    title: "Claude layer",
     step1Title: "Load the Input export",
-    step2Title: "Customize the controls",
     step3Title: "Review and generate",
   },
   help: {
     summary: "How do I prepare my Input export?",
     step1:
-      "In Work Louder Input, create a layer named “Claude” (never in first position).",
+      "Export the active profile from Work Louder Input (Share → Export profile).",
     step2:
-      "Link that layer to Claude Desktop with AppSense and “Auto detect”.",
+      "Load the JSON file here: if there is no “Claude” layer, the configurator creates it for you.",
     step3:
-      "Export the active profile (Share → Export profile), then load the JSON file here.",
+      "After importing the generated profile, link the Claude layer to Claude Desktop via AppSense (“Auto detect”).",
     guideLink: "Detailed setup guide",
     releasesLink: "Download Work Louder Input",
   },
   dialog: {
     kicker: "Claude setup",
+    exportTitle: "Profile and export",
     close: "Close the configurator",
-    chooseControl: "Choose a control",
+    miniMapLabel: "Keypad overview — key being edited",
     actionTitle: "Action",
     mappingLabel: "Current mapping",
     scrimClose: "Close the configurator",
@@ -124,12 +188,7 @@ export default {
     customHint:
       "A letter, digit, or Space must be combined with at least one modifier.",
     customSafety:
-      "Return, Enter, Delete, and Backspace are excluded for safety.",
-  },
-  advanced: {
-    title: "Advanced controls",
-    hint:
-      "Unlocks the row of four light keys. Not validated on hardware: test carefully and keep your backup.",
+      "Return and Enter are available only through the dedicated Send actions. Delete and Backspace remain excluded.",
   },
   loader: {
     titleLoad: "Load the Input backup",
@@ -138,15 +197,31 @@ export default {
     meta: "{file} · layer {layer} · AppSense {appSense}",
     appSenseKept: "kept",
     appSenseNotLinked: "not linked",
+    safetyNote:
+      "Your existing layers (native, Codex…) are never modified: the generated profile imports separately and your original backup stays intact.",
+  },
+  conflict: {
+    message:
+      "This Claude layer already contains a mapping that differs from your current customization. Which one do you want to keep?",
+    keep: "Keep my customization",
+    adopt: "Use the layer’s mapping",
+  },
+  notice: {
+    layerCreated:
+      "“Claude” layer created automatically (structure copied from the “{template}” layer, keys neutralized).",
+    appSenseTodo:
+      "After importing into Input: open the Claude layer and link it to Claude Desktop via AppSense (“Auto detect”).",
   },
   review: {
     needProfile: "First, load your Input export in step 1.",
     ready: "Review the result before downloading the profile.",
     nativePreserved: "Work Louder native layer preserved",
     appSensePreserved: "AppSense link kept",
+    appSenseTodo:
+      "To do after import: link the Claude layer via AppSense (Auto detect)",
     layersPreserved: "{count} other layer(s) intact",
     createdActions: "{count} action(s) created in the library",
-    advancedAssigned: "{count} advanced control(s) assigned",
+    switchesAssigned: "{count} switch(es) assigned",
     shaLabel: "SHA-256 fingerprint of the file",
   },
   panelNote:
@@ -158,6 +233,8 @@ export default {
     loaded: "Input backup recognized. The profile can be generated.",
     loadedMapping:
       "Backup recognized: the existing mapping of the Claude layer was carried over.",
+    keptMapping:
+      "Customization kept: the layer’s mapping was not applied.",
     needProfile: "First, load the official backup of your Input profile.",
     generated: "Input profile created. Import it with “Add New” in Input.",
   },
@@ -181,12 +258,20 @@ export default {
       "The Claude layer cannot replace the native layer at index 0.",
     BAD_KEY_ROW:
       "The Claude layer does not have the expected layout for the four keys.",
+    BAD_TOP_ROW:
+      "The Claude layer does not have the expected top-row layout.",
+    BAD_AGENT_ROW:
+      "The Claude layer does not have the expected Agent-key layout.",
+    BAD_BOTTOM_ROW:
+      "The Claude layer does not have the expected bottom-row layout.",
     BAD_ENCODERS: "The Claude layer does not have the expected layout for the wheel.",
-    BAD_ADVANCED_ROW:
-      "The Claude layer does not have the expected layout for the advanced row.",
     MISSING_JOYSTICK: "The Claude layer does not contain a joystick.",
     MISSING_APPSENSE:
       "The Claude layer must already be linked to Claude with a valid AppSense identifier.",
+    LAYER_LIMIT:
+      "The profile already contains six layers: free a slot in Input before creating the Claude layer.",
+    NO_TEMPLATE_LAYER:
+      "No existing layer can be used as a template to create the Claude layer.",
     FORBIDDEN_KEY:
       "Return, Enter, Delete, and Backspace are forbidden for safety.",
     PRINTABLE_NEEDS_MODIFIER:
@@ -206,5 +291,9 @@ export default {
       "Plug in the Codex Micro, select it in Input, then export the profile again.",
     CLAUDE_LAYER_NATIVE:
       "Create the “Claude” layer alongside the native layer: it must never occupy the first position.",
+    LAYER_LIMIT:
+      "Delete or merge a layer in Input, then export again.",
+    NO_TEMPLATE_LAYER:
+      "Create a “Claude” layer manually in Input, then export again.",
   },
 };

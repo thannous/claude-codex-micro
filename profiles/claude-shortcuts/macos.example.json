@@ -91,7 +91,7 @@
     },
     {
       "control": "encoder-rotate",
-      "physicalPosition": "top-right-rotary-encoder",
+      "physicalPosition": "top-left-clickable-rotary-encoder",
       "label": "PAGE",
       "action": {
         "type": "page-navigation",
@@ -103,7 +103,7 @@
     },
     {
       "control": "joystick",
-      "physicalPosition": "top-left-planar-joystick",
+      "physicalPosition": "top-right-non-clickable-planar-joystick",
       "label": "NAV",
       "action": {
         "type": "directional-keys",

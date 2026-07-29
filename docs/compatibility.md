@@ -5,7 +5,7 @@ partage et les validations encore requises sur le matériel.
 
 | Élément | Version / cible | Niveau de preuve | Résultat |
 | --- | --- | --- | --- |
-| Matériel | Work Louder Codex Micro | `hardware-observed` | joystick supérieur gauche, molette supérieure droite et touches principales observés ; checklist complète en attente |
+| Matériel | Work Louder Codex Micro | `hardware-observed` | molette cliquable supérieure gauche, joystick sans clic supérieur droit et touches principales observés ; checklist complète en attente |
 | Work Louder Input | `0.17.3`, bundle `it.focusense.input-app` | profile réel et générateur validés | transformation locale du profile validée ; round-trip layer séparé en attente |
 | Mécanisme historique | Input `0.17.2` | bundle officiel inspecté | import/export layer et profile observé statiquement |
 | Firmware | `v0.4.1` | écran Setup observé localement | combinaison Input/firmware connue ; validation matérielle partielle |

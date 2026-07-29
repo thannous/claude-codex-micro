@@ -6,6 +6,20 @@
     <meta name="theme-color" content="#d97757" />
     <meta name="description" content="Easily configure your Codex Micro keys for Claude Desktop." />
     <title>Set up Claude | Codex Micro</title>
+    <script>
+      (function () {
+        var theme = "auto";
+        try {
+          theme = window.localStorage.getItem("codex-micro-theme") || "auto";
+        } catch (error) {}
+        if (theme !== "light" && theme !== "dark") {
+          theme = window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+        }
+        document.documentElement.dataset.theme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

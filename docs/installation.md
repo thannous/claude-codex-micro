@@ -22,7 +22,8 @@ La première ouverture peut préparer les dépendances verrouillées de
 1. exporter le profile actif depuis Work Louder Input ;
 2. déposer ce `*-profile.json` dans le configurateur ;
 3. vérifier l'unique layer `Claude`, son lien AppSense et l'index natif `0` ;
-4. personnaliser les quatre touches, le cadran et le joystick ;
+4. personnaliser les 13 switches, la rotation du cadran et le joystick ; seul
+   le capteur tactile de changement de layer reste réservé ;
 5. télécharger `Claude-macOS-profile.json` ;
 6. l'importer avec **Add New**, sans remplacer le profile source.
 
@@ -183,8 +184,34 @@ Le mapping généré est :
 | même rangée, deuxième | `⌘D` |
 | même rangée, troisième | `⌘⇧D` |
 | même rangée, droite | `Esc` |
-| cadran supérieur droit, horaire / antihoraire | `PageDown` / `PageUp` |
-| joystick supérieur gauche | quatre flèches |
+| molette supérieure gauche, horaire / antihoraire | `PageDown` / `PageUp` |
+| clic de la molette supérieure gauche | configurable séparément |
+| joystick supérieur droit, sans clic | quatre flèches |
+
+Le GUI propose aussi un mode expérimental **Effort Claude** pour la rotation de
+la molette. Chaque cran envoie `⌘⇧E`, attend l'ouverture du sélecteur, puis
+`←` ou `→` et `Esc`. Il passe donc au niveau d'effort disponible précédent ou
+suivant sans utiliser `Entrée`. Les niveaux réellement proposés dépendent du
+modèle et de la version de Claude Desktop.
+
+`⌘⇧E` est une bascule : le `Esc` final est obligatoire, sans lui le cran suivant
+refermerait le sélecteur au lieu de l'ouvrir.
+
+La macro porte donc deux temporisations, pour un coût d'environ 90 ms par cran :
+
+- **80 ms** sur la libération de ⌘, le temps que le sélecteur apparaisse. En
+  dessous de 40 ms la flèche part avant que le sélecteur ait le focus et le
+  changement de niveau est perdu sans message d'erreur ;
+- **10 ms** sur `Esc`, le temps que le sélecteur peigne le niveau atteint avant
+  de se refermer. Sans elle le sélecteur ne fait que clignoter et le niveau
+  choisi n'est jamais affiché.
+
+Ces temporisations sont exécutées par le firmware, et tourner vite pendant qu'une
+macro est en cours peut faire perdre des crans. Le mode convient à des
+ajustements de quelques niveaux, pas à un balayage continu.
+
+Le calibrage et ce qui reste non prouvé sont détaillés dans
+[`docs/research/effort-wheel-calibration.md`](research/effort-wheel-calibration.md).
 
 Le schéma de référence est
 [`profiles/claude-shortcuts/assets/layout.svg`](../profiles/claude-shortcuts/assets/layout.svg).
@@ -211,6 +238,11 @@ Tester dans une conversation sans enjeu, une action à la fois :
 - [ ] `⌘⇧D` affiche ou masque le diff ;
 - [ ] `Esc` annule ou ferme uniquement le contexte attendu ;
 - [ ] cadran horaire descend et antihoraire monte ;
+- [ ] en mode Effort Claude, chaque cran change d'un seul niveau et referme le
+      sélecteur sans envoyer de prompt ;
+- [ ] en mode Effort Claude, le niveau atteint est lisible avant la fermeture, et
+      un cran déclenché au retour d'une autre application le change bien : c'est
+      le cas défavorable, où l'échec est silencieux ;
 - [ ] joystick émet les quatre flèches ;
 - [ ] tous les contrôles non utilisés restent sans action dangereuse ;
 - [ ] passer au Finder restaure un état sûr ;

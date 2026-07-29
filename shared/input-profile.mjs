@@ -35,6 +35,11 @@ const FINAL_KEYCODES = {
   Escape: "KC_ESC",
   Space: "KC_SPC",
   Tab: "KC_TAB",
+  Comma: "KC_COMM",
+  BracketLeft: "KC_LBRC",
+  BracketRight: "KC_RBRC",
+  Equal: "KC_EQL",
+  Minus: "KC_MINS",
 };
 
 const FINAL_KEY_BY_KEYCODE = Object.fromEntries(
@@ -53,18 +58,51 @@ const PRINTABLE_KEYS = new Set([
   ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)),
   ...Array.from({ length: 10 }, (_, digit) => String(digit)),
   "Space",
+  "Comma",
+  "BracketLeft",
+  "BracketRight",
+  "Equal",
+  "Minus",
 ]);
 
-const CONTROL_ORDER = ["key-1", "key-2", "key-3", "key-4"];
-const ADVANCED_CONTROL_ORDER = ["key-5", "key-6", "key-7", "key-8"];
+// Les douze keycaps programmables sont répartis sur quatre rangées. La
+// première cellule de la dernière rangée est le capteur de changement de
+// layer : elle est volontairement absente de cette table et reste intacte.
+const KEY_CONTROL_LOCATIONS = Object.freeze({
+  "key-9": { row: 0, column: 0 },
+  "key-10": { row: 0, column: 1 },
+  "key-5": { row: 1, column: 0 },
+  "key-6": { row: 1, column: 1 },
+  "key-7": { row: 1, column: 2 },
+  "key-8": { row: 1, column: 3 },
+  "key-1": { row: 2, column: 0 },
+  "key-2": { row: 2, column: 1 },
+  "key-3": { row: 2, column: 2 },
+  "key-4": { row: 2, column: 3 },
+  "key-11": { row: 3, column: 1 },
+  "key-12": { row: 3, column: 2 },
+});
+const KEY_CONTROL_ORDER = Object.keys(KEY_CONTROL_LOCATIONS);
+// The top-left rotary encoder exposes counterclockwise, clockwise, and press
+// cells. Its press is the thirteenth configurable physical switch.
+const ENCODER_PRESS_CONTROL = "key-13";
 
 const DEFAULT_MAPPING = {
   joystick: "navigation",
   wheel: "scroll",
+  "key-9": "none",
+  "key-10": "none",
+  "key-5": "none",
+  "key-6": "none",
+  "key-7": "none",
+  "key-8": "none",
   "key-1": "newSession",
   "key-2": "voice",
   "key-3": "diff",
   "key-4": "stop",
+  "key-11": "none",
+  "key-12": "none",
+  "key-13": "none",
 };
 
 const ACTION_DEFINITIONS = {
@@ -72,6 +110,24 @@ const ACTION_DEFINITIONS = {
     name: "Claude New",
     type: "shortcut",
     keys: ["Command", "N"],
+  },
+  // Sending stays forbidden in the custom editor. These two definitions are
+  // deliberate, named catalogue actions that mirror Claude Desktop exactly.
+  send: {
+    name: "Claude Send",
+    type: "directKeycode",
+    keycode: "KC_ENT",
+  },
+  sendInDuplicateSession: {
+    name: "Claude Send in Duplicate Session",
+    type: "sequence",
+    keyInputs: [
+      { keycode: "KC_LALT", delay: 0, actionType: 1 },
+      { keycode: "KC_LGUI", delay: 0, actionType: 1 },
+      { keycode: "KC_ENT", delay: 0, actionType: 2 },
+      { keycode: "KC_LGUI", delay: 0, actionType: 0 },
+      { keycode: "KC_LALT", delay: 0, actionType: 0 },
+    ],
   },
   voice: {
     name: "Claude Voice",
@@ -88,18 +144,150 @@ const ACTION_DEFINITIONS = {
     type: "direct",
     key: "Escape",
   },
+  settings: {
+    name: "Claude Settings",
+    type: "shortcut",
+    keys: ["Command", "Comma"],
+  },
+  find: {
+    name: "Claude Find",
+    type: "shortcut",
+    keys: ["Command", "F"],
+  },
+  findNext: {
+    name: "Claude Find Next",
+    type: "shortcut",
+    keys: ["Command", "G"],
+  },
+  findPrevious: {
+    name: "Claude Find Previous",
+    type: "shortcut",
+    keys: ["Command", "Shift", "G"],
+  },
+  back: {
+    name: "Claude Back",
+    type: "shortcut",
+    keys: ["Command", "BracketLeft"],
+  },
+  forward: {
+    name: "Claude Forward",
+    type: "shortcut",
+    keys: ["Command", "BracketRight"],
+  },
+  reload: {
+    name: "Claude Reload",
+    type: "shortcut",
+    keys: ["Command", "R"],
+  },
+  closeWindow: {
+    name: "Claude Close Window",
+    type: "shortcut",
+    keys: ["Command", "W"],
+  },
+  zoomIn: {
+    name: "Claude Zoom In",
+    type: "shortcut",
+    keys: ["Command", "Shift", "Equal"],
+  },
+  zoomOut: {
+    name: "Claude Zoom Out",
+    type: "shortcut",
+    keys: ["Command", "Minus"],
+  },
+  resetZoom: {
+    name: "Claude Reset Zoom",
+    type: "shortcut",
+    keys: ["Command", "0"],
+  },
   none: {
     name: "None",
     type: "none",
   },
 };
 
+// Attente laissée au sélecteur d'effort pour apparaître, en millisecondes.
+//
+// Input ne documente pas si `delay` s'applique avant ou après son étape, et
+// aucune source ne permet de le trancher : le champ est transmis verbatim au
+// firmware, qui seul l'interprète. La macro contourne la question par sa forme
+// plutôt que par une mesure. Toute l'attente est posée sur la libération de ⌘ et
+// la flèche reçoit 0, ce qui rend les deux lectures équivalentes :
+//
+//   - lecture « après »  : ⌘ relâché, attente, flèche  -> sélecteur : ce délai
+//   - lecture « avant »  : attente, ⌘ relâché, flèche  -> sélecteur : ce délai
+//
+// Même marge et même durée totale dans les deux cas. Ne pas répartir cette
+// attente sur les deux étapes : cela double le délai d'ouverture sans rien
+// garantir de plus.
+//
+// Calibrage matériel, échelle descendante testée sur Codex Micro : 40 ms tient,
+// 20 ms échoue. La valeur retenue double ce plancher mesuré. Le délai
+// d'ouverture est donc de 80 ms, auquel s'ajoutent les 10 ms de retour visuel
+// ci-dessous, contre 900 ms pour la première version de la macro.
+//
+// En descendant plus bas, l'échec n'est pas bruyant : la flèche part avant que
+// le sélecteur ait le focus et le changement de niveau est perdu sans trace.
+// Toute nouvelle baisse doit donc être validée par plusieurs répétitions ET par
+// une première ouverture à froid, au retour d'une autre application.
+const EFFORT_PICKER_DELAY_MS = 80;
+
+// Attente portée par l'étape Escape, en millisecondes. Elle sert au retour
+// visuel, pas à la fiabilité, et ne doit pas être ramenée à 0.
+//
+// Sans elle, la flèche et Escape sont émis sans écart et Claude les traite dans
+// le même tour de boucle : le sélecteur s'ouvre et se referme sans jamais peindre
+// une image montrant le slider à son nouveau niveau. On change donc l'effort à
+// l'aveugle, et l'effet visible est un simple clignotement. 10 ms suffisent à
+// laisser passer une image, et le niveau atteint devient lisible.
+//
+// Cette attente est payée APRÈS que le niveau a changé : elle allonge la macro
+// sans retarder son effet. C'est aussi ce qui indique que `delay` s'applique
+// avant son étape et non après — dans la lecture « après » ces 10 ms seraient du
+// temps mort en fin de macro et ne changeraient rien à l'affichage.
+const EFFORT_FEEDBACK_DELAY_MS = 10;
+
 const WHEEL_MODES = {
   scroll: { counterClockwise: "KC_PGUP", clockwise: "KC_PGDN" },
+  effort: {
+    counterClockwise: {
+      name: "Claude Effort Down",
+      keyInputs: buildEffortWheelKeyInputs("KC_LEFT"),
+    },
+    clockwise: {
+      name: "Claude Effort Up",
+      keyInputs: buildEffortWheelKeyInputs("KC_RGHT"),
+    },
+    experimental: true,
+  },
   lines: { counterClockwise: "KC_UP", clockwise: "KC_DOWN" },
   volume: { counterClockwise: "KC_VOLD", clockwise: "KC_VOLU", experimental: true },
   none: null,
 };
+
+// These indices are deliberately the opposite of what the vendor names suggest.
+// DO NOT "fix" them from the keycode names alone — the mapping below is the one
+// confirmed by hardware, twice.
+//
+// The Codex Micro factory template names the three cells
+// ["KV_OAI_ENC_CC", "KV_OAI_ENC_CW", "KV_OAI_ENC_CLK"], so cell 0 reads as
+// counterclockwise. On the tested firmware it is not: rotating clockwise fires
+// cell 0. Reading the names and swapping these indices reverses the wheel.
+//
+// Two independent inversions sit between the names and the user, which is why
+// this is easy to get wrong:
+//   - the firmware delivers the two rotation events swapped relative to the
+//     vendor's own cell names;
+//   - Input 0.17.3 additionally swaps the "CW" and "CCW" labels in its editor
+//     for any three-cell encoder, so its UI disagrees with the keycode names of
+//     its own default template. Writing this JSON directly bypasses that bug,
+//     which is why the generator must not mirror what the editor displays.
+//
+// Keep the public wheel semantics physical and intuitive despite all that.
+const PHYSICAL_ENCODER_SLOTS = Object.freeze({
+  clockwise: 0,
+  counterClockwise: 1,
+  press: 2,
+});
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value));
@@ -178,6 +366,29 @@ function buildKeyInputs(keys) {
   ];
 }
 
+// Claude Desktop ouvre le sélecteur d'effort avec ⌘⇧E. Son curseur ARIA
+// accepte ensuite gauche/droite pour passer au niveau disponible précédent ou
+// suivant. ⌘⇧E est une bascule vérifiée sur Claude Desktop : chaque cran doit
+// donc refermer le sélecteur avec Escape, sinon le cran suivant le referme au
+// lieu de l'ouvrir et le niveau est sauté.
+//
+// Le sélecteur est rendu de façon asynchrone, il faut donc l'attendre avant
+// d'envoyer la flèche : EFFORT_PICKER_DELAY_MS, porté par la seule libération de
+// ⌘. Puis il faut le laisser peindre le niveau atteint avant de le refermer :
+// EFFORT_FEEDBACK_DELAY_MS, porté par Escape. L'étape de la flèche reste à 0,
+// c'est elle qui rend les deux lectures possibles de `delay` équivalentes.
+function buildEffortWheelKeyInputs(directionKeycode) {
+  return [
+    { keycode: "KC_LGUI", delay: 0, actionType: 1 },
+    { keycode: "KC_LSFT", delay: 0, actionType: 1 },
+    { keycode: "KC_E", delay: 0, actionType: 2 },
+    { keycode: "KC_LSFT", delay: 0, actionType: 0 },
+    { keycode: "KC_LGUI", delay: EFFORT_PICKER_DELAY_MS, actionType: 0 },
+    { keycode: directionKeycode, delay: 0, actionType: 2 },
+    { keycode: "KC_ESC", delay: EFFORT_FEEDBACK_DELAY_MS, actionType: 2 },
+  ];
+}
+
 function decodeKeyInputs(keyInputs) {
   if (!Array.isArray(keyInputs) || keyInputs.length % 2 !== 1) return null;
 
@@ -243,10 +454,42 @@ function resolveKeyAssignment(profile, assignment, createdActionIds) {
     const id = findOrCreateAction(profile, definition.name, keyInputs, createdActionIds);
     return `KA_${id}`;
   }
+  if (definition.type === "sequence") {
+    const keyInputs = clone(definition.keyInputs);
+    const id = findOrCreateAction(
+      profile,
+      definition.name,
+      keyInputs,
+      createdActionIds,
+    );
+    return `KA_${id}`;
+  }
   if (definition.type === "direct") {
     return FINAL_KEYCODES[definition.key];
   }
+  if (definition.type === "directKeycode") {
+    return definition.keycode;
+  }
   return "KC_NONE";
+}
+
+function resolveWheelDirection(profile, direction, createdActionIds) {
+  if (typeof direction === "string") return direction;
+
+  assert(
+    direction &&
+      typeof direction.name === "string" &&
+      Array.isArray(direction.keyInputs),
+    "Séquence de molette invalide.",
+    "UNKNOWN_ASSIGNMENT",
+  );
+  const id = findOrCreateAction(
+    profile,
+    direction.name,
+    direction.keyInputs,
+    createdActionIds,
+  );
+  return `KA_${id}`;
 }
 
 function addActionsToGroup(profile, actionIds) {
@@ -286,7 +529,7 @@ function radialSectors(keycodes) {
   return sectors;
 }
 
-export function inspectInputProfile(source) {
+export function inspectInputProfile(source, { requireAppSense = true } = {}) {
   assert(source && typeof source === "object", "Le fichier JSON est vide.", "EMPTY_FILE");
   assert(
     source.keyboard === DEVICE_TYPE,
@@ -329,22 +572,34 @@ export function inspectInputProfile(source) {
     "Le layer Claude ne peut pas remplacer le layer natif à l’index 0.",
     "CLAUDE_LAYER_NATIVE",
   );
-  assert(
-    Array.isArray(layer.layout?.base?.[2]) && layer.layout.base[2].length >= 4,
-    "Le layer Claude n’a pas la disposition attendue pour les quatre touches.",
-    "BAD_KEY_ROW",
-  );
+  const expectedRows = [
+    { index: 0, length: 2, code: "BAD_TOP_ROW", label: "supérieure" },
+    { index: 1, length: 4, code: "BAD_AGENT_ROW", label: "des touches Agent" },
+    { index: 2, length: 4, code: "BAD_KEY_ROW", label: "des quatre touches principales" },
+    { index: 3, length: 3, code: "BAD_BOTTOM_ROW", label: "inférieure" },
+  ];
+  for (const row of expectedRows) {
+    assert(
+      Array.isArray(layer.layout?.base?.[row.index]) &&
+        layer.layout.base[row.index].length >= row.length,
+      `Le layer Claude n’a pas la disposition attendue pour la rangée ${row.label}.`,
+      row.code,
+    );
+  }
   assert(
     Array.isArray(layer.layout?.encoders?.[0]) && layer.layout.encoders[0].length >= 3,
     "Le layer Claude n’a pas la disposition attendue pour la molette.",
     "BAD_ENCODERS",
   );
   assert(layer.layout?.joystick, "Le layer Claude ne contient pas de joystick.", "MISSING_JOYSTICK");
-  assert(
-    Number.isInteger(layer.linkedAppId) && layer.linkedAppId >= 0,
-    "Le layer Claude doit déjà être associé à Claude avec un identifiant AppSense valide.",
-    "MISSING_APPSENSE",
-  );
+  const appSenseLinked = Number.isInteger(layer.linkedAppId) && layer.linkedAppId >= 0;
+  if (requireAppSense) {
+    assert(
+      appSenseLinked,
+      "Le layer Claude doit déjà être associé à Claude avec un identifiant AppSense valide.",
+      "MISSING_APPSENSE",
+    );
+  }
 
   return {
     device: source.keyboard,
@@ -352,22 +607,122 @@ export function inspectInputProfile(source) {
     profileName: source.profile.name,
     layerName: layer.name,
     layerIndex,
-    appSenseLinked: true,
-    advancedRowAvailable:
-      Array.isArray(layer.layout?.base?.[1]) && layer.layout.base[1].length >= 4,
+    appSenseLinked,
+    configurableSwitches: 13,
     inputSchema: "0.17.x",
   };
 }
 
+// Le Codex Micro accepte six layers programmables au maximum (doc Work Louder).
+const MAX_LAYERS = 6;
+
+function hasClaudeLayout(layer) {
+  return (
+    Array.isArray(layer?.layout?.base?.[0]) &&
+    layer.layout.base[0].length >= 2 &&
+    Array.isArray(layer?.layout?.base?.[1]) &&
+    layer.layout.base[1].length >= 4 &&
+    Array.isArray(layer?.layout?.base?.[2]) &&
+    layer.layout.base[2].length >= 4 &&
+    Array.isArray(layer?.layout?.base?.[3]) &&
+    layer.layout.base[3].length >= 3 &&
+    Array.isArray(layer?.layout?.encoders?.[0]) &&
+    layer.layout.encoders[0].length >= 3 &&
+    Boolean(layer.layout?.joystick)
+  );
+}
+
+// Crée le layer « Claude » à partir d'un export qui n'en contient pas, en
+// clonant la structure d'un layer existant. Le lien AppSense (linkedAppId)
+// référence le registre local d'Input et ne peut pas être inventé ici : le
+// layer créé doit être lié via « Auto detect » après import.
+export function addClaudeLayer(source) {
+  assert(source && typeof source === "object", "Le fichier JSON est vide.", "EMPTY_FILE");
+  assert(
+    source.keyboard === DEVICE_TYPE,
+    "Cette sauvegarde ne provient pas d’un Codex Micro.",
+    "WRONG_DEVICE",
+  );
+  assert(
+    source.profile && typeof source.profile === "object",
+    "Profil Input absent.",
+    "MISSING_PROFILE",
+  );
+  assert(
+    Array.isArray(source.profile.layers) && source.profile.layers.length > 0,
+    "Liste des layers Input absente.",
+    "MISSING_LAYERS",
+  );
+
+  const layers = source.profile.layers;
+  assert(
+    !layers.some(
+      (layer) => layer.name?.trim().toLowerCase() === TARGET_LAYER_NAME.toLowerCase(),
+    ),
+    "Un layer « Claude » existe déjà dans cette sauvegarde.",
+    "MULTIPLE_CLAUDE_LAYERS",
+  );
+  assert(
+    layers.length < MAX_LAYERS,
+    "Le profil contient déjà six layers : libérez un emplacement dans Input avant de créer le layer Claude.",
+    "LAYER_LIMIT",
+  );
+
+  const template = layers.slice(1).find(hasClaudeLayout) ??
+    (hasClaudeLayout(layers[0]) ? layers[0] : null);
+  assert(
+    template,
+    "Aucun layer existant ne peut servir de modèle pour créer le layer Claude.",
+    "NO_TEMPLATE_LAYER",
+  );
+
+  const output = clone(source);
+  const layer = clone(template);
+  layer.id = nextId(output.profile.layers);
+  layer.name = TARGET_LAYER_NAME;
+  delete layer.linkedAppId;
+  // Sécurité par défaut : les contrôles assignables hérités du modèle sont
+  // neutralisés. Le capteur base[3][0] conserve sa fonction de changement de
+  // layer et ne sera jamais exposé dans le configurateur.
+  for (const [rowIndex, row] of layer.layout.base.entries()) {
+    if (!Array.isArray(row)) continue;
+    for (const [columnIndex, cell] of row.entries()) {
+      if (rowIndex === 3 && columnIndex === 0) continue;
+      if (cell && typeof cell === "object") cell.keycode = "KC_NONE";
+    }
+  }
+  for (const encoder of layer.layout.encoders ?? []) {
+    if (!Array.isArray(encoder)) continue;
+    for (const cell of encoder) {
+      if (cell && typeof cell === "object") cell.keycode = "KC_NONE";
+    }
+  }
+  layer.layout.joystick = { type: "RADIAL", sectors: radialSectors(["KC_NONE"]) };
+  output.profile.layers.push(layer);
+
+  return {
+    source: output,
+    templateName: template.name ?? "",
+    layerIndex: output.profile.layers.length - 1,
+  };
+}
+
 export function deriveMappingFromProfile(source) {
-  const inspection = inspectInputProfile(source);
+  const inspection = inspectInputProfile(source, { requireAppSense: false });
   const layer = source.profile.layers[inspection.layerIndex];
   const actionsById = new Map(source.actions.map((action) => [String(action.id), action]));
 
   const decodeCell = (cell) => {
     const keycode = cell?.keycode;
     if (!keycode || keycode === "KC_NONE") return "none";
-    if (keycode === "KC_ESC") return "stop";
+    for (const [id, definition] of Object.entries(ACTION_DEFINITIONS)) {
+      if (
+        (definition.type === "direct" && FINAL_KEYCODES[definition.key] === keycode) ||
+        (definition.type === "directKeycode" && definition.keycode === keycode)
+      ) {
+        return id;
+      }
+    }
 
     const reference = /^KA_(\d+)$/.exec(keycode);
     if (reference) {
@@ -375,8 +730,10 @@ export function deriveMappingFromProfile(source) {
       if (!action) return "none";
       for (const [id, definition] of Object.entries(ACTION_DEFINITIONS)) {
         if (
-          definition.type === "shortcut" &&
-          sameJson(action.keyInputs, buildKeyInputs(definition.keys))
+          (definition.type === "shortcut" &&
+            sameJson(action.keyInputs, buildKeyInputs(definition.keys))) ||
+          (definition.type === "sequence" &&
+            sameJson(action.keyInputs, definition.keyInputs))
         ) {
           return id;
         }
@@ -390,45 +747,56 @@ export function deriveMappingFromProfile(source) {
   };
 
   const mapping = {};
-  CONTROL_ORDER.forEach((controlId, index) => {
-    mapping[controlId] = decodeCell(layer.layout.base[2][index]);
-  });
-
-  let advancedInUse = false;
-  if (inspection.advancedRowAvailable) {
-    const decoded = ADVANCED_CONTROL_ORDER.map((controlId, index) => [
-      controlId,
-      decodeCell(layer.layout.base[1][index]),
-    ]);
-    advancedInUse = decoded.some(([, assignment]) => assignment !== "none");
-    if (advancedInUse) {
-      for (const [controlId, assignment] of decoded) mapping[controlId] = assignment;
-    }
+  for (const [controlId, location] of Object.entries(KEY_CONTROL_LOCATIONS)) {
+    mapping[controlId] = decodeCell(
+      layer.layout.base[location.row][location.column],
+    );
   }
 
   const encoder = layer.layout.encoders[0];
+  const wheelDirectionMatches = (cell, direction) => {
+    if (typeof direction === "string") return cell?.keycode === direction;
+
+    const reference = /^KA_(\d+)$/.exec(cell?.keycode ?? "");
+    if (!reference) return false;
+    const action = actionsById.get(reference[1]);
+    return Boolean(action && sameJson(action.keyInputs, direction.keyInputs));
+  };
   mapping.wheel = "none";
-  for (const [mode, keycodes] of Object.entries(WHEEL_MODES)) {
+  for (const [mode, wheelMode] of Object.entries(WHEEL_MODES)) {
     if (
-      keycodes &&
-      encoder[0]?.keycode === keycodes.counterClockwise &&
-      encoder[1]?.keycode === keycodes.clockwise
+      wheelMode &&
+      wheelDirectionMatches(
+        encoder[PHYSICAL_ENCODER_SLOTS.clockwise],
+        wheelMode.clockwise,
+      ) &&
+      wheelDirectionMatches(
+        encoder[PHYSICAL_ENCODER_SLOTS.counterClockwise],
+        wheelMode.counterClockwise,
+      )
     ) {
       mapping.wheel = mode;
       break;
     }
   }
+  mapping[ENCODER_PRESS_CONTROL] = decodeCell(
+    encoder[PHYSICAL_ENCODER_SLOTS.press],
+  );
 
   const sectors = layer.layout.joystick?.sectors ?? [];
   mapping.joystick = sectors.some((sector) => sector.k === "KC_UP") ? "navigation" : "none";
 
   const assigned = Object.values(mapping).filter((value) => value !== "none").length;
 
-  return { mapping, advancedInUse, assigned };
+  return { mapping, assigned };
 }
 
-export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
-  const inspection = inspectInputProfile(source);
+export function buildInputProfile(
+  source,
+  requestedMapping = DEFAULT_MAPPING,
+  { requireAppSense = true } = {},
+) {
+  const inspection = inspectInputProfile(source, { requireAppSense });
   const mapping = { ...DEFAULT_MAPPING, ...requestedMapping };
   const output = clone(source);
   const original = clone(source);
@@ -441,31 +809,12 @@ export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
   // metadata around the actions created by this profile.
   output.actionGroups = [];
 
-  for (const [index, controlId] of CONTROL_ORDER.entries()) {
-    targetLayer.layout.base[2][index].keycode = resolveKeyAssignment(
+  for (const [controlId, location] of Object.entries(KEY_CONTROL_LOCATIONS)) {
+    targetLayer.layout.base[location.row][location.column].keycode = resolveKeyAssignment(
       output,
       mapping[controlId],
       createdActionIds,
     );
-  }
-
-  const advancedAssignments = ADVANCED_CONTROL_ORDER.filter(
-    (controlId) => mapping[controlId] != null,
-  );
-  if (advancedAssignments.length > 0) {
-    assert(
-      inspection.advancedRowAvailable,
-      "Le layer Claude n’a pas la disposition attendue pour la rangée avancée.",
-      "BAD_ADVANCED_ROW",
-    );
-    for (const controlId of advancedAssignments) {
-      const index = ADVANCED_CONTROL_ORDER.indexOf(controlId);
-      targetLayer.layout.base[1][index].keycode = resolveKeyAssignment(
-        output,
-        mapping[controlId],
-        createdActionIds,
-      );
-    }
   }
 
   const wheelMode = WHEEL_MODES[mapping.wheel];
@@ -475,14 +824,30 @@ export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
     "UNKNOWN_ASSIGNMENT",
   );
   if (wheelMode) {
-    targetLayer.layout.encoders[0][0].keycode = wheelMode.counterClockwise;
-    targetLayer.layout.encoders[0][1].keycode = wheelMode.clockwise;
-    targetLayer.layout.encoders[0][2].keycode = "KC_NONE";
+    targetLayer.layout.encoders[0][PHYSICAL_ENCODER_SLOTS.clockwise].keycode =
+      resolveWheelDirection(
+        output,
+        wheelMode.clockwise,
+        createdActionIds,
+      );
+    targetLayer.layout.encoders[0][PHYSICAL_ENCODER_SLOTS.counterClockwise].keycode =
+      resolveWheelDirection(
+        output,
+        wheelMode.counterClockwise,
+        createdActionIds,
+      );
   } else {
-    targetLayer.layout.encoders[0].forEach((entry) => {
-      entry.keycode = "KC_NONE";
-    });
+    targetLayer.layout.encoders[0][PHYSICAL_ENCODER_SLOTS.clockwise].keycode =
+      "KC_NONE";
+    targetLayer.layout.encoders[0][PHYSICAL_ENCODER_SLOTS.counterClockwise].keycode =
+      "KC_NONE";
   }
+  targetLayer.layout.encoders[0][PHYSICAL_ENCODER_SLOTS.press].keycode =
+    resolveKeyAssignment(
+      output,
+      mapping[ENCODER_PRESS_CONTROL],
+      createdActionIds,
+    );
 
   if (mapping.joystick === "navigation") {
     targetLayer.layout.joystick = {
@@ -528,8 +893,10 @@ export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
       createdActions: createdActionIds.length,
       preservedLayers: output.profile.layers.length - 1,
       nativeLayerPreserved: true,
-      appSensePreserved: true,
-      advancedAssignments: advancedAssignments.length,
+      appSensePreserved: inspection.appSenseLinked,
+      assignedSwitches: [...KEY_CONTROL_ORDER, ENCODER_PRESS_CONTROL].filter(
+        (controlId) => mapping[controlId] !== "none",
+      ).length,
       wheelMode: mapping.wheel === "scroll" ? "Page précédente / suivante" : mapping.wheel,
       joystickMode:
         mapping.joystick === "navigation" ? "Flèches directionnelles" : "Non assigné",
@@ -539,11 +906,12 @@ export function buildInputProfile(source, requestedMapping = DEFAULT_MAPPING) {
 
 export {
   ACTION_DEFINITIONS,
-  ADVANCED_CONTROL_ORDER,
-  CONTROL_ORDER,
   DEFAULT_MAPPING,
+  ENCODER_PRESS_CONTROL,
   FINAL_KEYCODES,
   FORBIDDEN_KEYS,
+  KEY_CONTROL_LOCATIONS,
+  KEY_CONTROL_ORDER,
   MODIFIER_KEYCODES,
   PRINTABLE_KEYS,
   WHEEL_MODES,

@@ -9,31 +9,39 @@ export default {
     localProcessing: "Lokale Verarbeitung",
     backupVerified: "Sicherung geprüft",
     languageLabel: "Sprache",
+    theme: {
+      auto: "Design: System. Zum hellen Design wechseln",
+      light: "Design: Hell. Zum dunklen Design wechseln",
+      dark: "Design: Dunkel. Zurück zum Systemdesign",
+    },
   },
   hero: {
-    eyebrow: "Controller für Claude Desktop",
-    title: "Deine Claude-Shortcuts, griffbereit.",
     subtitle:
       "Wähle eine Taste des Codex Micro und weise ihr die Claude-Aktion zu, die du am häufigsten nutzt.",
   },
   device: {
-    alt: "Transluzenter Codex Micro mit vier Tasten, einem Joystick und einem Drehregler",
-    reservedTip: "Reserviert – Sicherheit per Voreinstellung",
-    advancedTip: "Reserviert – aktiviere die erweiterten Bedienelemente in Schritt 2",
+    alt:
+      "Transluzenter Codex Micro mit drückbarem Drehregler oben links und Richtungs-Joystick oben rechts",
+    reservedTip: "Layer-Sensor – reserviert",
     reservedNote:
-      "Bedienelemente ohne Markierung bleiben bewusst ohne Aktion: Sicherheit per Voreinstellung.",
+      "Alle 13 Schalter einschließlich Reglerdruck, beide Drehrichtungen und der Joystick ohne Druckfunktion sind konfigurierbar. Nur der Layer-Sensor bleibt reserviert.",
   },
   controls: {
-    joystick: "Joystick",
-    wheel: "Drehregler",
-    "key-1": "Taste 1",
-    "key-2": "Taste 2",
-    "key-3": "Taste 3",
-    "key-4": "Taste 4",
-    "key-5": "Erweiterte Taste 1",
-    "key-6": "Erweiterte Taste 2",
-    "key-7": "Erweiterte Taste 3",
-    "key-8": "Erweiterte Taste 4",
+    joystick: "Richtungs-Joystick – ohne Druckfunktion",
+    wheel: "Drehregler – links oder rechts",
+    "key-1": "Befehlstaste 1",
+    "key-2": "Befehlstaste 2",
+    "key-3": "Befehlstaste 3",
+    "key-4": "Befehlstaste 4",
+    "key-5": "Agent-Taste 3",
+    "key-6": "Agent-Taste 4",
+    "key-7": "Agent-Taste 5",
+    "key-8": "Agent-Taste 6",
+    "key-9": "Agent-Taste 1",
+    "key-10": "Agent-Taste 2",
+    "key-11": "Befehlstaste 5",
+    "key-12": "Befehlstaste 6",
+    "key-13": "Drehregler-Druck",
   },
   actions: {
     navigation: {
@@ -48,6 +56,10 @@ export default {
       label: "Zeilenweises Scrollen",
       description: "Bei jedem Rastschritt Pfeil hoch oder runter senden",
     },
+    effort: {
+      label: "Claude-Aufwand",
+      description: "Pro Rastschritt eine verfügbare Aufwandsstufe senken oder erhöhen",
+    },
     volume: {
       label: "Lautstärke",
       description: "Die Lautstärke des Mac regeln",
@@ -55,6 +67,14 @@ export default {
     newSession: {
       label: "Neue Session",
       description: "Eine neue Claude-Session öffnen",
+    },
+    send: {
+      label: "Senden",
+      description: "Die aktuelle Eingabe sofort senden",
+    },
+    sendInDuplicateSession: {
+      label: "In duplizierter Session senden",
+      description: "Die Session duplizieren und die Eingabe dort senden",
     },
     voice: {
       label: "Sprachmodus",
@@ -67,6 +87,41 @@ export default {
     stop: {
       label: "Antwort stoppen",
       description: "Die laufende Antwort abbrechen",
+    },
+    settings: {
+      label: "Einstellungen",
+      description: "Die Claude-Einstellungen öffnen",
+    },
+    find: { label: "Suchen", description: "Text in der Unterhaltung suchen" },
+    findNext: {
+      label: "Nächstes Ergebnis",
+      description: "Zum nächsten Suchergebnis wechseln",
+    },
+    findPrevious: {
+      label: "Vorheriges Ergebnis",
+      description: "Zum vorherigen Suchergebnis zurückkehren",
+    },
+    back: { label: "Zurück", description: "Zur vorherigen Ansicht zurückkehren" },
+    forward: { label: "Vorwärts", description: "Zur nächsten Ansicht wechseln" },
+    reload: {
+      label: "Claude neu laden",
+      description: "Das Claude-Desktop-Fenster neu laden",
+    },
+    closeWindow: {
+      label: "Fenster schließen",
+      description: "Das aktive Claude-Fenster schließen",
+    },
+    zoomIn: {
+      label: "Vergrößern",
+      description: "Die Claude-Oberfläche vergrößern",
+    },
+    zoomOut: {
+      label: "Verkleinern",
+      description: "Die Claude-Oberfläche verkleinern",
+    },
+    resetZoom: {
+      label: "Zoom zurücksetzen",
+      description: "Die Oberfläche auf 100 % zurücksetzen",
     },
     custom: {
       label: "Eigener Shortcut",
@@ -87,28 +142,28 @@ export default {
     download: "JSON herunterladen",
     replace: "Ersetzen",
     chooseJson: "JSON auswählen",
+    goExport: "Prüfen und exportieren",
   },
   wizard: {
-    title: "Claude-Layer",
     step1Title: "Input-Export laden",
-    step2Title: "Bedienelemente anpassen",
     step3Title: "Prüfen und erzeugen",
   },
   help: {
     summary: "Wie bereite ich meinen Input-Export vor?",
     step1:
-      "Erstelle in Work Louder Input einen Layer namens „Claude“ (niemals an erster Position).",
+      "Exportiere das aktive Profil aus Work Louder Input (Share → Export profile).",
     step2:
-      "Verknüpfe diesen Layer per AppSense und „Auto detect“ mit Claude Desktop.",
+      "Lade die JSON-Datei hier: Gibt es keinen Layer „Claude“, erstellt ihn der Konfigurator für dich.",
     step3:
-      "Exportiere das aktive Profil (Share → Export profile) und lade die JSON-Datei anschließend hier.",
+      "Verknüpfe den Claude-Layer nach dem Import des erzeugten Profils über AppSense („Auto detect“) mit Claude Desktop.",
     guideLink: "Ausführliche Installationsanleitung",
     releasesLink: "Work Louder Input herunterladen",
   },
   dialog: {
     kicker: "Claude-Konfiguration",
+    exportTitle: "Profil und Export",
     close: "Konfigurator schließen",
-    chooseControl: "Bedienelement wählen",
+    miniMapLabel: "Tastenfeld-Übersicht — Taste in Bearbeitung",
     actionTitle: "Aktion",
     mappingLabel: "Aktuelles Mapping",
     scrimClose: "Konfigurator schließen",
@@ -124,12 +179,7 @@ export default {
     customHint:
       "Ein Buchstabe, eine Ziffer oder die Leertaste muss mit mindestens einem Modifikator kombiniert werden.",
     customSafety:
-      "Return, Enter, Entfernen und Rücktaste sind aus Sicherheitsgründen ausgeschlossen.",
-  },
-  advanced: {
-    title: "Erweiterte Bedienelemente",
-    hint:
-      "Schaltet die Reihe mit vier Leuchttasten frei. Auf der Hardware nicht validiert: Teste vorsichtig und behalte deine Sicherung.",
+      "Return und Enter sind nur über die vordefinierten Senden-Aktionen verfügbar. Entfernen und Rücktaste bleiben ausgeschlossen.",
   },
   loader: {
     titleLoad: "Input-Sicherung laden",
@@ -138,15 +188,31 @@ export default {
     meta: "{file} · Layer {layer} · AppSense {appSense}",
     appSenseKept: "beibehalten",
     appSenseNotLinked: "nicht verknüpft",
+    safetyNote:
+      "Deine vorhandenen Layer (nativ, Codex …) werden nie verändert: Das erzeugte Profil wird separat importiert und deine Original-Sicherung bleibt unangetastet.",
+  },
+  conflict: {
+    message:
+      "Dieser Claude-Layer enthält bereits ein Mapping, das sich von deiner aktuellen Anpassung unterscheidet. Welches möchtest du behalten?",
+    keep: "Meine Anpassung behalten",
+    adopt: "Mapping des Layers übernehmen",
+  },
+  notice: {
+    layerCreated:
+      "Layer „Claude“ automatisch erstellt (Struktur vom Layer „{template}“ kopiert, Tasten neutralisiert).",
+    appSenseTodo:
+      "Nach dem Import in Input: Öffne den Claude-Layer und verknüpfe ihn über AppSense („Auto detect“) mit Claude Desktop.",
   },
   review: {
     needProfile: "Lade zuerst deinen Input-Export in Schritt 1.",
     ready: "Prüfe das Ergebnis, bevor du das Profil herunterlädst.",
     nativePreserved: "Nativer Work Louder Layer bleibt erhalten",
     appSensePreserved: "AppSense-Verknüpfung beibehalten",
+    appSenseTodo:
+      "Nach dem Import zu erledigen: Claude-Layer über AppSense verknüpfen (Auto detect)",
     layersPreserved: "{count} weitere(r) Layer unverändert",
     createdActions: "{count} Aktion(en) in der Bibliothek erstellt",
-    advancedAssigned: "{count} erweiterte(s) Bedienelement(e) zugewiesen",
+    switchesAssigned: "{count} Schalter zugewiesen",
     shaLabel: "SHA-256-Prüfsumme der Datei",
   },
   panelNote:
@@ -158,6 +224,8 @@ export default {
     loaded: "Input-Sicherung erkannt. Das Profil kann erzeugt werden.",
     loadedMapping:
       "Sicherung erkannt: Das vorhandene Mapping des Claude-Layers wurde übernommen.",
+    keptMapping:
+      "Anpassung beibehalten: Das Mapping des Layers wurde nicht übernommen.",
     needProfile: "Lade zuerst die offizielle Sicherung deines Input-Profils.",
     generated: "Input-Profil erstellt. Importiere es über „Add New“ in Input.",
   },
@@ -181,12 +249,20 @@ export default {
       "Der Claude-Layer kann den nativen Layer an Index 0 nicht ersetzen.",
     BAD_KEY_ROW:
       "Der Claude-Layer hat nicht die erwartete Belegung für die vier Tasten.",
+    BAD_TOP_ROW:
+      "Der Claude-Layer hat nicht die erwartete Belegung für die obere Reihe.",
+    BAD_AGENT_ROW:
+      "Der Claude-Layer hat nicht die erwartete Belegung für die Agent-Tasten.",
+    BAD_BOTTOM_ROW:
+      "Der Claude-Layer hat nicht die erwartete Belegung für die untere Reihe.",
     BAD_ENCODERS: "Der Claude-Layer hat nicht die erwartete Belegung für den Drehregler.",
-    BAD_ADVANCED_ROW:
-      "Der Claude-Layer hat nicht die erwartete Belegung für die erweiterte Reihe.",
     MISSING_JOYSTICK: "Der Claude-Layer enthält keinen Joystick.",
     MISSING_APPSENSE:
       "Der Claude-Layer muss bereits mit einer gültigen AppSense-Kennung mit Claude verknüpft sein.",
+    LAYER_LIMIT:
+      "Das Profil enthält bereits sechs Layer: Gib in Input einen Platz frei, bevor der Claude-Layer erstellt wird.",
+    NO_TEMPLATE_LAYER:
+      "Kein vorhandener Layer eignet sich als Vorlage für den Claude-Layer.",
     FORBIDDEN_KEY:
       "Return, Enter, Entfernen und Rücktaste sind aus Sicherheitsgründen nicht erlaubt.",
     PRINTABLE_NEEDS_MODIFIER:
@@ -206,5 +282,9 @@ export default {
       "Schließe den Codex Micro an, wähle ihn in Input aus und exportiere das Profil erneut.",
     CLAUDE_LAYER_NATIVE:
       "Erstelle den „Claude“-Layer zusätzlich zum nativen Layer: Er darf nie an erster Position stehen.",
+    LAYER_LIMIT:
+      "Lösche oder kombiniere einen Layer in Input und exportiere erneut.",
+    NO_TEMPLATE_LAYER:
+      "Erstelle den Layer „Claude“ manuell in Input und exportiere erneut.",
   },
 };

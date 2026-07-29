@@ -96,8 +96,8 @@
       "inputControlId": null,
       "physical": {
         "row": 1,
-        "column": 4,
-        "description": "rotary encoder at the top right"
+        "column": 1,
+        "description": "clickable rotary encoder at the top left"
       },
       "label": "PAGE",
       "action": {
@@ -113,8 +113,8 @@
       "inputControlId": null,
       "physical": {
         "row": 1,
-        "column": 1,
-        "description": "planar joystick at the top left"
+        "column": 4,
+        "description": "non-clickable planar joystick at the top right"
       },
       "label": "NAV",
       "action": {
