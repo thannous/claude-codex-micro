@@ -184,15 +184,18 @@ Le mapping généré est :
 | même rangée, deuxième | `⌘D` |
 | même rangée, troisième | `⌘⇧D` |
 | même rangée, droite | `Esc` |
-| molette supérieure gauche, horaire / antihoraire | `PageDown` / `PageUp` |
+| molette supérieure gauche, horaire / antihoraire | **Effort Claude** `+1` / `−1` |
 | clic de la molette supérieure gauche | configurable séparément |
 | joystick supérieur droit, sans clic | quatre flèches |
 
-Le GUI propose aussi un mode expérimental **Effort Claude** pour la rotation de
-la molette. Chaque cran envoie `⌘⇧E`, attend l'ouverture du sélecteur, puis
-`←` ou `→` et `Esc`. Il passe donc au niveau d'effort disponible précédent ou
-suivant sans utiliser `Entrée`. Les niveaux réellement proposés dépendent du
-modèle et de la version de Claude Desktop.
+La rotation de la molette est en mode **Effort Claude** par défaut. Chaque cran
+envoie `⌘⇧E`, attend l'ouverture du sélecteur, puis `←` ou `→` et `Esc`. Il passe
+donc au niveau d'effort disponible précédent ou suivant sans utiliser `Entrée`.
+Les niveaux réellement proposés dépendent du modèle et de la version de Claude
+Desktop.
+
+Le GUI permet de la remettre sur le défilement page par page, le défilement ligne
+par ligne, le volume, ou de la désassigner.
 
 `⌘⇧E` est une bascule : le `Esc` final est obligatoire, sans lui le cran suivant
 refermerait le sélecteur au lieu de l'ouvrir.
@@ -228,6 +231,40 @@ Le générateur conserve l'identifiant AppSense local sans le publier. Si le lie
 est absent, revenir au profile original et le créer manuellement avant un
 nouvel export.
 
+### Forcer un lien, ou en ajouter un second
+
+Deux options écrivent une référence AppSense au lieu de seulement reprendre celle
+de la sauvegarde :
+
+```bash
+node scripts/build-input-profile.mjs sauvegarde.json sortie.json --app-sense-id=0 --base-layer-app-sense-id=2
+```
+
+`--app-sense-id=<n>` force la référence du layer `Claude` et dispense d'en exiger
+une dans la sauvegarde : c'est le cas d'usage « réparer un lien perdu ».
+
+`--base-layer-app-sense-id=<n>` lie le layer natif à une **seconde** application.
+C'est le seul moyen de quitter automatiquement le layer `Claude`, puisqu'AppSense
+n'a pas de retour : la sortie est elle-même une entrée dans un autre layer lié.
+Le keymap natif reste intact au keycode près, seul le lien est ajouté, et le
+générateur refuse que les deux layers pointent vers la même entrée.
+
+**Ces options écrivent une référence, jamais une entrée.** Un fichier
+`*-profile.json` ne transporte pas la table `linkedApps` : l'entrée visée doit
+déjà exister sur la carte, créée une fois dans l'UI d'Input avec `Auto detect`.
+Une référence vers une entrée absente s'importe **sans erreur** et laisse
+AppSense mort sans le signaler. Relever les identifiants réels avant, dans
+`~/Library/Logs/input/main.log`, où `sending device config :` est suivi du JSON
+complet — et n'exécuter `Auto detect` qu'une seule fois par application, il ne
+dédoublonne pas.
+
+Le GUI expose les deux mêmes réglages dans l'étape **Vérifier et générer**, section
+« Liens AppSense ». Laisser les champs vides revient à ne pas passer les options :
+les liens de la sauvegarde sont alors repris tels quels.
+
+Détail du comportement mesuré :
+[`docs/research/appsense-behavior.md`](research/appsense-behavior.md).
+
 ## 10. Validation matérielle
 
 Tester dans une conversation sans enjeu, une action à la fois :
@@ -245,8 +282,11 @@ Tester dans une conversation sans enjeu, une action à la fois :
       le cas défavorable, où l'échec est silencieux ;
 - [ ] joystick émet les quatre flèches ;
 - [ ] tous les contrôles non utilisés restent sans action dangereuse ;
-- [ ] passer au Finder restaure un état sûr ;
 - [ ] revenir dans Claude réactive le layer ;
+- [ ] passer au Finder **laisse** le layer Claude actif — c'est le comportement
+      attendu, pas un défaut : AppSense n'a pas de retour, voir
+      [`docs/research/appsense-behavior.md`](research/appsense-behavior.md).
+      Vérifier plutôt qu'aucune action du layer n'est dangereuse hors de Claude ;
 - [ ] quitter puis relancer Input conserve la configuration ;
 - [ ] aucun autre profile, layer ou lien AppSense n'a changé.
 

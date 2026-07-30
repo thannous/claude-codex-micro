@@ -58,7 +58,7 @@ export default {
     },
     effort: {
       label: "Claude effort",
-      description: "Move one available effort level down or up at each notch",
+      description: "One effort level down or up per notch",
     },
     volume: {
       label: "Volume",
@@ -172,10 +172,8 @@ export default {
     kicker: "Claude setup",
     exportTitle: "Profile and export",
     close: "Close the configurator",
-    miniMapLabel: "Keypad overview — key being edited",
     actionTitle: "Action",
     mappingLabel: "Current mapping",
-    scrimClose: "Close the configurator",
   },
   hotspot: {
     configure: "{control}: {action}. Configure",
@@ -222,7 +220,19 @@ export default {
     layersPreserved: "{count} other layer(s) intact",
     createdActions: "{count} action(s) created in the library",
     switchesAssigned: "{count} switch(es) assigned",
+    baseLayerLinked: "Native layer linked to app {id}: lets the board leave the Claude layer",
     shaLabel: "SHA-256 fingerprint of the file",
+  },
+  appSense: {
+    legend: "AppSense links (optional)",
+    hint:
+      "Leave empty to keep the links from your backup. AppSense has no automatic return: linking the native layer to a second app is the only way to leave the Claude layer without touching the layer sensor.",
+    claudeLabel: "Claude layer app id",
+    baseLabel: "Native layer app id",
+    inherit: "backup",
+    none: "none",
+    warning:
+      "These fields write a reference, never an entry: the target app must already exist in Input, created once with “Auto detect”. A reference to a missing entry imports without error and leaves AppSense dead.",
   },
   panelNote:
     "The native layer, your other layers, and the AppSense link are preserved. The import adds a new “Claude macOS” profile: your backup stays available if you want to roll back.",
@@ -268,6 +278,9 @@ export default {
     MISSING_JOYSTICK: "The Claude layer does not contain a joystick.",
     MISSING_APPSENSE:
       "The Claude layer must already be linked to Claude with a valid AppSense identifier.",
+    INVALID_APPSENSE_ID: "An AppSense identifier must be a non-negative integer.",
+    DUPLICATE_APPSENSE_ID:
+      "The Claude layer and the native layer cannot be linked to the same app.",
     LAYER_LIMIT:
       "The profile already contains six layers: free a slot in Input before creating the Claude layer.",
     NO_TEMPLATE_LAYER:

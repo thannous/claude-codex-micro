@@ -58,7 +58,7 @@ export default {
     },
     effort: {
       label: "Effort Claude",
-      description: "Descendre ou monter d’un niveau d’effort disponible à chaque cran",
+      description: "Un niveau d’effort en moins ou en plus par cran",
     },
     volume: {
       label: "Volume",
@@ -172,10 +172,8 @@ export default {
     kicker: "Configuration Claude",
     exportTitle: "Profil et export",
     close: "Fermer le configurateur",
-    miniMapLabel: "Aperçu du clavier — touche en cours de modification",
     actionTitle: "Action",
     mappingLabel: "Mapping actuel",
-    scrimClose: "Fermer le configurateur",
   },
   hotspot: {
     configure: "{control} : {action}. Configurer",
@@ -222,7 +220,19 @@ export default {
     layersPreserved: "{count} autre(s) layer(s) intact(s)",
     createdActions: "{count} action(s) créée(s) dans la bibliothèque",
     switchesAssigned: "{count} switch(es) affecté(s)",
+    baseLayerLinked: "Layer natif lié à l’application {id} : permet de quitter le layer Claude",
     shaLabel: "Empreinte SHA-256 du fichier",
+  },
+  appSense: {
+    legend: "Liens AppSense (optionnel)",
+    hint:
+      "Laissez vide pour reprendre les liens de votre sauvegarde. AppSense n’a pas de retour automatique : lier le layer natif à une seconde application est le seul moyen de quitter le layer Claude sans toucher le capteur tactile.",
+    claudeLabel: "Identifiant du layer Claude",
+    baseLabel: "Identifiant du layer natif",
+    inherit: "sauvegarde",
+    none: "aucun",
+    warning:
+      "Ces champs écrivent une référence, jamais une entrée : l’application visée doit déjà exister dans Input, créée une fois avec « Auto detect ». Une référence vers une entrée absente s’importe sans erreur et laisse AppSense inactif.",
   },
   panelNote:
     "Le layer natif, les autres layers et le lien AppSense sont préservés. L’import ajoute un nouveau profil « Claude macOS » : votre sauvegarde reste disponible pour revenir en arrière.",
@@ -268,6 +278,10 @@ export default {
     MISSING_JOYSTICK: "Le layer Claude ne contient pas de joystick.",
     MISSING_APPSENSE:
       "Le layer Claude doit déjà être associé à Claude avec un identifiant AppSense valide.",
+    INVALID_APPSENSE_ID:
+      "Un identifiant AppSense doit être un entier positif ou nul.",
+    DUPLICATE_APPSENSE_ID:
+      "Le layer Claude et le layer natif ne peuvent pas être liés à la même application.",
     LAYER_LIMIT:
       "Le profil contient déjà six layers : libérez un emplacement dans Input avant de créer le layer Claude.",
     NO_TEMPLATE_LAYER:

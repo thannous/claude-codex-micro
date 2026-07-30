@@ -58,7 +58,7 @@ export default {
     },
     effort: {
       label: "Esfuerzo de Claude",
-      description: "Bajar o subir un nivel de esfuerzo disponible en cada paso",
+      description: "Un nivel de esfuerzo menos o más por paso",
     },
     volume: {
       label: "Volumen",
@@ -154,10 +154,8 @@ export default {
     kicker: "Configuración de Claude",
     exportTitle: "Perfil y exportación",
     close: "Cerrar el configurador",
-    miniMapLabel: "Vista del teclado — tecla en edición",
     actionTitle: "Acción",
     mappingLabel: "Asignación actual",
-    scrimClose: "Cerrar el configurador",
   },
   hotspot: {
     configure: "{control}: {action}. Configurar",
@@ -204,7 +202,20 @@ export default {
     layersPreserved: "{count} layer(s) adicional(es) intacto(s)",
     createdActions: "{count} acción(es) creada(s) en la biblioteca",
     switchesAssigned: "{count} switch(es) asignado(s)",
+    baseLayerLinked:
+      "Layer nativo vinculado a la aplicación {id}: permite salir del layer Claude",
     shaLabel: "Huella SHA-256 del archivo",
+  },
+  appSense: {
+    legend: "Vínculos AppSense (opcional)",
+    hint:
+      "Déjalo vacío para conservar los vínculos de tu copia de seguridad. AppSense no vuelve automáticamente: vincular el layer nativo a una segunda aplicación es la única forma de salir del layer Claude sin tocar el sensor de layer.",
+    claudeLabel: "Id de aplicación del layer Claude",
+    baseLabel: "Id de aplicación del layer nativo",
+    inherit: "copia",
+    none: "ninguno",
+    warning:
+      "Estos campos escriben una referencia, nunca una entrada: la aplicación de destino ya debe existir en Input, creada una vez con « Auto detect ». Una referencia a una entrada ausente se importa sin error y deja AppSense inactivo.",
   },
   panelNote:
     "El layer nativo, los demás layers y el vínculo AppSense se conservan. La importación añade un nuevo perfil « Claude macOS »: tu copia de seguridad sigue disponible para volver atrás.",
@@ -261,6 +272,10 @@ export default {
     UNSUPPORTED_KEY: "Esta tecla no es compatible.",
     UNSUPPORTED_MODIFIER: "Este modificador no es compatible.",
     CUSTOM_EMPTY: "Un atajo personalizado debe contener al menos una tecla.",
+    INVALID_APPSENSE_ID:
+      "Un identificador AppSense debe ser un entero positivo o cero.",
+    DUPLICATE_APPSENSE_ID:
+      "El layer Claude y el layer nativo no pueden vincularse a la misma aplicación.",
   },
   hints: {
     NO_CLAUDE_LAYER:

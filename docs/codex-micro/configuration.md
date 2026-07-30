@@ -57,7 +57,7 @@ Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 | Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
 | Touche 3 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
 | Touche 4 | même rangée, tout à droite | `Esc` — annuler ou fermer selon le contexte |
-| Molette cliquable | coin supérieur gauche | horaire : `PageDown` ; antihoraire : `PageUp` ; clic configurable |
+| Molette cliquable | coin supérieur gauche | Effort Claude, horaire : `+1` ; antihoraire : `−1` ; clic configurable |
 | Joystick sans clic | coin supérieur droit | flèches haut, droite, bas et gauche |
 
 ![Schéma physique du mapping](../../profiles/claude-shortcuts/assets/layout.svg)
@@ -87,8 +87,12 @@ Le lien doit exister avant l'export du profile. Le générateur conserve son
 `linkedAppId` dans la copie locale, refuse son absence et ne crée jamais un
 second lien. Les autres liens ne sont jamais modifiés.
 
-Le retour à un état sûr après perte de focus reste une validation matérielle
-obligatoire : il ne doit pas être supposé à partir de la seule documentation.
+**Il n'existe aucun retour automatique à un état sûr après perte de focus.**
+Mesuré sur matériel : AppSense n'est qu'un ensemble de règles application →
+layer, et chaque règle est une transition aller. Quitter Claude pour une
+application non liée laisse la carte sur le layer Claude, indéfiniment. Le layer
+Claude doit donc être conçu comme si ses raccourcis pouvaient rester actifs
+ailleurs. Voir [`docs/research/appsense-behavior.md`](../research/appsense-behavior.md).
 
 ## Actions absentes par défaut
 
@@ -124,7 +128,7 @@ réimporté sur une configuration isolée.
 - [x] conservation du lien AppSense dans le profile généré ;
 - [ ] quatre touches, cadran et joystick testés ;
 - [ ] contrôles inutilisés confirmés sans action ;
-- [ ] état sûr après perte de focus ;
+- [x] comportement après perte de focus : établi, il n'y a pas de retour ;
 - [ ] persistance après redémarrage ;
 - [ ] export/import du layer reproduit sur une copie isolée ;
 - [ ] doublon refusé ou traité idempotemment ;

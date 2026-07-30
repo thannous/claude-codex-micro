@@ -101,60 +101,62 @@ const INPUT_RELEASES_URL = "https://github.com/worklouder/input-releases/release
 const CONTROLS = [
   {
     id: "wheel",
-    shortLabel: "SCROLL",
+    // Identité du contrôle, pas un mode : la molette n'est plus en défilement
+    // par défaut. Affiché uniquement quand aucune action n'est assignée.
+    shortLabel: "DIAL",
     type: "dial",
-    x: 22.3,
-    y: 19.7,
-    w: 13.3,
-    h: 13.6,
+    x: 9.36,
+    y: 9.48,
+    w: 19.6,
+    h: 19.95,
   },
   {
     id: "key-13",
     shortLabel: "PRESS",
     type: "key",
     className: "key-hotspot--encoder-button",
-    x: 25.4,
-    y: 22.9,
-    w: 7.2,
-    h: 7.2,
+    x: 13.93,
+    y: 14.17,
+    w: 10.61,
+    h: 10.56,
   },
   {
     id: "key-9",
     shortLabel: "A1",
     type: "key",
-    x: 36.2,
-    y: 20.0,
-    w: 13.7,
-    h: 12.7,
+    x: 29.84,
+    y: 9.92,
+    w: 20.19,
+    h: 18.63,
   },
   {
     id: "key-10",
     shortLabel: "A2",
     type: "key",
-    x: 50.4,
-    y: 20.0,
-    w: 13.7,
-    h: 12.7,
+    x: 50.77,
+    y: 9.92,
+    w: 20.19,
+    h: 18.63,
   },
   {
     id: "joystick",
     shortLabel: "NAV",
     type: "joystick",
-    x: 65.7,
-    y: 20.1,
-    w: 12.2,
-    h: 13.2,
+    x: 73.31,
+    y: 10.06,
+    w: 17.98,
+    h: 19.36,
   },
-  { id: "key-5", shortLabel: "A3", type: "key", x: 21.9, y: 34.5, w: 13.7, h: 12.7 },
-  { id: "key-6", shortLabel: "A4", type: "key", x: 35.5, y: 34.5, w: 13.7, h: 12.7 },
-  { id: "key-7", shortLabel: "A5", type: "key", x: 50.6, y: 34.5, w: 13.7, h: 12.7 },
-  { id: "key-8", shortLabel: "A6", type: "key", x: 64.9, y: 34.5, w: 13.7, h: 12.7 },
-  { id: "key-1", shortLabel: "C1", type: "key", x: 21.9, y: 49.4, w: 13.7, h: 12.7 },
-  { id: "key-2", shortLabel: "C2", type: "key", x: 35.5, y: 49.4, w: 13.7, h: 12.7 },
-  { id: "key-3", shortLabel: "C3", type: "key", x: 50.6, y: 49.4, w: 13.7, h: 12.7 },
-  { id: "key-4", shortLabel: "C4", type: "key", x: 64.9, y: 49.4, w: 13.7, h: 12.7 },
-  { id: "key-11", shortLabel: "C5", type: "key", x: 35.5, y: 63.9, w: 28.8, h: 12.7 },
-  { id: "key-12", shortLabel: "C6", type: "key", x: 64.9, y: 63.9, w: 13.7, h: 12.7 },
+  { id: "key-5", shortLabel: "A3", type: "key", x: 8.77, y: 31.18, w: 20.19, h: 18.63 },
+  { id: "key-6", shortLabel: "A4", type: "key", x: 28.81, y: 31.18, w: 20.19, h: 18.63 },
+  { id: "key-7", shortLabel: "A5", type: "key", x: 51.06, y: 31.18, w: 20.19, h: 18.63 },
+  { id: "key-8", shortLabel: "A6", type: "key", x: 72.13, y: 31.18, w: 20.19, h: 18.63 },
+  { id: "key-1", shortLabel: "C1", type: "key", x: 8.77, y: 53.04, w: 20.19, h: 18.63 },
+  { id: "key-2", shortLabel: "C2", type: "key", x: 28.81, y: 53.04, w: 20.19, h: 18.63 },
+  { id: "key-3", shortLabel: "C3", type: "key", x: 51.06, y: 53.04, w: 20.19, h: 18.63 },
+  { id: "key-4", shortLabel: "C4", type: "key", x: 72.13, y: 53.04, w: 20.19, h: 18.63 },
+  { id: "key-11", shortLabel: "C5", type: "key", x: 28.81, y: 74.3, w: 42.44, h: 18.63 },
+  { id: "key-12", shortLabel: "C6", type: "key", x: 72.13, y: 74.3, w: 20.19, h: 18.63 },
 ];
 
 const KEY_CONTROL_IDS = new Set(
@@ -162,30 +164,8 @@ const KEY_CONTROL_IDS = new Set(
 );
 
 const RESERVED_ZONES = [
-  { id: "sensor", x: 21.9, y: 63.9, w: 13.7, h: 12.7, round: true },
+  { id: "sensor", x: 8.77, y: 74.3, w: 20.19, h: 18.63, round: true },
 ];
-
-// Les hotspots sont exprimés en % de la photo du device ; le mini-schéma du
-// panneau recadre sur la zone réellement occupée par les contrôles.
-const MINI_MAP_BOUNDS = CONTROLS.reduce(
-  (bounds, control) => ({
-    minX: Math.min(bounds.minX, control.x),
-    minY: Math.min(bounds.minY, control.y),
-    maxX: Math.max(bounds.maxX, control.x + control.w),
-    maxY: Math.max(bounds.maxY, control.y + control.h),
-  }),
-  { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity },
-);
-
-function miniMapRect(control) {
-  const { minX, minY, maxX, maxY } = MINI_MAP_BOUNDS;
-  return {
-    left: `${((control.x - minX) / (maxX - minX)) * 100}%`,
-    top: `${((control.y - minY) / (maxY - minY)) * 100}%`,
-    width: `${(control.w / (maxX - minX)) * 100}%`,
-    height: `${(control.h / (maxY - minY)) * 100}%`,
-  };
-}
 
 const KEYCAP_TONES = {
   "key-9": "186 235 211",
@@ -227,11 +207,10 @@ const ACTIONS = {
   },
   effort: {
     id: "effort",
-    shortcut: "⌘ ⇧ E  ·  ← / →",
+    shortcut: "⌘ ⇧ E · ← / →",
     icon: SlidersHorizontal,
     controlTypes: ["dial"],
     exportLabel: "EFFORT",
-    experimental: true,
   },
   volume: {
     id: "volume",
@@ -480,6 +459,9 @@ export function App() {
   const [mappingConflict, setMappingConflict] = useState(null);
   const [layerCreated, setLayerCreated] = useState(null);
   const [review, setReview] = useState(null);
+  // Références AppSense saisies par l'utilisateur. Chaînes vides = option non
+  // passée au générateur, qui reprend alors ce que contient la sauvegarde.
+  const [appSenseIds, setAppSenseIds] = useState({ claude: "", base: "" });
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
   const returnFocusRef = useRef(null);
@@ -692,9 +674,23 @@ export function App() {
       return;
     }
 
+    const parseAppSenseId = (value) => {
+      const trimmed = value.trim();
+      if (trimmed === "") return undefined;
+      const parsed = Number(trimmed);
+      if (!Number.isInteger(parsed) || parsed < 0) {
+        const error = new Error(t("errors.INVALID_APPSENSE_ID"));
+        error.code = "INVALID_APPSENSE_ID";
+        throw error;
+      }
+      return parsed;
+    };
+
     try {
       const { profile, report } = buildInputProfile(sourceProfile, mapping, {
         requireAppSense: false,
+        appSenseId: parseAppSenseId(appSenseIds.claude),
+        baseLayerAppSenseId: parseAppSenseId(appSenseIds.base),
       });
       const json = `${JSON.stringify(profile, null, 2)}\n`;
       const sha = await sha256Hex(json);
@@ -757,9 +753,12 @@ export function App() {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
+  // Remonter la liste à chaque changement de contexte : nouveau mode, ouverture,
+  // ou touche différente. Sans ça la liste reste au décalage précédent et son
+  // premier élément apparaît coupé sous l'en-tête.
   useEffect(() => {
     dialogRef.current?.querySelector(".dialog-scroll")?.scrollTo({ top: 0 });
-  }, [panelMode]);
+  }, [panelMode, panelOpen, selectedControlId]);
 
   useEffect(() => {
     if (!panelOpen) {
@@ -771,46 +770,22 @@ export function App() {
 
     window.requestAnimationFrame(() => closeButtonRef.current?.focus());
 
+    // Le panneau est non modal sur les deux formats : le clavier reste visible
+    // et utilisable à côté sur desktop, au-dessus sur mobile. Pas de piège à
+    // focus, donc, seulement Échap pour fermer.
     const handleKeyDown = (event) => {
-      if (event.key === "Escape") {
-        event.preventDefault();
-        closeConfigurator();
-        return;
-      }
-
-      // Sur desktop le panneau est non modal : pas de piège à focus,
-      // le clavier derrière reste utilisable.
-      if (event.key !== "Tab" || !isMobile || !dialogRef.current) return;
-
-      const focusable = Array.from(
-        dialogRef.current.querySelectorAll(
-          'button:not([disabled]), [href], select, input:not([hidden]), summary, [tabindex]:not([tabindex="-1"])',
-        ),
-      ).filter((element) => !element.hasAttribute("hidden"));
-      if (!focusable.length) return;
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      closeConfigurator();
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [panelOpen, isMobile, panelMode]);
+  }, [panelOpen, panelMode]);
 
   return (
     <main className={`app-shell${panelOpen ? " is-panel-open" : ""}`}>
-      <div
-        className="page-content"
-        inert={panelOpen && isMobile ? true : undefined}
-        aria-hidden={panelOpen && isMobile ? "true" : undefined}
-      >
+      <div className="page-content">
         <header className="topbar">
           <a className="brand" href="#configurateur" aria-label={t("topbar.brandHome")}>
             <span className="brand-mark">C</span>
@@ -965,7 +940,6 @@ export function App() {
         ref={dialogRef}
         className={`mapping-dialog ${panelOpen ? "is-open" : ""}`}
         role="dialog"
-        aria-modal={isMobile ? "true" : undefined}
         aria-hidden={!panelOpen}
         aria-labelledby="mapping-dialog-title"
         inert={panelOpen ? undefined : true}
@@ -1115,24 +1089,6 @@ export function App() {
 
           {panelMode === "key" && (
           <>
-            <div className="mini-map" role="group" aria-label={t("dialog.miniMapLabel")}>
-              {controls.map((control) => (
-                <button
-                  key={control.id}
-                  type="button"
-                  className={`mini-map-key mini-map-key--${control.type}${
-                    control.className ? " mini-map-key--encoder" : ""
-                  }${control.id === selectedControl.id ? " is-selected" : ""}`}
-                  style={miniMapRect(control)}
-                  aria-label={controlLabel(control)}
-                  aria-pressed={control.id === selectedControl.id}
-                  onClick={() => setSelectedControlId(control.id)}
-                >
-                  {control.shortLabel}
-                </button>
-              ))}
-            </div>
-
             <section className="action-picker" aria-label={t("dialog.actionTitle")}>
               <div className="action-list">
                 {availableActions.map((action) => {
@@ -1271,6 +1227,40 @@ export function App() {
               {t("wizard.step3Title")}
             </h3>
 
+            <fieldset className="appsense-fields">
+              <legend>{t("appSense.legend")}</legend>
+              <p className="appsense-hint">{t("appSense.hint")}</p>
+              <label>
+                <span>{t("appSense.claudeLabel")}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder={t("appSense.inherit")}
+                  value={appSenseIds.claude}
+                  onChange={(event) =>
+                    setAppSenseIds((current) => ({ ...current, claude: event.target.value }))
+                  }
+                />
+              </label>
+              <label>
+                <span>{t("appSense.baseLabel")}</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="1"
+                  inputMode="numeric"
+                  placeholder={t("appSense.none")}
+                  value={appSenseIds.base}
+                  onChange={(event) =>
+                    setAppSenseIds((current) => ({ ...current, base: event.target.value }))
+                  }
+                />
+              </label>
+              <p className="appsense-warning">{t("appSense.warning")}</p>
+            </fieldset>
+
             {review ? (
               <div className="review-report" role="status">
                 <ul className="review-checklist">
@@ -1302,6 +1292,14 @@ export function App() {
                       <Check size={15} aria-hidden="true" />
                       {t("review.switchesAssigned", {
                         count: review.report.assignedSwitches,
+                      })}
+                    </li>
+                  )}
+                  {review.report.baseLayerAppSenseId !== null && (
+                    <li>
+                      <Check size={15} aria-hidden="true" />
+                      {t("review.baseLayerLinked", {
+                        id: review.report.baseLayerAppSenseId,
                       })}
                     </li>
                   )}
@@ -1359,14 +1357,6 @@ export function App() {
           )}
         </div>
       </aside>
-
-      {panelOpen && isMobile && (
-        <button
-          className="dialog-scrim"
-          aria-label={t("dialog.scrimClose")}
-          onClick={closeConfigurator}
-        />
-      )}
 
       {toast && (
         <div className="toast" role="status" aria-live="polite">

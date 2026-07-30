@@ -45,7 +45,7 @@ Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
 | Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
 | Touche 3 | même rangée, troisième | `⌘⇧D` — afficher/masquer le diff |
 | Touche 4 | même rangée, tout à droite | `Esc` — annuler/fermer selon le contexte |
-| Molette cliquable | coin supérieur gauche | horaire : `PageDown` ; antihoraire : `PageUp` ; clic configurable |
+| Molette cliquable | coin supérieur gauche | Effort Claude, horaire : `+1` ; antihoraire : `−1` ; clic configurable |
 | Joystick sans clic | coin supérieur droit | quatre flèches directionnelles |
 
 ![Schéma du layer Claude](assets/layout.svg)
@@ -83,9 +83,10 @@ Retour pour envoyer, et `⌥⌘Retour` pour envoyer dans une session dupliquée.
 Entrée reste indisponible dans l'éditeur de combinaison personnalisée et ces
 actions ne font pas partie du preset public par défaut.
 
-La rotation de la molette peut aussi recevoir le mode expérimental **Effort
-Claude** : chaque cran ouvre le sélecteur avec `⌘⇧E`, déplace son curseur d'un
-niveau avec `←` ou `→`, puis le referme avec `Esc`, sans utiliser `Entrée`.
+La rotation de la molette porte le mode **Effort Claude** par défaut : chaque cran
+ouvre le sélecteur avec `⌘⇧E`, déplace son curseur d'un niveau avec `←` ou `→`,
+puis le referme avec `Esc`, sans utiliser `Entrée`. Le GUI permet de la remettre
+sur le défilement, le défilement ligne par ligne, le volume, ou de la désassigner.
 `⌘⇧E` étant une bascule, ce `Esc` est obligatoire. La macro attend 80 ms que le
 sélecteur apparaisse, puis 10 ms qu'il affiche le niveau atteint avant de le
 refermer, soit environ 90 ms par cran payés dans le firmware.

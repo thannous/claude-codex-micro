@@ -40,8 +40,8 @@ Codex layer.
 - visual mapping for all 13 switches, wheel rotation, and the joystick;
 - expanded Claude Desktop catalog for sessions, voice, diff, search,
   navigation, settings, window controls, zoom, and two explicit send actions;
-- experimental wheel mode that moves through Claude's available effort levels
-  one notch at a time;
+- default wheel mode that moves through Claude's available effort levels one
+  notch at a time, calibrated at roughly 90 ms per notch;
 - safe custom shortcuts with Return/Enter, Delete, and Backspace rejected by
   construction;
 - preservation checks for the native layer, other layers, and AppSense link;
@@ -192,8 +192,8 @@ du système et propose :
 - des raccourcis personnalisés restreints aux touches sûres (Retour/Entrée,
   Suppression et Retour arrière restent interdits dans l'éditeur
   personnalisé) ;
-- quatre modes de molette (pages, lignes, effort Claude expérimental, volume
-  expérimental).
+- quatre modes de molette : effort Claude par défaut, pages, lignes, et volume
+  expérimental.
 
 ### Démarrage sans modification
 

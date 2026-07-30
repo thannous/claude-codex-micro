@@ -89,7 +89,11 @@ const ENCODER_PRESS_CONTROL = "key-13";
 
 const DEFAULT_MAPPING = {
   joystick: "navigation",
-  wheel: "scroll",
+  // La molette est en mode Effort par défaut : c'est le geste distinctif de cette
+  // carte pour Claude, et il est calibré et documenté (voir
+  // docs/research/effort-wheel-calibration.md). Les autres modes restent
+  // disponibles dans le GUI, le défilement compris.
+  wheel: "effort",
   "key-9": "none",
   "key-10": "none",
   "key-5": "none",
@@ -257,7 +261,6 @@ const WHEEL_MODES = {
       name: "Claude Effort Up",
       keyInputs: buildEffortWheelKeyInputs("KC_RGHT"),
     },
-    experimental: true,
   },
   lines: { counterClockwise: "KC_UP", clockwise: "KC_DOWN" },
   volume: { counterClockwise: "KC_VOLD", clockwise: "KC_VOLU", experimental: true },
@@ -791,12 +794,46 @@ export function deriveMappingFromProfile(source) {
   return { mapping, assigned };
 }
 
+// Un fichier `*-profile.json` exporté par Input ne transporte PAS la table
+// `linkedApps`, seulement les références `linkedAppId` posées sur les layers.
+// Aucune des deux options ci-dessous ne peut donc créer une entrée : elles
+// écrivent une référence vers une entrée qui doit déjà exister sur la carte,
+// créée une fois dans l'UI d'Input. Une référence vers une entrée absente
+// s'importe sans erreur et laisse AppSense mort sans le dire.
+function validateAppSenseId(value, label) {
+  assert(
+    Number.isInteger(value) && value >= 0,
+    `${label} doit être un entier positif ou nul, reçu : ${JSON.stringify(value)}`,
+    "INVALID_APPSENSE_ID",
+  );
+}
+
 export function buildInputProfile(
   source,
   requestedMapping = DEFAULT_MAPPING,
-  { requireAppSense = true } = {},
+  { requireAppSense = true, appSenseId, baseLayerAppSenseId } = {},
 ) {
-  const inspection = inspectInputProfile(source, { requireAppSense });
+  const forcesClaudeLink = appSenseId !== undefined;
+  const linksBaseLayer = baseLayerAppSenseId !== undefined;
+
+  if (forcesClaudeLink) validateAppSenseId(appSenseId, "appSenseId");
+  if (linksBaseLayer) validateAppSenseId(baseLayerAppSenseId, "baseLayerAppSenseId");
+
+  // Deux layers liés à la même entrée rendent la bascule ambiguë : le firmware
+  // ne documente pas dans quel ordre il parcourt sa table.
+  if (forcesClaudeLink && linksBaseLayer) {
+    assert(
+      appSenseId !== baseLayerAppSenseId,
+      "Le layer Claude et le layer natif ne peuvent pas être liés à la même entrée AppSense.",
+      "DUPLICATE_APPSENSE_ID",
+    );
+  }
+
+  // Forcer le lien du layer Claude rend son absence dans la source acceptable :
+  // c'est précisément le cas d'usage, réparer un lien perdu.
+  const inspection = inspectInputProfile(source, {
+    requireAppSense: requireAppSense && !forcesClaudeLink,
+  });
   const mapping = { ...DEFAULT_MAPPING, ...requestedMapping };
   const output = clone(source);
   const original = clone(source);
@@ -865,8 +902,15 @@ export function buildInputProfile(
 
   addActionsToGroup(output, createdActionIds);
 
+  if (forcesClaudeLink) targetLayer.linkedAppId = appSenseId;
+  // AppSense n'a pas de retour : chaque règle est une transition aller. Lier le
+  // layer natif à une seconde application est le seul moyen de quitter le layer
+  // Claude automatiquement, en entrant dans ce layer-là. Voir
+  // docs/research/appsense-behavior.md.
+  if (linksBaseLayer) output.profile.layers[0].linkedAppId = baseLayerAppSenseId;
+
   source.profile.layers.forEach((layer, index) => {
-    if (index !== inspection.layerIndex) {
+    if (index !== inspection.layerIndex && !(index === 0 && linksBaseLayer)) {
       assert(
         sameJson(layer, output.profile.layers[index]),
         `Le layer ${index + 1} a été modifié alors qu’il devait être préservé.`,
@@ -875,14 +919,30 @@ export function buildInputProfile(
   });
 
   assert(
-    source.profile.layers[inspection.layerIndex].linkedAppId ===
-      output.profile.layers[inspection.layerIndex].linkedAppId,
+    forcesClaudeLink ||
+      source.profile.layers[inspection.layerIndex].linkedAppId ===
+        output.profile.layers[inspection.layerIndex].linkedAppId,
     "Le lien AppSense du layer Claude n’a pas été préservé.",
   );
-  assert(
-    sameJson(source.profile.layers[0], output.profile.layers[0]),
-    "Le layer natif Work Louder a été modifié.",
-  );
+  if (linksBaseLayer) {
+    // Le lien change, jamais le keymap : les touches natives OpenAI doivent
+    // rester intactes au keycode près.
+    assert(
+      sameJson(source.profile.layers[0].layout, output.profile.layers[0].layout),
+      "Le keymap du layer natif Work Louder a été modifié.",
+    );
+    const { linkedAppId: _sourceLink, ...sourceRest } = source.profile.layers[0];
+    const { linkedAppId: _outputLink, ...outputRest } = output.profile.layers[0];
+    assert(
+      sameJson(sourceRest, outputRest),
+      "Le layer natif Work Louder a été modifié au-delà de son lien AppSense.",
+    );
+  } else {
+    assert(
+      sameJson(source.profile.layers[0], output.profile.layers[0]),
+      "Le layer natif Work Louder a été modifié.",
+    );
+  }
   assert(sameJson(source, original), "La sauvegarde source a été modifiée en mémoire.");
 
   return {
@@ -894,6 +954,13 @@ export function buildInputProfile(
       preservedLayers: output.profile.layers.length - 1,
       nativeLayerPreserved: true,
       appSensePreserved: inspection.appSenseLinked,
+      // Référence effectivement écrite sur le layer Claude, forcée ou héritée.
+      appSenseId: forcesClaudeLink
+        ? appSenseId
+        : output.profile.layers[inspection.layerIndex].linkedAppId,
+      appSenseForced: forcesClaudeLink,
+      // Lien du layer natif, qui fournit la transition de sortie du layer Claude.
+      baseLayerAppSenseId: linksBaseLayer ? baseLayerAppSenseId : null,
       assignedSwitches: [...KEY_CONTROL_ORDER, ENCODER_PRESS_CONTROL].filter(
         (controlId) => mapping[controlId] !== "none",
       ).length,

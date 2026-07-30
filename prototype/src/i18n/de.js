@@ -58,7 +58,7 @@ export default {
     },
     effort: {
       label: "Claude-Aufwand",
-      description: "Pro Rastschritt eine verfügbare Aufwandsstufe senken oder erhöhen",
+      description: "Eine Aufwandsstufe runter oder rauf pro Rastschritt",
     },
     volume: {
       label: "Lautstärke",
@@ -163,10 +163,8 @@ export default {
     kicker: "Claude-Konfiguration",
     exportTitle: "Profil und Export",
     close: "Konfigurator schließen",
-    miniMapLabel: "Tastenfeld-Übersicht — Taste in Bearbeitung",
     actionTitle: "Aktion",
     mappingLabel: "Aktuelles Mapping",
-    scrimClose: "Konfigurator schließen",
   },
   hotspot: {
     configure: "{control}: {action}. Einrichten",
@@ -213,7 +211,20 @@ export default {
     layersPreserved: "{count} weitere(r) Layer unverändert",
     createdActions: "{count} Aktion(en) in der Bibliothek erstellt",
     switchesAssigned: "{count} Schalter zugewiesen",
+    baseLayerLinked:
+      "Nativer Layer mit App {id} verknüpft: erlaubt das Verlassen des Claude-Layers",
     shaLabel: "SHA-256-Prüfsumme der Datei",
+  },
+  appSense: {
+    legend: "AppSense-Verknüpfungen (optional)",
+    hint:
+      "Leer lassen, um die Verknüpfungen aus deiner Sicherung zu übernehmen. AppSense kehrt nicht automatisch zurück: den nativen Layer mit einer zweiten App zu verknüpfen ist der einzige Weg, den Claude-Layer ohne den Layer-Sensor zu verlassen.",
+    claudeLabel: "App-ID des Claude-Layers",
+    baseLabel: "App-ID des nativen Layers",
+    inherit: "Sicherung",
+    none: "keine",
+    warning:
+      "Diese Felder schreiben eine Referenz, niemals einen Eintrag: die Ziel-App muss in Input bereits existieren, einmalig über „Auto detect“ erstellt. Eine Referenz auf einen fehlenden Eintrag wird ohne Fehler importiert und lässt AppSense wirkungslos.",
   },
   panelNote:
     "Der native Layer, die übrigen Layer und die AppSense-Verknüpfung bleiben erhalten. Der Import fügt ein neues Profil „Claude macOS“ hinzu: Deine Sicherung bleibt verfügbar, falls du zurückwechseln möchtest.",
@@ -270,6 +281,10 @@ export default {
     UNSUPPORTED_KEY: "Diese Taste wird nicht unterstützt.",
     UNSUPPORTED_MODIFIER: "Dieser Modifikator wird nicht unterstützt.",
     CUSTOM_EMPTY: "Ein eigener Shortcut muss mindestens eine Taste enthalten.",
+    INVALID_APPSENSE_ID:
+      "Eine AppSense-Kennung muss eine nicht negative ganze Zahl sein.",
+    DUPLICATE_APPSENSE_ID:
+      "Der Claude-Layer und der native Layer können nicht mit derselben App verknüpft werden.",
   },
   hints: {
     NO_CLAUDE_LAYER:

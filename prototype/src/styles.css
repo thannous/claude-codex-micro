@@ -242,16 +242,31 @@ a:focus-visible {
   margin-top: 20px;
 }
 
+/* La boîte est recadrée sur le device lui-même, pas sur le cadre du PNG.
+   Le fichier est un détourage de 1254x1254 dont la partie opaque n'occupe que
+   851x855, soit 68% : cadrer sur le fichier gaspillait 32% de la largeur en
+   transparent et rendait le clavier d'autant plus petit. Le recadrage se fait
+   ici, sans toucher à l'asset — l'image est agrandie et décalée pour que sa
+   zone opaque remplisse exactement la boîte.
+
+   Conséquence : les coordonnées des hotspots dans App.jsx sont des pourcentages
+   de CE cadre, pas du fichier. Remplacer l'image impose de les recalculer, et
+   les valeurs en `cqw` ci-dessous suivent la même référence. */
 .device-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 1;
+  container-type: inline-size;
+  aspect-ratio: 851 / 855;
 }
 
 .device-image {
+  position: absolute;
+  top: -19.42%;
+  left: -23.5%;
   display: block;
-  width: 100%;
-  height: 100%;
+  width: 147.36%;
+  max-width: none;
+  height: 146.67%;
   object-fit: contain;
   filter: drop-shadow(0 30px 40px rgba(119, 70, 50, 0.16));
   user-select: none;
@@ -333,27 +348,54 @@ a:focus-visible {
   border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 7px;
   background: rgba(45, 34, 29, 0.94);
-  padding: 4px 6px;
   color: #fffaf6;
   box-shadow:
     0 3px 10px rgba(45, 28, 20, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  font: 800 9px/1 "SFMono-Regular", Consolas, monospace;
+  /* Taille indexée sur la photo, pas sur le viewport : le plafond `max-width`
+     de la pastille se réduit avec la touche, donc un libellé en pixels fixes
+     finit tronqué aux petites tailles — « VOICE » se coupait en « VO… » dès que
+     le device passait sous ~330px. Les bornes du clamp reproduisent exactement
+     l'aspect actuel à la grande taille. */
+  padding: clamp(2px, 1.18cqw, 4px) clamp(3px, 1.77cqw, 6px);
+  font: 800 clamp(7px, 2.73cqw, 9px) / 1 "SFMono-Regular", Consolas, monospace;
   letter-spacing: 0.025em;
   opacity: 1;
   pointer-events: none;
   transition: background 140ms ease, box-shadow 140ms ease;
 }
 
+/* Empilement de la molette, en trois étages qui ne peuvent pas se croiser :
+   le libellé du clic au-dessus du cercle, l'icône du clic centrée dedans, le
+   libellé de rotation sous le cercle. Tout est exprimé en `cqw` pour que les
+   trois gardent leurs écarts quelle que soit la taille de la photo — c'est le
+   mélange de pixels fixes et de pourcentages qui faisait chevaucher l'icône du
+   clic et le libellé de rotation. */
 .key-hotspot-label--dial {
   display: inline-flex;
+  bottom: -2.06cqw;
   max-width: none;
   align-items: center;
-  gap: 2px;
+  gap: 0.59cqw;
+  padding: 1.62cqw 2.36cqw;
+  font-size: clamp(6px, 2.73cqw, 9px);
 }
 
 .key-hotspot-label--dial svg {
   flex: none;
+}
+
+/* Les deux libellés de la molette débordent volontairement de la boîte de leur
+   bouton, et celui du clic recouvre le cercle de rotation. Avec
+   `pointer-events: none` le pointeur les traversait et atteignait le contrôle
+   du dessous : survoler « PRESS » mettait la molette en avant. Les rendre
+   sensibles au pointeur suffit — ce sont des enfants de leur bouton, le survol
+   et le clic remontent donc au bon contrôle, et le contrôle voisin n'est plus
+   atteint. Les autres libellés gardent `none` : ils ne dépassent que de
+   quelques pixels sous leur touche, où il n'y a rien à protéger. */
+.key-hotspot--dial > .key-hotspot-label,
+.key-hotspot--encoder-button > .key-hotspot-label {
+  pointer-events: auto;
 }
 
 .key-hotspot--key:not(.key-hotspot--encoder-button) > .key-hotspot-label {
@@ -373,8 +415,8 @@ a:focus-visible {
   top: 43%;
   left: 50%;
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 10.98cqw;
+  height: 10.98cqw;
   place-items: center;
   transform: translate(-50%, -50%);
   border: 0;
@@ -396,19 +438,36 @@ a:focus-visible {
   transform: translate(-50%, -50%) scale(1.06);
 }
 
+/* Étage du milieu : nettement plus petit que le cercle du clic, pour laisser
+   respirer les deux libellés au-dessus et en dessous. */
 .key-hotspot--encoder-button > .keycap-action-asset {
   top: 50%;
-  width: 24px;
-  height: 24px;
+  width: 6.04cqw;
+  height: 6.04cqw;
   color: #fffaf6;
 }
 
+/* Les icônes sont rendues avec une taille en attribut par React : les
+   contraindre en CSS pour qu'elles suivent leur disque, lui-même indexé sur la
+   photo. Les proportions reprennent celles d'origine, 19px dans 38px pour une
+   keycap et 13px dans 24px pour le clic de molette. */
+.keycap-action-asset > svg {
+  width: 50%;
+  height: 50%;
+}
+
+.key-hotspot--encoder-button > .keycap-action-asset > svg {
+  width: 54%;
+  height: 54%;
+}
+
+/* Étage du haut : posé sur le bandeau vide au-dessus de la molette. */
 .key-hotspot--encoder-button > .key-hotspot-label {
-  top: -14px;
+  top: -5.01cqw;
   bottom: auto;
   max-width: none;
-  padding: 3px 4px;
-  font-size: 7px;
+  padding: 1.18cqw 1.77cqw;
+  font-size: clamp(5px, 2.14cqw, 7px);
 }
 
 .reserved-hotspot {
@@ -455,18 +514,20 @@ a:focus-visible {
   font-size: 12px;
 }
 
+/* Dans le flux, sous le clavier. Ce bouton était auparavant en position absolue
+   par-dessus le bas du stage, qui était vide : le cadre de l'image laissait
+   18,6% de transparent sous le device. Depuis que la boîte est recadrée sur le
+   device, ce vide n'existe plus et le bouton recouvrirait les touches. */
 .configure-button {
-  position: absolute;
-  right: 0;
-  bottom: 62px;
-  left: 0;
+  position: relative;
+  z-index: 3;
   display: inline-flex;
   width: min(240px, calc(100vw - 32px));
   min-height: 50px;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  margin-inline: auto;
+  margin: 18px auto 0;
   border: 1px solid rgba(255, 255, 255, 0.78);
   border-radius: 999px;
   background: rgba(255, 251, 247, 0.6);
@@ -503,7 +564,9 @@ a:focus-visible {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  margin-top: -44px;
+  /* Marge positive : ce bouton remontait de 44px pour combler le vide sous le
+     device, vide supprimé par le recadrage de la boîte sur le clavier. */
+  margin-top: 12px;
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 999px;
   background: rgba(201, 95, 67, 0.82);
@@ -713,60 +776,6 @@ a:focus-visible {
   padding: 22px 25px 28px;
 }
 
-/* Mini-schéma du clavier : visible uniquement sur mobile, où la sheet
-   recouvre la photo du device — il rappelle quelle touche est en cours de
-   modification et permet d'en changer. Masqué sur desktop, où le vrai
-   clavier reste visible à côté du panneau. */
-.mini-map {
-  position: relative;
-  display: none;
-  width: min(100%, 240px);
-  aspect-ratio: 1;
-  margin: 0 auto 18px;
-}
-
-.mini-map-key {
-  position: absolute;
-  display: grid;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid var(--line-strong);
-  border-radius: 9px;
-  background: rgba(255, 255, 255, 0.55);
-  padding: 0;
-  color: var(--muted);
-  font: 750 9px/1 "SFMono-Regular", Consolas, monospace;
-  transition: background 150ms ease, border-color 150ms ease;
-}
-
-.mini-map-key--dial,
-.mini-map-key--joystick,
-.mini-map-key--encoder {
-  border-radius: 50%;
-}
-
-/* Le bouton d'encodeur est superposé à la molette (comme sur le device) :
-   libellé de la molette poussé en bas du cercle et fond opaque sur PRESS
-   pour éviter que les deux textes se chevauchent. */
-.mini-map-key--dial {
-  place-items: end center;
-  padding-bottom: 6px;
-}
-
-.mini-map-key--encoder {
-  z-index: 1;
-  background: #efe9e2;
-  font-size: 6px;
-}
-
-.mini-map-key.is-selected {
-  z-index: 2;
-  border-color: var(--accent);
-  background: var(--accent-soft);
-  color: var(--accent-dark);
-  box-shadow: 0 0 0 3px rgba(201, 95, 67, 0.22);
-}
-
 kbd {
   border-radius: 7px;
   background: rgba(91, 72, 64, 0.08);
@@ -832,12 +841,19 @@ kbd {
   font-size: 13px;
 }
 
+/* Deux lignes plutôt qu'une seule tronquée : la colonne du raccourci est en
+   `auto`, donc les raccourcis larges comme celui du mode Effort écrasaient la
+   description jusqu'à la rendre illisible. La hauteur de rangée de 67px les
+   accueille sans décaler la liste. */
 .action-copy small {
+  display: -webkit-box;
   overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
   color: var(--muted);
   font-size: 11px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
 }
 
 .check-slot {
@@ -1177,6 +1193,55 @@ kbd {
   font-size: 10px;
 }
 
+.appsense-fields {
+  margin: 0 0 12px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  padding: 12px;
+}
+
+.appsense-fields legend {
+  padding: 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.appsense-hint,
+.appsense-warning {
+  margin: 0 0 9px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.appsense-warning {
+  margin: 9px 0 0;
+}
+
+.appsense-fields label {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 12px;
+}
+
+.appsense-fields input {
+  width: 12ch;
+  border: 1px solid rgba(88, 88, 88, 0.25);
+  border-radius: 8px;
+  background: #fff;
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 12px;
+  text-align: right;
+}
+
 .review-empty {
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 12px;
@@ -1335,15 +1400,6 @@ kbd {
   transform: translateY(1px);
 }
 
-.dialog-scrim {
-  position: fixed;
-  z-index: 20;
-  inset: 0;
-  border: 0;
-  background: rgba(122, 89, 70, 0.16);
-  backdrop-filter: blur(10px) saturate(1.2);
-}
-
 .toast {
   position: fixed;
   z-index: 40;
@@ -1371,10 +1427,6 @@ kbd {
     padding: 18px;
   }
 
-  .mini-map {
-    display: block;
-  }
-
   .local-status {
     padding: 7px 9px;
   }
@@ -1398,9 +1450,8 @@ kbd {
   }
 
   .configure-button {
-    position: static;
     min-height: 50px;
-    margin: -34px auto 0;
+    margin: 14px auto 0;
   }
 
   .generate-button {
@@ -1416,19 +1467,60 @@ kbd {
     line-height: 1.4;
   }
 
-  .mapping-dialog {
-    top: auto;
-    right: 8px;
-    bottom: 8px;
-    left: 8px;
-    width: auto;
-    max-height: 91dvh;
-    border-radius: 24px;
-    transform: translateY(calc(100% + 16px));
+  /* Pas de bottom sheet sur mobile. La photo du device reste visible en haut
+     et le panneau prend le reste de la hauteur : seule sa liste défile. C'est
+     ce qui a permis de supprimer le mini-schéma du clavier, le piège à focus
+     et le scrim — le vrai clavier est là, et il reste cliquable. */
+  .app-shell.is-panel-open {
+    display: flex;
+    height: 100dvh;
+    flex-direction: column;
+    overflow: hidden;
   }
 
-  .mapping-dialog.is-open {
-    transform: translateY(0);
+  .app-shell.is-panel-open .page-content {
+    min-height: 0;
+    flex: 0 0 auto;
+  }
+
+  .app-shell.is-panel-open .hero {
+    min-height: 0;
+    padding: 56px 14px 0;
+  }
+
+  /* Tout ce qui n'aide pas à choisir une touche laisse la place au panneau. */
+  .app-shell.is-panel-open .hero-copy,
+  .app-shell.is-panel-open .configure-button,
+  .app-shell.is-panel-open .generate-button,
+  .app-shell.is-panel-open .mapping-preview,
+  .app-shell.is-panel-open .device-note,
+  .app-shell.is-panel-open .quiet-note {
+    display: none;
+  }
+
+  /* La boîte est désormais recadrée sur le device, donc plus de vide à
+     récupérer par une marge négative : la largeur du stage est directement
+     celle du clavier. */
+  .app-shell.is-panel-open .device-stage {
+    width: min(285px, 78vw);
+    margin: 0 auto;
+  }
+
+  .mapping-dialog {
+    position: static;
+    width: auto;
+    min-height: 0;
+    flex: 1 1 auto;
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: 22px 22px 0 0;
+    box-shadow: 0 -18px 50px rgba(67, 51, 44, 0.22);
+    transform: none;
+  }
+
+  .mapping-dialog:not(.is-open) {
+    display: none;
   }
 
   .dialog-header {
@@ -1523,7 +1615,6 @@ kbd {
     backdrop-filter: none;
   }
 
-  .dialog-scrim,
   .toast {
     backdrop-filter: none;
   }
@@ -1607,14 +1698,6 @@ kbd {
   .key-hotspot.is-selected {
     --selected-glow: 224 135 103;
     background: rgba(255, 255, 255, 0.1);
-  }
-
-  .mini-map-key {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  .mini-map-key--encoder {
-    background: #382e28;
   }
 
   .key-hotspot > .key-hotspot-label {
@@ -1824,10 +1907,17 @@ kbd {
     background: rgba(224, 135, 103, 0.14);
   }
 
-  .review-empty {
+  .review-empty,
+  .appsense-fields {
     border-color: rgba(255, 255, 255, 0.12);
     background: rgba(255, 255, 255, 0.06);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .appsense-fields input {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.1);
+    color: inherit;
   }
 
   .review-run {
@@ -1870,10 +1960,6 @@ kbd {
 
   .export-button:hover {
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.5);
-  }
-
-  .dialog-scrim {
-    background: rgba(15, 9, 6, 0.3);
   }
 
   .toast {

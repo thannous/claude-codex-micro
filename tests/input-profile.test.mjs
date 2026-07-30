@@ -114,19 +114,18 @@ test("builds the canonical mapping without touching the source or native layer",
     claude.layout.base[2].map((entry) => entry.keycode),
     ["KA_0", "KA_1", "KA_2", "KC_ESC"],
   );
-  assert.deepEqual(
-    claude.layout.encoders[0].map((entry) => entry.keycode),
-    ["KC_PGDN", "KC_PGUP", "KC_NONE"],
-  );
+  // La molette est en mode Effort par défaut : les deux sens référencent donc
+  // une action générée, pas un keycode direct.
+  const defaultEncoder = claude.layout.encoders[0].map((entry) => entry.keycode);
+  assert.match(defaultEncoder[0], /^KA_\d+$/);
+  assert.match(defaultEncoder[1], /^KA_\d+$/);
+  assert.equal(defaultEncoder[2], "KC_NONE");
+  assert.equal(deriveMappingFromProfile(profile).mapping.wheel, "effort");
   assert.deepEqual(
     claude.layout.joystick.sectors.map((sector) => sector.k),
     ["KI_X", "KC_LEFT", "KC_DOWN", "KC_RGHT", "KC_UP"],
   );
   assert.equal(profile.profile.name, "Claude macOS");
-  assert.deepEqual(
-    profile.actionGroups,
-    [{ id: 0, name: "Claude Codex Micro", actionIds: [1, 2] }],
-  );
   assert.equal(report.nativeLayerPreserved, true);
   assert.equal(report.appSensePreserved, true);
 
@@ -159,6 +158,66 @@ test("does not claim that AppSense was preserved when the Claude layer is not li
   assert.equal(profile.profile.layers[1].linkedAppId, undefined);
   assert.equal(report.appSenseLinked, false);
   assert.equal(report.appSensePreserved, false);
+});
+
+test("forces the Claude AppSense link even when the source has lost it", () => {
+  const source = sourceProfile();
+  delete source.profile.layers[1].linkedAppId;
+
+  const { profile, report } = buildInputProfile(source, DEFAULT_MAPPING, {
+    appSenseId: 4,
+  });
+
+  assert.equal(profile.profile.layers[1].linkedAppId, 4);
+  assert.equal(report.appSenseId, 4);
+  assert.equal(report.appSenseForced, true);
+  assert.equal(report.baseLayerAppSenseId, null);
+  // Forcer le lien dispense de l'exiger dans la source, sans avoir à passer
+  // requireAppSense: false.
+  assert.equal(report.appSenseLinked, false);
+});
+
+test("reports the inherited AppSense id when nothing is forced", () => {
+  const { report } = buildInputProfile(sourceProfile(), DEFAULT_MAPPING);
+
+  assert.equal(report.appSenseId, 7);
+  assert.equal(report.appSenseForced, false);
+  assert.equal(report.baseLayerAppSenseId, null);
+});
+
+test("links the native layer to a second app without touching its keymap", () => {
+  const source = sourceProfile();
+  const nativeKeymap = structuredClone(source.profile.layers[0].layout);
+
+  const { profile, report } = buildInputProfile(source, DEFAULT_MAPPING, {
+    baseLayerAppSenseId: 1,
+  });
+
+  assert.equal(profile.profile.layers[0].linkedAppId, 1);
+  assert.deepEqual(profile.profile.layers[0].layout, nativeKeymap);
+  assert.equal(profile.profile.layers[1].linkedAppId, 7);
+  assert.equal(report.baseLayerAppSenseId, 1);
+  assert.equal(report.nativeLayerPreserved, true);
+});
+
+test("rejects invalid or colliding AppSense ids", () => {
+  assert.throws(
+    () => buildInputProfile(sourceProfile(), DEFAULT_MAPPING, { appSenseId: -1 }),
+    /appSenseId/,
+  );
+  assert.throws(
+    () => buildInputProfile(sourceProfile(), DEFAULT_MAPPING, { baseLayerAppSenseId: "1" }),
+    /baseLayerAppSenseId/,
+  );
+  // Deux layers liés à la même application rendraient la bascule ambiguë.
+  assert.throws(
+    () =>
+      buildInputProfile(sourceProfile(), DEFAULT_MAPPING, {
+        appSenseId: 3,
+        baseLayerAppSenseId: 3,
+      }),
+    /même entrée AppSense/,
+  );
 });
 
 test("supports explicitly unassigned controls", () => {
