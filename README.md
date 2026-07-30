@@ -1,7 +1,7 @@
 <h1 align="center">Codex Micro × Claude</h1>
 
 <p align="center">
-  <strong>A safe, local configurator for mapping Work Louder Codex Micro controls to Claude Desktop.</strong>
+  <strong>A safe, local configurator for mapping Work Louder Codex Micro controls to Claude Desktop and Claude Code.</strong>
 </p>
 
 <p align="center">
@@ -12,6 +12,15 @@
 </p>
 
 ![Codex Micro controls mapped to Claude Desktop](docs/assets/readme/hero-configurator.png)
+
+## Latest additions
+
+- six Agent keys can now mirror live Claude Code session state by colour and
+  open the selected session;
+- navigation covers identifiable terminal sessions and, experimentally,
+  sessions hosted by Claude Desktop or an IDE;
+- the configurator now includes a calibrated effort wheel, eight-direction
+  joystick actions, AppSense controls, and a mobile-friendly layout.
 
 ## Map Claude to your fingertips
 
@@ -56,6 +65,70 @@ npm run configure
 ```
 
 Node.js 18 or newer is required. The app binds only to `127.0.0.1`.
+
+## Agent key lighting — experimental
+
+Everything above is the project. This part is an experiment on top of it: the
+six Agent keys show the live state of your Claude Code sessions in colour, and
+pressing one goes to that session.
+
+| | | |
+| --- | --- | --- |
+| `#C2483D` | **a decision is waiting for you** | the only colour that asks for you |
+| `#D97757` | the session is working | |
+| `#5B8C6F` | the turn has finished | |
+| `#6D5A7D` | session open, at rest | |
+| `#2F2927` | session closed, resumable | |
+| unlit | no session on this key | |
+
+**It only runs under three conditions.**
+
+1. **Quit the ChatGPT app.** It rewrites these LEDs every 35 to 40 seconds and
+   intercepts Agent key presses. Last write wins, so with it running you will
+   see your colours appear and then vanish.
+2. `npm install`, so that `node-hid` — an optional dependency — is built.
+3. The Agent keycodes have to sit on the Claude layer. Input does not offer
+   them in its key picker, so `scripts/enable-agent-keys.mjs` writes a profile
+   for you to import through **Input > Import Profile**.
+
+**If this half breaks, the other half does not.** Nothing above depends on it.
+When the ChatGPT app takes the LEDs back, when `node-hid` is absent, or when an
+app update moves the resume route, your keys keep sending their shortcuts. The
+lighting writes nothing persistent either — only volatile HID reports, so no
+firmware, no Input storage, and no ChatGPT app state is touched.
+
+```sh
+node scripts/thread-status.mjs watch    # reconcile sessions, write slots.json
+node scripts/lighting.mjs watch --hold  # push those colours onto the keys
+```
+
+`thread-status` reconciles two official sources — `claude agents --json` for
+live sessions, and a plugin hook journal for their state — into
+`~/.claude/thread-status/slots.json`. `lighting watch` follows that file.
+`--hold` reapplies as soon as a foreign write is detected.
+
+```console
+$ node scripts/thread-status.mjs doctor
+  ✔ claude binary: $HOME/Library/Application Support/Claude/…/claude
+  ✔ claude agents --json: 6 live session(s)
+  ✔ state directory reachable: $HOME/.claude/thread-status
+  ✔ journal: 194 event(s), last UserPromptSubmit 513s ago
+  ✔ navigation: 4/6 session(s) in an identifiable terminal — the others are
+    hosted by Claude Desktop or an IDE, reached through claude://resume
+```
+
+Pressing an Agent key navigates to its session: a terminal session gets its
+window focused over AppleScript, and a session hosted by Claude Desktop is
+opened through `claude://resume?session=<uuid>`. That route is **not
+documented** — it is verified on this machine and can change with an app
+update. The URL handler also reports nothing back, so a session whose
+transcript has left the disk fails silently on the app side.
+
+The per-key lighting channel is confirmed on hardware and reimplemented in
+original code from the observed format. No Work Louder SDK is redistributed.
+Protocol, measurements and limits:
+[`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md)
+and [`docs/research/thread-status-feasibility.md`](docs/research/thread-status-feasibility.md).
 
 > Independent community project, not affiliated with or endorsed by Work
 > Louder or Anthropic. Product names and trademarks belong to their respective
@@ -318,30 +391,20 @@ Lire [`ble/README.md`](ble/README.md) et
 
 ### Pilotage de l'éclairage des touches
 
-Le canal d'éclairage par touche du Codex Micro est confirmé sur matériel et
-réimplémenté en code original, d'après le format observé (aucune redistribution
-du SDK Work Louder) :
+Voir [Agent key lighting — experimental](#agent-key-lighting--experimental),
+plus haut : conditions, garantie d'isolation et commandes y sont réunies. Les
+commandes et leur sortie sont en anglais, comme tout le reste de l'outillage.
+
+Le jeu complet des sous-commandes :
 
 ```sh
-npm install                 # active node-hid (optionalDependencies)
-node scripts/lighting.mjs probe              # vérifie le canal et le mapping des touches
+node scripts/lighting.mjs probe              # canal et mapping des touches
 node scripts/lighting.mjs set slot 3 '#C2483D' --effect=breath
 node scripts/lighting.mjs set all '#D97757'
 node scripts/lighting.mjs zones --keys=#D97757 --ambient=#6D5A7D
-node scripts/lighting.mjs watch              # couleurs d'état des sessions Claude Code
 node scripts/lighting.mjs listen             # événements touches et joystick
 node scripts/lighting.mjs off
 ```
-
-`watch` est la couche `DeviceAdapter` : il suit
-`~/.claude/thread-status/slots.json` (produit par `npm run thread-status -- watch`)
-et pousse la couleur d'état de chaque session sur sa touche Agent.
-
-Contention : l'app ChatGPT repousse sa propre configuration toutes les 35 à
-40 s et la dernière écriture gagne. `--hold` (sur `set` et `watch`) réapplique
-dès qu'une écriture étrangère est détectée. Aucune écriture persistante : seuls
-des rapports HID volatils sont émis — ni firmware, ni stockage Input, ni app
-ChatGPT ne sont touchés.
 
 Protocole, mesures et bornes :
 [`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md).
