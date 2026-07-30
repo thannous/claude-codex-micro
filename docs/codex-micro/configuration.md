@@ -31,7 +31,17 @@ Le preset et l'outil imposent les règles suivantes :
 - absence ou doublon `Claude` refusé ;
 - structure d'export inconnue refusée au lieu d'être interprétée ;
 - sauvegarde et vérification SHA-256 avant la session réelle ;
-- aucune écriture directe dans le stockage Input ou le périphérique.
+- aucune écriture directe dans le stockage Input ;
+- aucune écriture de configuration sur le périphérique — keymap, layers et
+  couleurs de layer passent exclusivement par le flux de profils Input.
+
+La dernière règle portait jusqu'ici sur toute écriture vers le périphérique.
+Elle est restreinte aux écritures **persistantes** : l'envoi de rapports HID
+d'éclairage volatils est désormais dans le périmètre, sous six conditions
+cumulatives énoncées dans
+[`docs/scope-and-limitations.md`](../scope-and-limitations.md). Cette
+configuration-ci n'en dépend pas et reste réalisable sans écrire une seule fois
+sur le périphérique.
 
 L'inventaire bloque la transformation si l'export officiel ne permet pas de
 prouver la présence du layer protégé à l'index `0` et d'un unique layer

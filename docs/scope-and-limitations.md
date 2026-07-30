@@ -32,7 +32,45 @@
 - approbation de permissions depuis le clavier ;
 - action destructive, push ou déploiement ;
 - publication d'un export brut ou d'un identifiant matériel ;
-- présentation de Hardware Buddy comme fonctionnel sans preuve.
+- présentation de Hardware Buddy comme fonctionnel sans preuve ;
+- redistribution du SDK `@worklouder/device-kit-oai` ou de son code.
+
+## Amendement : écriture volatile de l'éclairage
+
+Jusqu'ici le dépôt s'interdisait toute écriture directe sur le périphérique. Cet
+amendement ouvre **un cas précis et un seul** : l'envoi de rapports HID de sortie
+portant l'état lumineux d'exécution.
+
+La distinction qui fonde l'amendement est la persistance, pas la nature du canal :
+
+| Écriture | Statut |
+| --- | --- |
+| rapport HID d'éclairage, volatile, perdu à la déconnexion | **dans le périmètre**, sous conditions |
+| configuration du périphérique, keymap, layers, couleurs de layer | hors périmètre, inchangé |
+| stockage applicatif d'Input | hors périmètre, inchangé |
+| firmware | hors périmètre, inchangé |
+
+Conditions cumulatives, toutes requises :
+
+1. **Opt-in explicite.** Aucune écriture par défaut, jamais au premier lancement.
+2. **Volatile uniquement.** Rien qui survive à une déconnexion du périphérique.
+3. **Implémentation originale.** Le format observé est documenté ; le SDK
+   propriétaire n'est ni copié, ni redistribué, ni empaqueté.
+4. **Restauration en sortie.** Interruption, arrêt ou exception laissent
+   l'éclairage dans un état neutre, jamais figé sur un état faux.
+5. **Concurrence documentée.** L'app ChatGPT réémet toutes les 35 à 40 secondes,
+   la dernière écriture gagne, et aucune coexistence déterministe n'est promise.
+6. **Réversibilité par abstention.** Ne pas lancer l'outil suffit à revenir à
+   l'état d'origine ; il n'y a rien à désinstaller côté matériel.
+
+Ce que l'amendement ne change pas : le remappage des touches continue de passer
+exclusivement par le flux de profils Input, et la capture de frappes reste hors
+périmètre.
+
+Base retenue pour la réimplémentation : interopérabilité avec un périphérique que
+l'utilisateur possède, code original, aucune redistribution. Voir
+[`research/thread-status-feasibility.md`](research/thread-status-feasibility.md)
+pour les mesures qui établissent le format.
 
 ## Matrice de confiance
 

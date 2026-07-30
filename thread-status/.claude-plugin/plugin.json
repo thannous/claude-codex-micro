@@ -1,0 +1,11 @@
+{
+  "name": "codex-micro-thread-status",
+  "description": "Journalise l'état des sessions Claude Code pour les six touches Agent du Codex Micro.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Communauté Codex Micro × Claude"
+  },
+  "homepage": "https://github.com/thannous/claude-codex-micro",
+  "repository": "https://github.com/thannous/claude-codex-micro",
+  "license": "MIT"
+}

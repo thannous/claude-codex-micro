@@ -85,3 +85,31 @@ format et son effet sur le périphérique ne sont pas prouvés.
 La recherche BLE reste indépendante. Elle ne rejoint la feuille de route
 principale que si le service Nordic UART, la coexistence HID et une procédure
 de restauration sûre sont démontrés sur le Codex Micro exact.
+
+## Piste parallèle : statut des sessions Claude Code
+
+Une seconde piste couvre les six touches Agent : afficher l'état des sessions
+Claude Code locales et sauter à la bonne session. Contrairement à Hardware Buddy,
+ses deux briques centrales reposent sur des mécanismes documentés — le roster
+`claude agents --json` et les hooks — et sont implémentées :
+
+- [x] plugin de hooks et journal publiable ([`thread-status/`](../thread-status/README.md)) ;
+- [x] réducteur à six emplacements, testé sans matériel ;
+- [x] compagnon `watch` / `status` / `focus` / `doctor` ;
+- [ ] focus d'une session hébergée par un terminal, vérifié de bout en bout ;
+- [x] appui d'une touche Agent relié à `focus <n>` : les touches émettent
+  `v.oai.hid` avec `k` valant `AG00` à `AG05`, donc aucun raccourci global natif
+  n'est nécessaire — `npm run lighting -- watch --focus` ;
+- [x] couche `DeviceAdapter` : le protocole d'éclairage est confirmé sur
+  matériel et `node scripts/lighting.mjs watch` pousse les couleurs d'état —
+  voir [`hid-lighting-protocol.md`](research/hid-lighting-protocol.md).
+
+Une seule limite la maintient hors de la V1 : aucune route n'adresse une
+session Claude Code hébergée par Claude Desktop. Le protocole des LED par
+touche, seconde limite historique, est désormais confirmé sur matériel et
+implémenté — y compris sur le layer `Claude`, à condition que ses six positions
+Agent portent les keycodes `KV_OAI_AG00` à `KV_OAI_AG05`, ce que pose
+[`scripts/enable-agent-keys.mjs`](../scripts/enable-agent-keys.mjs). Mesures et
+bornes dans
+[`docs/research/thread-status-feasibility.md`](research/thread-status-feasibility.md)
+et [`docs/research/hid-lighting-protocol.md`](research/hid-lighting-protocol.md).
