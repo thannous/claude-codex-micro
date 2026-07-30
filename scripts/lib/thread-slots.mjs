@@ -23,25 +23,10 @@ export const SLOT_COUNT = 6;
 // proviennent de KEY_CONTROL_LOCATIONS dans shared/input-profile.mjs.
 export const SLOT_CONTROLS = Object.freeze(["key-9", "key-10", "key-5", "key-6", "key-7", "key-8"]);
 
-export const STATES = Object.freeze({
-  free: "free",
-  idle: "idle",
-  running: "running",
-  blocked: "blocked",
-  done: "done",
-  ended: "ended",
-});
-
-// Couleurs reprises de la palette du dépôt. `blocked` est la seule teinte
-// ajoutée : aucune couleur existante ne signifiait « une décision est attendue ».
-export const STATE_COLORS = Object.freeze({
-  free: null,
-  idle: "#6D5A7D",
-  running: "#D97757",
-  blocked: "#C2483D",
-  done: "#5B8C6F",
-  ended: "#2F2927",
-});
+// Réexportées depuis shared/, où elles sont la source unique de vérité : le GUI
+// affiche la même légende, et une palette dupliquée finirait par diverger.
+export { LEGEND_ORDER, STATE_COLORS, STATES } from "../../shared/thread-status-palette.mjs";
+import { STATE_COLORS, STATES } from "../../shared/thread-status-palette.mjs";
 
 // Les types de notification qui exigent une action humaine. Tout autre type
 // (`auth_success`, `elicitation_complete`…) ne change pas l'état : un témoin
@@ -249,9 +234,36 @@ export function slotView(snapshot) {
 }
 
 /**
+ * Normalise le terminal rapporté par `ps -o tty=` en chemin de périphérique.
+ *
+ * macOS renvoie déjà la forme préfixée (`ttys001`), là où d'autres BSD renvoient
+ * la forme courte (`s001`). Préfixer `/dev/tty` sans distinguer les deux
+ * fabriquait `/dev/ttyttys001` : un chemin inexistant, que l'AppleScript de
+ * focus comparait au `tty` réel de chaque fenêtre sans jamais pouvoir
+ * correspondre. Les seules sessions pourtant navigables échouaient donc toutes
+ * en « fenêtre introuvable ».
+ */
+export function ttyDevice(tty) {
+  if (!tty || tty === "??" || tty === "-") return null;
+  if (tty.startsWith("/dev/")) return tty;
+  return tty.startsWith("tty") ? `/dev/${tty}` : `/dev/tty${tty}`;
+}
+
+/**
+ * Le `session` de `claude://resume` est validé par une regex UUID stricte avant
+ * d'être repris. Un identifiant d'une autre forme est refusé par l'application :
+ * on ne fabrique donc l'URL que pour ce que le handler acceptera.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
  * Traduit un emplacement en action de navigation. Ne décide rien d'irréversible
  * et n'invente aucune route : une session que l'on ne sait pas atteindre renvoie
  * `unsupported` plutôt qu'une URL supposée.
+ *
+ * Une session sans `tty` est hébergée par Claude Desktop. `claude://resume` la
+ * désigne par son `sessionId` — celui du roster, pas le `hostSessionId`, qui
+ * regroupe plusieurs sessions et n'en adresse aucune.
  */
 export function resolveNavigation(entry) {
   if (!entry) return { kind: "empty" };
@@ -261,12 +273,20 @@ export function resolveNavigation(entry) {
   if (entry.tty) {
     return { kind: "terminal", tty: entry.tty, app: entry.terminalApp ?? null, sessionId: entry.sessionId };
   }
+  if (UUID.test(entry.sessionId ?? "")) {
+    return {
+      kind: "desktop",
+      sessionId: entry.sessionId,
+      url: `claude://resume?session=${entry.sessionId}`,
+      entrypoint: entry.entrypoint ?? null,
+      hostSessionId: entry.hostSessionId ?? null,
+    };
+  }
   return {
     kind: "unsupported",
     sessionId: entry.sessionId,
     entrypoint: entry.entrypoint ?? null,
     hostSessionId: entry.hostSessionId ?? null,
-    reason:
-      "Session sans terminal : aucune route documentée n'adresse une session Claude Code hébergée par Claude Desktop ou un IDE.",
+    reason: "Session sans terminal et sans identifiant UUID : `claude://resume` refuserait cette cible.",
   };
 }

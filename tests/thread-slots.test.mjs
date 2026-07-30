@@ -10,6 +10,7 @@ import {
   resolveNavigation,
   slotView,
   stateFromHookEvent,
+  ttyDevice,
 } from "../scripts/lib/thread-slots.mjs";
 
 function rosterRow(index, overrides = {}) {
@@ -151,16 +152,42 @@ test("la navigation ne suppose aucune route", () => {
   assert.equal(closed.kind, "resume");
   assert.equal(closed.sessionId, "session-1");
 
-  // Session hébergée par Claude Desktop : pas de tty, et l'identifiant d'hôte
-  // regroupe plusieurs sessions. Aucune URL n'est fabriquée.
+  // Session hébergée par Claude Desktop : pas de tty. `claude://resume` la
+  // désigne par le `sessionId` du roster — jamais par le `hostSessionId`, qui
+  // regroupe plusieurs sessions.
   const hosted = resolveNavigation({
-    sessionId: "session-1",
+    sessionId: "6f2d3f4a-8c11-4b2e-9a77-0d5e1c8b4a30",
     state: STATES.running,
     entrypoint: "claude-desktop",
     hostSessionId: "local_f92b6e6a",
   });
-  assert.equal(hosted.kind, "unsupported");
+  assert.equal(hosted.kind, "desktop");
+  assert.equal(hosted.url, "claude://resume?session=6f2d3f4a-8c11-4b2e-9a77-0d5e1c8b4a30");
   assert.equal(hosted.hostSessionId, "local_f92b6e6a");
+
+  // L'application valide la cible par une regex UUID stricte. Un identifiant
+  // d'une autre forme ne donne pas lieu à une URL que le handler refuserait.
+  const opaque = resolveNavigation({
+    sessionId: "session-1",
+    state: STATES.running,
+    entrypoint: "claude-desktop",
+  });
+  assert.equal(opaque.kind, "unsupported");
+  assert.equal(opaque.url, undefined);
+});
+
+test("le tty de `ps` devient un chemin de périphérique qui existe", () => {
+  // La forme que renvoie macOS. Un préfixe `/dev/tty` inconditionnel donnait
+  // `/dev/ttyttys001`, et le focus AppleScript ne trouvait jamais la fenêtre.
+  assert.equal(ttyDevice("ttys001"), "/dev/ttys001");
+  // La forme courte des autres BSD, qui exige bien le préfixe complet.
+  assert.equal(ttyDevice("s001"), "/dev/ttys001");
+  // Déjà absolu : conservé tel quel, sans double préfixe.
+  assert.equal(ttyDevice("/dev/ttys006"), "/dev/ttys006");
+  // Sessions sans terminal : Claude Desktop, un IDE, un `claude -p`.
+  for (const absent of ["??", "-", "", null, undefined]) {
+    assert.equal(ttyDevice(absent), null);
+  }
 });
 
 test("un instantané corrompu retombe sur six emplacements libres", () => {

@@ -16,8 +16,11 @@ dans cet ordre de solidité :
    porter les keycodes `KV_OAI_AG00` à `KV_OAI_AG05`. Le prédicat du firmware est
    le keycode, pas l'index du layer.
 
-Les trois briques sont donc réunies, et les six témoins coexistent avec les
-raccourcis Claude sans compromis.
+Les trois briques sont réunies, et aucun raccourci Claude n'est sacrifié. Mais la
+fonction a une condition d'usage : **l'app ChatGPT doit être quittée.** Elle
+réécrit les six LED toutes les 35 à 40 secondes et intercepte les appuis sur les
+touches Agent pour changer de thread Codex. Les deux moitiés de la fonction lui
+sont donc disputées par la même application, et rien ne permet d'arbitrer.
 
 ## Le modèle : deux sources, deux rôles
 
@@ -76,7 +79,12 @@ Mesuré sur macOS `26.5.2` arm64, Claude `1.24012.9`, Claude Code `2.1.219`.
 | `CLAUDE_CODE_HOST_SESSION_ID` **n'identifie pas** une session | confirmé | deux sessions distinctes partagent `local_f92b6e6a` |
 | Le `tty` distingue terminal et Desktop | confirmé | `tty = ??` pour les trois sessions Desktop |
 | Focus d'une fenêtre de terminal par `tty` en AppleScript | non testé de bout en bout | scripts compilés par `osacompile` ; aucune session en terminal disponible, iTerm2 absent de la machine |
-| Route pour ouvrir une session Claude Code locale dans Desktop | inexistante | doc des deep links : `claude://code/new` seulement |
+| Route pour ouvrir une session Claude Code locale dans Desktop **par identifiant** | **réfuté** | `claude://resume?session=<uuid>` ouvre la bonne session, vérifié sur machine ; la route est absente de la doc des deep links, qui ne cite que `claude://code/new` |
+| `claude://resume` valide sa cible par une regex UUID stricte | confirmé | lu dans le handler : l'`uuid` est vérifié avant `importCliSession`, puis la navigation |
+| `claude://resume` échoue quand le transcript est absent du disque | rapporté, non testé | chemin d'erreur `transcript_missing` du handler ; aucun compte rendu ne remonte à l'appelant, `open` sort en 0 dans tous les cas |
+| Raccourcis de **cycle** entre sessions dans Claude Desktop | documentés | `Ctrl Tab` / `Ctrl Shift Tab` et `Cmd Shift ]` / `Cmd Shift [` — table des raccourcis du Code tab |
+| Raccourci pour sélectionner une session par son rang | inexistant | `1`–`9` ne sélectionne que dans un menu ouvert, et il n'existe pas de menu de sessions |
+| Repli pour une session Desktop sans identifiant UUID : activer l'application | implémenté | `open -b com.anthropic.claudefordesktop`, sans consentement Automation ; la session précise reste non sélectionnable |
 | `claude --resume <id>` reprend une session fermée | documenté | doc de gestion des sessions |
 | Le Codex Micro est un périphérique Espressif | confirmé | `hidutil list` : VID `0x303a`, PID `0x8360` |
 | Le log d'Input ne peut pas livrer le protocole RGB | confirmé | 66 lignes `v.oai.*`, toutes des réponses, zéro requête |
@@ -93,6 +101,7 @@ Mesuré sur macOS `26.5.2` arm64, Claude `1.24012.9`, Claude Code `2.1.219`.
 | Le rendu exige les keycodes `KV_OAI_AG00..05` sur les six positions | **confirmé sur matériel** | layer `Claude` avec `KC_NONE` : aucun rendu ; les mêmes six positions passées aux keycodes Agent : rendu immédiat des six couleurs |
 | Le prédicat du firmware est l'index de layer 0 | **réfuté** | le rendu fonctionne sur le layer `Claude` d'index 1 dès que les keycodes y sont posés |
 | Les touches Agent notifient l'hôte de leur appui | **confirmé sur matériel** | `v.oai.hid` reçu pour `AG00` à `AG05`, `act` 1 à l'appui et 0 au relâchement — `npm run lighting -- listen` |
+| L'app ChatGPT intercepte aussi ces appuis | **confirmé sur matériel** | sur le layer `Claude`, appuyer sur une touche Agent fait basculer les threads Codex |
 | Un raccourci global natif est nécessaire pour la navigation | **réfuté** | le clavier désigne l'emplacement sur le canal HID déjà ouvert ; ni `RegisterEventHotKey`, ni autorisation macOS |
 | `device.status` renvoie un index de layer 1-based | rapporté, non revérifié | `layer_index: 1` = layer Codex, `2` = layer `Claude` ; Input applique `layer_index - 1` |
 | Les keycodes `KV_OAI_AG00..05` sont assignables depuis Input | **réfuté** | une seule occurrence chacun dans l'`app.asar`, dans la définition câblée du layer natif : absents du sélecteur de touches |
@@ -127,12 +136,20 @@ Conséquence directe, et c'est la décision produit du projet :
 | Surface | `tty` | Aller à la session |
 | --- | --- | --- |
 | Terminal | réel | `pid` → `tty` → focus de la fenêtre en AppleScript |
-| Claude Desktop, IDE | `??` | aucune route documentée ni officieuse |
+| Claude Desktop, IDE | `??` | `claude://resume?session=<sessionId>` |
 | Session fermée | — | `claude --resume <sessionId>` |
 
-**Faire tourner les six sessions dans un terminal rend la navigation officielle.
-Les faire tourner dans Claude Desktop la laisse impossible.** Le focus par
-AppleScript demande le consentement Automation de macOS, pas l'Accessibilité.
+Ce qui manquait n'était pas un identifiant, c'était la route. Le `sessionId` du
+roster est exactement la cible que `claude://resume` attend — le
+`hostSessionId`, lui, ne désigne toujours rien. **Les six emplacements sont donc
+navigables quelle que soit la surface**, et le repli « activer l'application »
+ne sert plus qu'aux sessions dont l'identifiant n'est pas un UUID.
+
+Deux réserves, portées par le code plutôt que par ce texte : la route n'est pas
+documentée, et le handler ne rend pas compte de l'issue — `open` sort en 0 même
+quand la reprise échoue faute de transcript sur le disque. Le focus par
+AppleScript demande le consentement Automation de macOS, pas l'Accessibilité ;
+le passage par `claude://` n'exige ni l'un ni l'autre.
 
 ## Pièges rencontrés
 
@@ -416,9 +433,29 @@ inassignables depuis l'interface. D'où
 écrit dans un export de profile à réimporter par le flux officiel **Import
 Profile**, sans jamais toucher au layer d'index 0.
 
-Le coût est nul sur le preset Claude : ces six positions y étaient `no-action`, et
-les raccourcis vivent sur la rangée suivante. La seule contrepartie est qu'un
-appui sur ces touches émet désormais l'action Agent native au lieu de rien.
+Aucun raccourci Claude n'est perdu : ces six positions étaient `no-action`, et les
+raccourcis vivent sur la rangée suivante.
+
+**Mais le coût n'est pas nul, et il n'est pas seulement théorique.** Ces keycodes
+ne sont pas de simples marqueurs d'affichage : le firmware émet une notification
+`v.oai.hid`, et **l'app ChatGPT y réagit en changeant de thread Codex**. Mesuré :
+sur le layer `Claude`, appuyer sur une touche Agent fait basculer les threads
+Codex.
+
+La même application contend donc les deux moitiés de la fonction :
+
+| Ressource | Ce que fait l'app ChatGPT |
+| --- | --- |
+| les six LED | réécrit sa configuration toutes les 35 à 40 s |
+| les six appuis | intercepte et change de thread Codex |
+
+Il n'y a pas d'arbitrage possible : les notifications sont diffusées à tous les
+lecteurs, et rien ne permet de demander à ChatGPT de se taire. **Quitter l'app
+ChatGPT résout les deux d'un coup** — les écritures d'éclairage ne sont plus
+recouvertes, et les appuis n'ont plus qu'un seul destinataire.
+
+C'est donc la condition d'usage réelle de la fonction, et elle doit être annoncée
+comme telle : les six témoins Claude et l'app ChatGPT ne cohabitent pas.
 
 **Vérifié sur matériel** : après import, layer `Claude` actif,
 `lighting set all #00FF00` allume bien les six touches en vert.

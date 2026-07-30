@@ -148,6 +148,26 @@ const ACTION_DEFINITIONS = {
     type: "direct",
     key: "Escape",
   },
+  // Cycle entre les sessions du Code tab de Claude Desktop. La documentation
+  // précise que ce raccourci utilise Control sur toutes les plateformes,
+  // contrairement aux autres. Il n'existe aucun raccourci pour choisir une
+  // session par son rang : seul le cycle est adressable.
+  nextSession: {
+    name: "Claude Next Session",
+    type: "shortcut",
+    keys: ["Control", "Tab"],
+  },
+  previousSession: {
+    name: "Claude Previous Session",
+    type: "shortcut",
+    keys: ["Control", "Shift", "Tab"],
+  },
+  // Ouvre le menu d'effort, où les chiffres 1 à 9 sélectionnent une entrée.
+  effortMenu: {
+    name: "Claude Effort Menu",
+    type: "shortcut",
+    keys: ["Command", "Shift", "E"],
+  },
   settings: {
     name: "Claude Settings",
     type: "shortcut",
@@ -513,6 +533,39 @@ function addActionsToGroup(profile, actionIds) {
   group.actionIds = [...new Set([...group.actionIds, ...actionIds])];
 }
 
+// Le joystick accepte, en plus des deux préréglages `navigation` et `none`, une
+// affectation par direction :
+//
+//   { directions: 4, sectors: ["newSession", "voice", "diff", "stop"] }
+//
+// Chaque secteur prend la même valeur qu'une touche — identifiant du catalogue,
+// raccourci personnalisé, ou `none`. La sérialisation d'Input convertit bien les
+// références `KA_` dans les secteurs, donc une macro complète y est possible et
+// pas seulement un keycode nu.
+//
+// 45° restent réservés à la zone de fermeture `KI_X` en haut, exactement comme
+// le gabarit par défaut d'Input. Les 315° restants se partagent, soit 78,75° à
+// quatre directions et 39,4° à huit. Au-delà de huit, viser au pouce devient
+// hasardeux : la borne est ergonomique, le format n'en impose aucune.
+const JOYSTICK_DIRECTION_COUNTS = Object.freeze([4, 8]);
+
+function isCustomJoystick(value) {
+  return Boolean(value) && typeof value === "object" && Array.isArray(value.sectors);
+}
+
+function validateCustomJoystick(joystick) {
+  assert(
+    JOYSTICK_DIRECTION_COUNTS.includes(joystick.directions),
+    `Le joystick accepte ${JOYSTICK_DIRECTION_COUNTS.join(" ou ")} directions, reçu : ${JSON.stringify(joystick.directions)}`,
+    "UNSUPPORTED_JOYSTICK_DIRECTIONS",
+  );
+  assert(
+    joystick.sectors.length === joystick.directions,
+    `Le joystick déclare ${joystick.directions} directions mais porte ${joystick.sectors.length} secteurs.`,
+    "JOYSTICK_SECTOR_COUNT",
+  );
+}
+
 function radialSectors(keycodes) {
   const closeAngle = 45 / 360;
   const start = (90 - 45 / 2) / 360;
@@ -786,8 +839,22 @@ export function deriveMappingFromProfile(source) {
     encoder[PHYSICAL_ENCODER_SLOTS.press],
   );
 
-  const sectors = layer.layout.joystick?.sectors ?? [];
-  mapping.joystick = sectors.some((sector) => sector.k === "KC_UP") ? "navigation" : "none";
+  // Le premier secteur est toujours la zone de fermeture `KI_X` : les
+  // directions utiles sont les suivants, dans l'ordre où radialSectors les pose.
+  const sectors = (layer.layout.joystick?.sectors ?? []).filter(
+    (sector) => sector.k !== "KI_X",
+  );
+  const directions = sectors.map((sector) => sector.k);
+  if (sameJson(directions, ["KC_LEFT", "KC_DOWN", "KC_RGHT", "KC_UP"])) {
+    mapping.joystick = "navigation";
+  } else if (JOYSTICK_DIRECTION_COUNTS.includes(directions.length)) {
+    mapping.joystick = {
+      directions: directions.length,
+      sectors: directions.map((keycode) => decodeCell({ keycode })),
+    };
+  } else {
+    mapping.joystick = "none";
+  }
 
   const assigned = Object.values(mapping).filter((value) => value !== "none").length;
 
@@ -896,8 +963,20 @@ export function buildInputProfile(
       type: "RADIAL",
       sectors: radialSectors(["KC_NONE"]),
     };
+  } else if (isCustomJoystick(mapping.joystick)) {
+    validateCustomJoystick(mapping.joystick);
+    targetLayer.layout.joystick = {
+      type: "RADIAL",
+      sectors: radialSectors(
+        mapping.joystick.sectors.map((entry) =>
+          resolveKeyAssignment(output, entry, createdActionIds),
+        ),
+      ),
+    };
   } else {
-    throw new Error(`Action inconnue pour le joystick : ${mapping.joystick}`);
+    throw new Error(
+      `Action inconnue pour le joystick : ${JSON.stringify(mapping.joystick)}`,
+    );
   }
 
   addActionsToGroup(output, createdActionIds);
@@ -965,8 +1044,11 @@ export function buildInputProfile(
         (controlId) => mapping[controlId] !== "none",
       ).length,
       wheelMode: mapping.wheel === "scroll" ? "Page précédente / suivante" : mapping.wheel,
-      joystickMode:
-        mapping.joystick === "navigation" ? "Flèches directionnelles" : "Non assigné",
+      joystickMode: isCustomJoystick(mapping.joystick)
+        ? `${mapping.joystick.directions} directions`
+        : mapping.joystick === "navigation"
+          ? "Flèches directionnelles"
+          : "Non assigné",
     },
   };
 }

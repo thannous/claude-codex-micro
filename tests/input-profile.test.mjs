@@ -576,3 +576,81 @@ test("inspection requires AppSense by default but can report its absence", () =>
   const inspection = inspectInputProfile(source, { requireAppSense: false });
   assert.equal(inspection.appSenseLinked, false);
 });
+
+test("assigns Claude actions to four joystick directions", () => {
+  const { profile, report } = buildInputProfile(sourceProfile(), {
+    ...DEFAULT_MAPPING,
+    joystick: {
+      directions: 4,
+      sectors: ["newSession", "voice", "diff", "settings"],
+    },
+  });
+  const { sectors } = profile.profile.layers[1].layout.joystick;
+
+  // Le premier secteur reste la zone de fermeture, les quatre suivants portent
+  // des références d'action et non des keycodes nus.
+  assert.equal(sectors.length, 5);
+  assert.equal(sectors[0].k, "KI_X");
+  for (const sector of sectors.slice(1)) {
+    assert.match(sector.k, /^KA_\d+$/);
+  }
+  assert.equal(report.joystickMode, "4 directions");
+
+  const names = sectors
+    .slice(1)
+    .map((sector) => profile.actions.find((a) => `KA_${a.id}` === sector.k).name);
+  assert.deepEqual(names, [
+    "Claude New",
+    "Claude Voice",
+    "Claude Diff",
+    "Claude Settings",
+  ]);
+});
+
+test("supports eight joystick directions and round-trips them", () => {
+  const sectorsIn = [
+    "newSession",
+    "voice",
+    "diff",
+    "settings",
+    "find",
+    "findNext",
+    "back",
+    "forward",
+  ];
+  const { profile } = buildInputProfile(sourceProfile(), {
+    ...DEFAULT_MAPPING,
+    joystick: { directions: 8, sectors: sectorsIn },
+  });
+
+  assert.equal(profile.profile.layers[1].layout.joystick.sectors.length, 9);
+  assert.deepEqual(deriveMappingFromProfile(profile).mapping.joystick, {
+    directions: 8,
+    sectors: sectorsIn,
+  });
+});
+
+test("keeps reading the four-arrow preset as navigation", () => {
+  const { profile } = buildInputProfile(sourceProfile(), DEFAULT_MAPPING);
+  assert.equal(deriveMappingFromProfile(profile).mapping.joystick, "navigation");
+});
+
+test("rejects an unsupported joystick direction count or a sector mismatch", () => {
+  assert.throws(
+    () =>
+      buildInputProfile(sourceProfile(), {
+        ...DEFAULT_MAPPING,
+        joystick: { directions: 6, sectors: new Array(6).fill("voice") },
+      }),
+    /4 ou 8 directions/,
+  );
+
+  assert.throws(
+    () =>
+      buildInputProfile(sourceProfile(), {
+        ...DEFAULT_MAPPING,
+        joystick: { directions: 4, sectors: ["voice", "diff"] },
+      }),
+    /4 directions mais porte 2 secteurs/,
+  );
+});

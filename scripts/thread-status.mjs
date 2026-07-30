@@ -26,6 +26,7 @@ import {
   normalizeSnapshot,
   resolveNavigation,
   slotView,
+  ttyDevice,
 } from "./lib/thread-slots.mjs";
 
 // Contrat de chemin partagé avec thread-status/bin/emit.mjs, qui reste
@@ -117,11 +118,6 @@ function processTable() {
     table.set(Number(match[1]), { ppid: Number(match[2]), tty: match[3], comm: match[4].trim() });
   }
   return table;
-}
-
-function ttyDevice(tty) {
-  if (!tty || tty === "??" || tty === "-") return null;
-  return tty.startsWith("/dev/") ? tty : `/dev/tty${tty}`;
 }
 
 function terminalFor(table, pid) {
@@ -302,7 +298,16 @@ function renderTable(snapshot) {
 
 function runAppleScript(script) {
   const result = spawnSync("osascript", ["-e", script], { encoding: "utf8", timeout: 15000 });
-  return { ok: result.status === 0, output: (result.stdout || result.stderr || "").trim() };
+  const output = (result.stdout || result.stderr || "").trim();
+  // Un AppleEvent qui expire — `-1712`, ou `osascript` tué par le timeout —
+  // signifie presque toujours que le consentement Automation n'a pas été accordé
+  // au shell appelant : macOS n'affiche pas toujours l'invite et laisse
+  // simplement l'événement expirer. Le confondre avec « fenêtre introuvable »
+  // envoie chercher le problème du côté du terminal, où il n'est pas.
+  if (result.error?.code === "ETIMEDOUT" || result.signal || output.includes("-1712")) {
+    return { ok: false, reason: "automation-consent", output };
+  }
+  return { ok: result.status === 0, output };
 }
 
 // Le tty vient de `ps` : on le revalide avant interpolation plutôt que de faire
@@ -319,9 +324,14 @@ function focusTerminal(target) {
     };
   }
 
+  // L'ordre des opérations décide du résultat quand les fenêtres se recouvrent.
+  // `activate` d'abord remonte la fenêtre déjà frontale, et réordonner ensuite ne
+  // tient pas : la cible reste sous la pile. On sélectionne donc l'onglet, on
+  // remonte sa fenêtre en tête de l'ordre de profondeur, et on n'active l'app
+  // qu'en dernier. Bénéfice secondaire : un `tty` introuvable ne vole plus le
+  // focus pour rien, puisqu'on sort sans jamais activer.
   if (app.driver === "iterm") {
     return runAppleScript(`tell application "iTerm2"
-  activate
   repeat with w in windows
     repeat with t in tabs of w
       repeat with s in sessions of t
@@ -329,6 +339,7 @@ function focusTerminal(target) {
           select w
           select t
           select s
+          activate
           return "ok"
         end if
       end repeat
@@ -339,12 +350,12 @@ return "not-found"`);
   }
 
   return runAppleScript(`tell application "Terminal"
-  activate
   repeat with w in windows
     repeat with t in tabs of w
       if tty of t is "${target.tty}" then
         set selected tab of w to t
-        set frontmost of w to true
+        set index of w to 1
+        activate
         return "ok"
       end if
     end repeat
@@ -364,6 +375,14 @@ async function focus(slotNumber) {
       return fail(`Emplacement ${slotNumber} : libre.`);
     case "terminal": {
       const result = focusTerminal(target);
+      if (result.reason === "automation-consent") {
+        return fail(
+          `Emplacement ${slotNumber} : ${target.app} n'a pas répondu à l'AppleEvent.\n` +
+            "  C'est le consentement Automation, pas le terminal. Accorder\n" +
+            `  Réglages Système > Confidentialité et sécurité > Automatisation > ${target.app},\n` +
+            "  pour le terminal depuis lequel cette commande est lancée.",
+        );
+      }
       if (!result.ok || result.output === "not-found") {
         return fail(`Emplacement ${slotNumber} : ${result.output || "fenêtre introuvable"}.`);
       }
@@ -380,12 +399,48 @@ async function focus(slotNumber) {
       );
       return undefined;
     }
-    default:
-      return fail(
-        `Emplacement ${slotNumber} : ${target.reason}\n  session ${target.sessionId}` +
-          `\n  entrypoint ${target.entrypoint ?? "inconnu"}` +
-          `\n  hostSessionId ${target.hostSessionId ?? "inconnu"} (identifiant de groupe, non adressable)`,
+    case "desktop": {
+      // `claude://resume?session=<uuid>` ouvre la session par son identifiant.
+      // Comme `open -b`, le passage par le handler d'URL évite AppleScript et
+      // n'exige donc aucun consentement Automation.
+      //
+      // Le handler ne rend pas compte de l'issue : `open` sort en 0 dès que
+      // l'URL est remise. Une session dont le transcript a disparu du disque
+      // échoue côté application, sans que rien ne remonte ici.
+      const opened = spawnSync("open", [target.url], { encoding: "utf8", timeout: 10000 });
+      if (opened.status !== 0) {
+        return fail(
+          `Emplacement ${slotNumber} : ${target.url} n'a pas pu être ouvert : ${(opened.stderr || "").trim()}`,
+        );
+      }
+      process.stdout.write(
+        `Emplacement ${slotNumber} : session ${target.sessionId.slice(0, 8)} demandée à Claude Desktop.\n`,
       );
+      return undefined;
+    }
+    default: {
+      // Session hébergée dont l'identifiant n'est pas un UUID : `claude://resume`
+      // le refuserait. Faute de pouvoir sélectionner la bonne session, on met au
+      // moins l'application au premier plan.
+      //
+      // `open -b` évite AppleScript, donc n'exige aucun consentement Automation.
+      const activated = spawnSync("open", ["-b", "com.anthropic.claudefordesktop"], {
+        encoding: "utf8",
+        timeout: 10000,
+      });
+      if (activated.status !== 0) {
+        return fail(
+          `Emplacement ${slotNumber} : ${target.reason}\n` +
+            `  session ${target.sessionId}\n` +
+            `  Claude Desktop n'a pas pu être activé : ${(activated.stderr || "").trim()}`,
+        );
+      }
+      process.stdout.write(
+        `Emplacement ${slotNumber} : Claude Desktop activé. La session ${target.sessionId.slice(0, 8)} ` +
+          "ne peut pas être sélectionnée : aucune route ne l'adresse.\n",
+      );
+      return undefined;
+    }
   }
 }
 

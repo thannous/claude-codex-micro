@@ -341,8 +341,16 @@ async function commandWatch(flags) {
       child.stdout.on("data", (chunk) => (output += chunk));
       child.stderr.on("data", (chunk) => (output += chunk));
       child.on("close", () => {
-        const first = output.trim().split("\n")[0] ?? "sans retour";
-        process.stdout.write(`${new Date().toISOString()}  [touche ${slot}]  ${first}\n`);
+        // Toutes les lignes, pas seulement la première : pour une session fermée,
+        // `focus` répond sur deux lignes et c'est la seconde qui porte la commande
+        // de reprise. N'en afficher qu'une revenait à masquer l'essentiel.
+        const lines = output.trim().split("\n").filter((line) => line.trim());
+        const stamp = `${new Date().toISOString()}  [touche ${slot}]  `;
+        process.stdout.write(
+          lines.length
+            ? `${stamp}${lines[0]}\n${lines.slice(1).map((line) => `${" ".repeat(stamp.length)}${line.trim()}\n`).join("")}`
+            : `${stamp}sans retour\n`,
+        );
       });
     });
     process.stdout.write("Appui sur une touche Agent → navigation vers sa session.\n");

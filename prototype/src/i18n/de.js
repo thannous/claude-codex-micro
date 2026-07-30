@@ -26,6 +26,20 @@ export default {
     reservedNote:
       "Alle 13 Schalter einschließlich Reglerdruck, beide Drehrichtungen und der Joystick ohne Druckfunktion sind konfigurierbar. Nur der Layer-Sensor bleibt reserviert.",
   },
+  stateLegend: {
+    title: "Farben der Agent-Tasten",
+    off: "aus",
+    states: {
+      blocked: "Eine Entscheidung wird erwartet",
+      running: "Die Sitzung arbeitet",
+      done: "Der Zug ist beendet",
+      idle: "Sitzung offen, im Ruhezustand",
+      ended: "Sitzung geschlossen, fortsetzbar",
+      free: "Keine Sitzung auf dieser Taste",
+    },
+    note:
+      "Von „npm run lighting -- watch“ aus dem echten Zustand der Claude-Code-Sitzungen gesendet. Die ChatGPT-App muss beendet sein: sie überschreibt diese LEDs alle 35 bis 40 Sekunden und fängt die Tastendrücke ab.",
+  },
   controls: {
     joystick: "Richtungs-Joystick – ohne Druckfunktion",
     wheel: "Drehregler – links oder rechts",
@@ -84,6 +98,18 @@ export default {
       label: "Diff anzeigen",
       description: "Das Diff-Panel öffnen oder ausblenden",
     },
+    nextSession: {
+      label: "Nächste Sitzung",
+      description: "Zur nächsten Sitzung im Code-Tab wechseln",
+    },
+    previousSession: {
+      label: "Vorherige Sitzung",
+      description: "Zur vorherigen Sitzung im Code-Tab zurückgehen",
+    },
+    effortMenu: {
+      label: "Aufwandsmenü",
+      description: "Aufwandsmenü öffnen und mit 1 bis 9 auswählen",
+    },
     stop: {
       label: "Antwort stoppen",
       description: "Die laufende Antwort abbrechen",
@@ -127,11 +153,23 @@ export default {
       label: "Eigener Shortcut",
       description: "Eine sichere Tastenkombination zusammenstellen",
     },
+    joystickCustom: {
+      label: "Eigene Richtungen",
+      shortcut: "{count} Richtungen"
+    },
     none: {
       label: "Keine Aktion",
       description: "Dieses Bedienelement frei lassen",
       shortcut: "Nicht zugewiesen",
     },
+  },
+  joystick: {
+    sector: "Richtung",
+    closeZone: "Schließzone, 45° oben",
+    legend: "Joystick-Richtungen",
+    directions: "{count} Richtungen",
+    hint: "Wähle eine Richtung und weise ihr eine Aktion zu. 45° bleiben oben für die Schließzone reserviert.",
+    editingSlot: "{control} — Richtung {index}"
   },
   buttons: {
     configureKeys: "Tasten einrichten",

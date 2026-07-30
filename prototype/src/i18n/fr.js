@@ -26,6 +26,20 @@ export default {
     reservedNote:
       "Les 13 switches, dont le clic de la molette, sa rotation dans les deux sens et le joystick sans clic sont configurables. Seul le capteur de layer reste réservé.",
   },
+  stateLegend: {
+    title: "Couleurs des touches Agent",
+    off: "éteinte",
+    states: {
+      blocked: "Une décision est attendue",
+      running: "La session travaille",
+      done: "Le tour est terminé",
+      idle: "Session ouverte, au repos",
+      ended: "Session fermée, reprenable",
+      free: "Aucune session sur cette touche",
+    },
+    note:
+      "Poussées par « npm run lighting -- watch » d'après l'état réel des sessions Claude Code. L'app ChatGPT doit être quittée : elle réécrit ces LED toutes les 35 à 40 secondes et intercepte les appuis.",
+  },
   controls: {
     joystick: "Joystick directionnel — sans clic",
     wheel: "Rotation de la molette — gauche ou droite",
@@ -84,6 +98,18 @@ export default {
       label: "Afficher le diff",
       description: "Ouvrir ou masquer le panneau diff",
     },
+    nextSession: {
+      label: "Session suivante",
+      description: "Passer à la session suivante du Code tab",
+    },
+    previousSession: {
+      label: "Session précédente",
+      description: "Revenir à la session précédente du Code tab",
+    },
+    effortMenu: {
+      label: "Menu d'effort",
+      description: "Ouvrir le menu d'effort, puis choisir avec 1 à 9",
+    },
     stop: {
       label: "Arrêter la réponse",
       description: "Interrompre la réponse en cours",
@@ -136,11 +162,23 @@ export default {
       label: "Raccourci personnalisé",
       description: "Composer une combinaison sûre",
     },
+    joystickCustom: {
+      label: "Directions personnalisées",
+      shortcut: "{count} directions"
+    },
     none: {
       label: "Aucune action",
       description: "Laisser ce contrôle libre",
       shortcut: "Non assigné",
     },
+  },
+  joystick: {
+    sector: "Direction",
+    closeZone: "Zone de fermeture, 45° en haut",
+    legend: "Directions du joystick",
+    directions: "{count} directions",
+    hint: "Choisissez une direction, puis affectez-lui une action. 45° restent réservés à la zone de fermeture, en haut.",
+    editingSlot: "{control} — direction {index}"
   },
   buttons: {
     configureKeys: "Configurer les touches",

@@ -16,10 +16,15 @@
 // n'apparaissent qu'une fois chacun dans l'`app.asar` : Input ne les propose pas
 // dans son sélecteur, d'où ce script.
 //
-// Coût sur ce mapping : nul. Les six positions sont `no-action` dans le preset
-// Claude, et les raccourcis vivent sur la rangée suivante. La seule contrepartie
-// est qu'un appui sur ces touches émet désormais l'action Agent native au lieu de
-// rien.
+// Aucun raccourci Claude n'est perdu : les six positions sont `no-action` dans le
+// preset Claude, et les raccourcis vivent sur la rangée suivante.
+//
+// Le coût est ailleurs, et il faut le savoir avant d'importer : ces keycodes font
+// émettre au firmware une notification `v.oai.hid`, à laquelle **l'app ChatGPT
+// réagit en changeant de thread Codex**. Elle contend donc les deux moitiés de la
+// fonction — elle réécrit les LED toutes les 35 à 40 s et elle intercepte les
+// appuis. Quitter l'app ChatGPT résout les deux d'un coup, et c'est la condition
+// d'usage réelle.
 //
 // Ce script ne touche jamais le layer d'index 0, n'écrit pas dans le stockage
 // d'Input et n'écrit pas sur le périphérique. Il produit un fichier à importer

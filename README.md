@@ -274,7 +274,9 @@ scripts/
   prepare-gui.mjs           préparation verrouillée des dépendances du GUI
   build-input-profile.mjs   génération locale du profile importable
   input-layer.mjs           diagnostic, sauvegarde et installation guidée
-  lib/                      fonctions de validation et de preset
+  thread-status.mjs         compagnon des six touches Agent (états des sessions)
+  lighting.mjs              pilotage de l'éclairage : probe/set/watch/listen/off
+  lib/                      fonctions de validation, de preset et le canal HID
   validate-profile.mjs      contrat logique Claude historique
   validate-presets.mjs      invariants de la bibliothèque
 prototype/
@@ -314,6 +316,36 @@ publié.
 Lire [`ble/README.md`](ble/README.md) et
 [`ble/feasibility.md`](ble/feasibility.md).
 
+### Pilotage de l'éclairage des touches
+
+Le canal d'éclairage par touche du Codex Micro est confirmé sur matériel et
+réimplémenté en code original, d'après le format observé (aucune redistribution
+du SDK Work Louder) :
+
+```sh
+npm install                 # active node-hid (optionalDependencies)
+node scripts/lighting.mjs probe              # vérifie le canal et le mapping des touches
+node scripts/lighting.mjs set slot 3 '#C2483D' --effect=breath
+node scripts/lighting.mjs set all '#D97757'
+node scripts/lighting.mjs zones --keys=#D97757 --ambient=#6D5A7D
+node scripts/lighting.mjs watch              # couleurs d'état des sessions Claude Code
+node scripts/lighting.mjs listen             # événements touches et joystick
+node scripts/lighting.mjs off
+```
+
+`watch` est la couche `DeviceAdapter` : il suit
+`~/.claude/thread-status/slots.json` (produit par `npm run thread-status -- watch`)
+et pousse la couleur d'état de chaque session sur sa touche Agent.
+
+Contention : l'app ChatGPT repousse sa propre configuration toutes les 35 à
+40 s et la dernière écriture gagne. `--hold` (sur `set` et `watch`) réapplique
+dès qu'une écriture étrangère est détectée. Aucune écriture persistante : seuls
+des rapports HID volatils sont émis — ni firmware, ni stockage Input, ni app
+ChatGPT ne sont touchés.
+
+Protocole, mesures et bornes :
+[`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md).
+
 ### Liens de documentation
 
 - [Vision](docs/vision.md)
@@ -321,6 +353,7 @@ Lire [`ble/README.md`](ble/README.md) et
 - [Installation et rollback](docs/installation.md)
 - [Compatibilité](docs/compatibility.md)
 - [Mécanisme Input 0.17.2](docs/research/input-0.17.2-sharing.md)
+- [Protocole d'éclairage HID du Codex Micro](docs/research/hid-lighting-protocol.md)
 - [Conventions des presets](profiles/README.md)
 - [Preset Claude](profiles/claude-shortcuts/README.md)
 - [Contribution](CONTRIBUTING.md)

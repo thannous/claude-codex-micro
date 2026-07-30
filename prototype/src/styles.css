@@ -514,6 +514,111 @@ a:focus-visible {
   font-size: 12px;
 }
 
+/* Légende des couleurs d'état des six touches Agent. Les teintes ne sont pas
+   écrites ici : elles viennent en style inline de shared/thread-status-palette.mjs,
+   source unique partagée avec l'outillage Node. */
+/* Légende des couleurs d'état des six touches Agent. Les teintes ne sont pas
+   écrites ici : elles arrivent en style inline depuis
+   shared/thread-status-palette.mjs, source unique partagée avec l'outillage Node.
+
+   Hors du flux, dans la marge gauche du clavier, à mi-hauteur. La colonne centrale
+   du héros n'a plus de budget vertical avant la ligne de flottaison et la coque ne
+   défile pas : une légende dans le flux y serait inatteignable. Le bas de page
+   n'est pas libre non plus — les deux notes centrées y courent sur presque toute
+   la largeur. Reste la marge latérale, face au clavier. */
+.state-legend {
+  position: fixed;
+  z-index: 4;
+  top: 50%;
+  left: 24px;
+  transform: translateY(-50%);
+  width: 262px;
+  border: 1px solid var(--glass-border);
+  border-radius: 13px;
+  background: var(--panel);
+  padding: 9px 13px;
+  box-shadow: 0 12px 34px rgba(112, 70, 51, 0.14);
+  backdrop-filter: var(--glass-blur);
+}
+
+.state-legend-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.state-legend[open] .state-legend-title {
+  margin-bottom: 10px;
+}
+
+/* Une seule colonne : la carte est étroite, et l'ordre de lecture va du plus
+   urgent au plus inerte. */
+.state-legend-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.state-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12px;
+}
+
+.state-legend-swatch {
+  flex: 0 0 auto;
+  width: 12px;
+  height: 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+}
+
+/* Un emplacement libre n'a pas de couleur : la pastille montre une touche
+   éteinte, pas une teinte de plus. */
+.state-legend-swatch.is-off {
+  background: transparent;
+  border-style: dashed;
+}
+
+.state-legend-label {
+  flex: 1 1 auto;
+  color: var(--ink);
+}
+
+.state-legend-hex {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.state-legend-note {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* La carte n'apparaît que là où la marge la contient réellement. Sous cette
+   largeur elle recouvrirait le clavier : mieux vaut ne rien montrer qu'un panneau
+   posé par-dessus le contenu. Même raison quand le panneau de configuration est
+   ouvert : le héros se décale vers la gauche et la marge disparaît. */
+@media (max-width: 1239px) {
+  .state-legend {
+    display: none;
+  }
+}
+
+.app-shell.is-panel-open .state-legend {
+  display: none;
+}
+
+
 /* Dans le flux, sous le clavier. Ce bouton était auparavant en position absolue
    par-dessus le bas du stage, qui était vide : le cadre de l'image laissait
    18,6% de transparent sous le device. Depuis que la boîte est recadrée sur le
@@ -1242,6 +1347,128 @@ kbd {
   text-align: right;
 }
 
+.joystick-editor {
+  margin-bottom: 14px;
+}
+
+.joystick-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.joystick-modes button {
+  border: 1px solid rgba(88, 88, 88, 0.25);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.45);
+  padding: 7px 13px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.joystick-modes button.is-active {
+  border-color: rgba(201, 95, 67, 0.4);
+  background: var(--accent-soft);
+  color: var(--accent-dark);
+}
+
+.joystick-hint {
+  margin: 11px 0 9px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+/* Roue de secteurs, dessinée depuis les mêmes angles que le profil : le
+   secteur cliqué est celui qui sera écrit, à l'angle près. */
+.joystick-dial-wrap {
+  position: relative;
+  width: min(228px, 78%);
+  margin: 0 auto 4px;
+}
+
+.joystick-dial {
+  display: block;
+  width: 100%;
+}
+
+/* Même convention que les keycaps : le numéro du secteur tant qu'il est libre,
+   le libellé de l'action une fois affectée. Purement décoratif — le secteur SVG
+   dessous reste le seul contrôle. */
+.joystick-dial-badge {
+  position: absolute;
+  max-width: 30%;
+  overflow: hidden;
+  border-radius: 6px;
+  padding: 3px 5px;
+  color: var(--muted);
+  font: 800 9px/1 "SFMono-Regular", Consolas, monospace;
+  letter-spacing: 0.02em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.joystick-dial-badge.is-assigned {
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  background: rgba(45, 34, 29, 0.94);
+  color: #fffaf6;
+  box-shadow: 0 3px 10px rgba(45, 28, 20, 0.34);
+}
+
+.joystick-dial-badge.is-active {
+  color: #fffaf6;
+}
+
+.joystick-dial-badge.is-active.is-assigned {
+  border-color: rgba(255, 255, 255, 0.9);
+}
+
+.joystick-dial path {
+  stroke: var(--panel);
+  stroke-width: 2.5;
+}
+
+.joystick-dial-close {
+  fill: rgba(88, 88, 88, 0.16);
+}
+
+.joystick-dial-glyph {
+  fill: var(--muted);
+  font: 750 11px/1 "SFMono-Regular", Consolas, monospace;
+  dominant-baseline: middle;
+  text-anchor: middle;
+  pointer-events: none;
+  user-select: none;
+}
+
+.joystick-dial-sector {
+  cursor: pointer;
+}
+
+.joystick-dial-sector path {
+  fill: rgba(88, 88, 88, 0.22);
+  transition: fill 140ms ease;
+}
+
+.joystick-dial-sector:hover path {
+  fill: rgba(201, 95, 67, 0.34);
+}
+
+.joystick-dial-sector:focus-visible {
+  outline: none;
+}
+
+.joystick-dial-sector:focus-visible path {
+  stroke: var(--accent);
+  stroke-width: 3;
+}
+
+.joystick-dial-sector.is-active path {
+  fill: var(--accent);
+}
+
 .review-empty {
   border: 1px solid rgba(255, 255, 255, 0.45);
   border-radius: 12px;
@@ -1913,6 +2140,34 @@ kbd {
     background: rgba(255, 255, 255, 0.06);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
   }
+
+  .joystick-modes button {
+    border-color: rgba(255, 255, 255, 0.16);
+    background: rgba(255, 255, 255, 0.07);
+  }
+
+  .joystick-modes button.is-active {
+    border-color: rgba(224, 135, 103, 0.5);
+    background: rgba(224, 135, 103, 0.16);
+    color: inherit;
+  }
+
+  .joystick-dial-close {
+    fill: rgba(255, 255, 255, 0.09);
+  }
+
+  .joystick-dial-sector path {
+    fill: rgba(255, 255, 255, 0.14);
+  }
+
+  .joystick-dial-sector:hover path {
+    fill: rgba(224, 135, 103, 0.42);
+  }
+
+  .joystick-dial-sector.is-active path {
+    fill: rgba(224, 135, 103, 0.85);
+  }
+
 
   .appsense-fields input {
     border-color: rgba(255, 255, 255, 0.2);

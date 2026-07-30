@@ -26,6 +26,20 @@ export default {
     reservedNote:
       "All 13 switches, including the wheel press, wheel rotation in both directions, and the non-clickable joystick are configurable. Only the layer sensor stays reserved.",
   },
+  stateLegend: {
+    title: "Agent key colours",
+    off: "unlit",
+    states: {
+      blocked: "A decision is waiting for you",
+      running: "The session is working",
+      done: "The turn has finished",
+      idle: "Session open, at rest",
+      ended: "Session closed, resumable",
+      free: "No session on this key",
+    },
+    note:
+      "Pushed by \"npm run lighting -- watch\" from live Claude Code session state. Quit the ChatGPT app first: it rewrites these LEDs every 35 to 40 seconds and intercepts the key presses.",
+  },
   controls: {
     joystick: "Directional joystick — no press",
     wheel: "Wheel rotation — left or right",
@@ -84,6 +98,18 @@ export default {
       label: "Show diff",
       description: "Open or hide the diff panel",
     },
+    nextSession: {
+      label: "Next session",
+      description: "Move to the next session in the Code tab",
+    },
+    previousSession: {
+      label: "Previous session",
+      description: "Go back to the previous session in the Code tab",
+    },
+    effortMenu: {
+      label: "Effort menu",
+      description: "Open the effort menu, then pick with 1 to 9",
+    },
     stop: {
       label: "Stop response",
       description: "Interrupt the current response",
@@ -136,11 +162,23 @@ export default {
       label: "Custom shortcut",
       description: "Compose a safe combination",
     },
+    joystickCustom: {
+      label: "Custom directions",
+      shortcut: "{count} directions"
+    },
     none: {
       label: "No action",
       description: "Leave this control free",
       shortcut: "Unassigned",
     },
+  },
+  joystick: {
+    sector: "Direction",
+    closeZone: "Close zone, 45° at the top",
+    legend: "Joystick directions",
+    directions: "{count} directions",
+    hint: "Pick a direction, then assign it an action. 45° stay reserved for the close zone at the top.",
+    editingSlot: "{control} — direction {index}"
   },
   buttons: {
     configureKeys: "Configure keys",

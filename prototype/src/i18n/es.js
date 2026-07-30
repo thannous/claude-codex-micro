@@ -26,6 +26,20 @@ export default {
     reservedNote:
       "Los 13 switches, incluida la pulsación de la rueda, su rotación en ambos sentidos y el joystick sin clic son configurables. Solo el sensor de layer queda reservado.",
   },
+  stateLegend: {
+    title: "Colores de las teclas Agent",
+    off: "apagada",
+    states: {
+      blocked: "Se espera una decisión",
+      running: "La sesión está trabajando",
+      done: "El turno ha terminado",
+      idle: "Sesión abierta, en reposo",
+      ended: "Sesión cerrada, reanudable",
+      free: "Ninguna sesión en esta tecla",
+    },
+    note:
+      "Enviados por «npm run lighting -- watch» según el estado real de las sesiones de Claude Code. Cierra la app ChatGPT: reescribe estos LED cada 35 a 40 segundos e intercepta las pulsaciones.",
+  },
   controls: {
     joystick: "Joystick direccional — sin clic",
     wheel: "Rotación de la rueda — izquierda o derecha",
@@ -84,6 +98,18 @@ export default {
       label: "Mostrar el diff",
       description: "Abrir u ocultar el panel de diff",
     },
+    nextSession: {
+      label: "Sesión siguiente",
+      description: "Pasar a la sesión siguiente de la pestaña Code",
+    },
+    previousSession: {
+      label: "Sesión anterior",
+      description: "Volver a la sesión anterior de la pestaña Code",
+    },
+    effortMenu: {
+      label: "Menú de esfuerzo",
+      description: "Abrir el menú de esfuerzo y elegir con 1 a 9",
+    },
     stop: {
       label: "Detener la respuesta",
       description: "Interrumpir la respuesta en curso",
@@ -118,11 +144,23 @@ export default {
       label: "Atajo personalizado",
       description: "Componer una combinación segura",
     },
+    joystickCustom: {
+      label: "Direcciones personalizadas",
+      shortcut: "{count} direcciones"
+    },
     none: {
       label: "Sin acción",
       description: "Dejar este control libre",
       shortcut: "Sin asignar",
     },
+  },
+  joystick: {
+    sector: "Dirección",
+    closeZone: "Zona de cierre, 45° arriba",
+    legend: "Direcciones del joystick",
+    directions: "{count} direcciones",
+    hint: "Elige una dirección y asígnale una acción. 45° quedan reservados para la zona de cierre, arriba.",
+    editingSlot: "{control} — dirección {index}"
   },
   buttons: {
     configureKeys: "Configurar las teclas",

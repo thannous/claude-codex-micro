@@ -9,8 +9,11 @@ import {
   CircleAlert,
   Command,
   CopyPlus,
+  ChevronsLeft,
+  ChevronsRight,
   Diff,
   FileJson,
+  Gauge,
   Keyboard,
   Mic,
   Minus,
@@ -41,6 +44,7 @@ import {
   PRINTABLE_KEYS,
   WHEEL_MODES,
 } from "../../shared/input-profile.mjs";
+import { LEGEND_ORDER, STATE_COLORS } from "../../shared/thread-status-palette.mjs";
 import {
   LOCALES,
   LOCALE_LABELS,
@@ -255,6 +259,30 @@ const ACTIONS = {
     controlTypes: ["key"],
     exportLabel: "DIFF",
   },
+  // Cycle entre les sessions du Code tab. Control sur toutes les plateformes,
+  // comme le documente Claude Desktop. Aucun raccourci ne choisit une session par
+  // son rang : seul le cycle est adressable.
+  nextSession: {
+    id: "nextSession",
+    shortcut: "⌃ ⇥",
+    icon: ChevronsRight,
+    controlTypes: ["key"],
+    exportLabel: "NEXT",
+  },
+  previousSession: {
+    id: "previousSession",
+    shortcut: "⌃ ⇧ ⇥",
+    icon: ChevronsLeft,
+    controlTypes: ["key"],
+    exportLabel: "PREV",
+  },
+  effortMenu: {
+    id: "effortMenu",
+    shortcut: "⌘ ⇧ E",
+    icon: Gauge,
+    controlTypes: ["key"],
+    exportLabel: "EFF",
+  },
   stop: {
     id: "stop",
     shortcut: "Esc",
@@ -380,6 +408,149 @@ const TOAST_DURATION_MS = 6000;
 
 const isCustom = (entry) => typeof entry === "object" && entry !== null && entry.type === "custom";
 
+// Le joystick accepte deux préréglages (`navigation`, `none`) ou une affectation
+// par direction. 45° restent pris par la zone de fermeture en haut, les 315°
+// restants se partagent : 78,75° à quatre directions, 39,4° à huit. Au-delà,
+// viser au pouce devient hasardeux — la borne est ergonomique, pas technique.
+const JOYSTICK_DIRECTION_COUNTS = [4, 8];
+
+const isCustomJoystick = (entry) =>
+  typeof entry === "object" && entry !== null && Array.isArray(entry.sectors);
+
+// Géométrie reprise de `radialSectors` dans shared/input-profile.mjs : 45° pris
+// par la zone de fermeture centrée sur le haut, puis les 315° restants partagés.
+// Le dessin doit rester dérivé de ces constantes, jamais recopié à la main —
+// sinon il finirait par mentir sur les angles réellement écrits dans le profil.
+const JOYSTICK_CLOSE_ANGLE = 45 / 360;
+const JOYSTICK_START_ANGLE = (90 - 45 / 2) / 360;
+
+function joystickGeometry(directions) {
+  const sectorAngle = (1 - JOYSTICK_CLOSE_ANGLE) / directions;
+  return Array.from({ length: directions }, (_, index) => {
+    const a1 = JOYSTICK_START_ANGLE + JOYSTICK_CLOSE_ANGLE + sectorAngle * index;
+    return { index, a1: a1 % 1, a2: (a1 + sectorAngle) % 1 };
+  });
+}
+
+// Repère mathématique : 0 à l'est, angles croissants dans le sens antihoraire.
+// L'ordonnée est inversée pour compenser l'axe y descendant du SVG, ce qui place
+// bien la zone de fermeture en haut comme le veut `radialSectors`.
+function polar(cx, cy, radius, angle) {
+  const radians = angle * 2 * Math.PI;
+  return [cx + radius * Math.cos(radians), cy - radius * Math.sin(radians)];
+}
+
+function sectorPath(cx, cy, inner, outer, a1, a2) {
+  const span = (a2 - a1 + 1) % 1;
+  const large = span > 0.5 ? 1 : 0;
+  const [x1, y1] = polar(cx, cy, outer, a1);
+  const [x2, y2] = polar(cx, cy, outer, a2);
+  const [x3, y3] = polar(cx, cy, inner, a2);
+  const [x4, y4] = polar(cx, cy, inner, a1);
+  return [
+    `M ${x1.toFixed(2)} ${y1.toFixed(2)}`,
+    `A ${outer} ${outer} 0 ${large} 0 ${x2.toFixed(2)} ${y2.toFixed(2)}`,
+    `L ${x3.toFixed(2)} ${y3.toFixed(2)}`,
+    `A ${inner} ${inner} 0 ${large} 1 ${x4.toFixed(2)} ${y4.toFixed(2)}`,
+    "Z",
+  ].join(" ");
+}
+
+function sectorCentroid(cx, cy, inner, outer, a1, a2) {
+  const span = (a2 - a1 + 1) % 1;
+  return polar(cx, cy, (inner + outer) / 2, (a1 + span / 2) % 1);
+}
+
+// Les pastilles reprennent la convention des keycaps : le numéro du secteur tant
+// qu'il est libre, le libellé de l'action une fois affectée. Ce sont des `span`
+// sans événements de pointeur : le seul contrôle est le secteur SVG dessous, ce
+// qui évite deux éléments interactifs pour une même chose.
+function JoystickDial({
+  directions,
+  sectors,
+  selectedIndex,
+  onSelect,
+  badgeFor,
+  sectorTitle,
+  closeTitle,
+}) {
+  const size = 140;
+  const center = size / 2;
+  const inner = 32;
+  const outer = 64;
+  const geometry = joystickGeometry(directions);
+  const closeA1 = JOYSTICK_START_ANGLE;
+  const closeA2 = (JOYSTICK_START_ANGLE + JOYSTICK_CLOSE_ANGLE) % 1;
+  const [closeX, closeY] = sectorCentroid(center, center, inner, outer, closeA1, closeA2);
+  const percent = (value) => `${(value / size) * 100}%`;
+
+  return (
+    <div className="joystick-dial-wrap">
+      <svg
+        className="joystick-dial"
+        viewBox={`0 0 ${size} ${size}`}
+        role="group"
+        aria-label={sectorTitle}
+      >
+        <title>{closeTitle}</title>
+        <path
+          className="joystick-dial-close"
+          d={sectorPath(center, center, inner, outer, closeA1, closeA2)}
+        />
+        <text className="joystick-dial-glyph" x={closeX} y={closeY}>
+          ✕
+        </text>
+
+        {geometry.map(({ index, a1, a2 }) => {
+          const active = selectedIndex === index;
+          return (
+            <g
+              key={index}
+              className={`joystick-dial-sector${active ? " is-active" : ""}`}
+              role="button"
+              tabIndex={0}
+              aria-pressed={active}
+              aria-label={`${sectorTitle} ${index + 1} : ${badgeFor(sectors[index], index).title}`}
+              onClick={() => onSelect(index)}
+              onKeyDown={(event) => {
+                if (event.key !== "Enter" && event.key !== " ") return;
+                event.preventDefault();
+                onSelect(index);
+              }}
+            >
+              <path d={sectorPath(center, center, inner, outer, a1, a2)} />
+            </g>
+          );
+        })}
+      </svg>
+
+      {geometry.map(({ index, a1, a2 }) => {
+        const [x, y] = sectorCentroid(center, center, inner, outer, a1, a2);
+        const badge = badgeFor(sectors[index], index);
+        return (
+          <span
+            key={index}
+            className={`joystick-dial-badge${selectedIndex === index ? " is-active" : ""}${
+              badge.assigned ? " is-assigned" : ""
+            }`}
+            style={{ left: percent(x), top: percent(y) }}
+            aria-hidden="true"
+          >
+            {badge.label}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function makeCustomJoystick(directions, previous = []) {
+  return {
+    directions,
+    sectors: Array.from({ length: directions }, (_, index) => previous[index] ?? "none"),
+  };
+}
+
 function formatCustomKeys(keys) {
   const modifiers = keys.slice(0, -1);
   const finalKey = keys.at(-1);
@@ -388,7 +559,16 @@ function formatCustomKeys(keys) {
 }
 
 function isValidEntry(controlId, entry) {
-  if (controlId === "joystick") return JOYSTICK_ACTION_IDS.has(entry);
+  if (controlId === "joystick") {
+    if (isCustomJoystick(entry)) {
+      return (
+        JOYSTICK_DIRECTION_COUNTS.includes(entry.directions) &&
+        entry.sectors.length === entry.directions &&
+        entry.sectors.every((sector) => isValidEntry("key-1", sector))
+      );
+    }
+    return JOYSTICK_ACTION_IDS.has(entry);
+  }
   if (controlId === "wheel") return typeof entry === "string" && entry in WHEEL_MODES;
   if (!KEY_CONTROL_IDS.has(controlId)) return false;
   if (isCustom(entry)) {
@@ -462,6 +642,8 @@ export function App() {
   // Références AppSense saisies par l'utilisateur. Chaînes vides = option non
   // passée au générateur, qui reprend alors ce que contient la sauvegarde.
   const [appSenseIds, setAppSenseIds] = useState({ claude: "", base: "" });
+  // Direction du joystick en cours d'édition, `null` quand on choisit le mode.
+  const [joystickSlot, setJoystickSlot] = useState(null);
   const dialogRef = useRef(null);
   const closeButtonRef = useRef(null);
   const returnFocusRef = useRef(null);
@@ -475,14 +657,24 @@ export function App() {
   const controls = CONTROLS;
   const controlLabel = (control) => t(`controls.${control.id}`);
   const entryFor = (controlId) => mapping[controlId] ?? "none";
-  const entryExportLabel = (entry) =>
-    isCustom(entry) ? formatCustomKeys(entry.keys) : ACTIONS[entry].exportLabel;
+  const entryExportLabel = (entry) => {
+    if (isCustomJoystick(entry)) return `${entry.directions} DIR`;
+    return isCustom(entry) ? formatCustomKeys(entry.keys) : ACTIONS[entry].exportLabel;
+  };
   const controlBadgeLabel = (control, entry) =>
     entry === "none" ? control.shortLabel : entryExportLabel(entry);
-  const entryLabel = (entry) =>
-    isCustom(entry) ? t("actions.custom.label") : t(`actions.${entry}.label`);
-  const entryIcon = (entry) => (isCustom(entry) ? Keyboard : ACTIONS[entry].icon);
+  const entryLabel = (entry) => {
+    if (isCustomJoystick(entry)) return t("actions.joystickCustom.label");
+    return isCustom(entry) ? t("actions.custom.label") : t(`actions.${entry}.label`);
+  };
+  const entryIcon = (entry) => {
+    if (isCustomJoystick(entry)) return Move;
+    return isCustom(entry) ? Keyboard : ACTIONS[entry].icon;
+  };
   const entryShortcut = (entry) => {
+    if (isCustomJoystick(entry)) {
+      return t("actions.joystickCustom.shortcut", { count: entry.directions });
+    }
     if (isCustom(entry)) return formatCustomKeys(entry.keys);
     return ACTIONS[entry].shortcut ?? t(`actions.${entry}.shortcut`);
   };
@@ -506,6 +698,20 @@ export function App() {
   const availableActions = Object.values(ACTIONS).filter((action) =>
     action.controlTypes.includes(selectedControl.type),
   );
+
+  // Quand une direction du joystick est ouverte, le sélecteur travaille sur
+  // elle et propose le catalogue des touches. Sans direction ouverte, le
+  // joystick n'affiche que ses modes : la liste d'actions est alors vide.
+  const editingJoystickSlot =
+    selectedControl.type === "joystick" &&
+    joystickSlot !== null &&
+    isCustomJoystick(selectedEntry);
+  const activeEntry = editingJoystickSlot ? selectedEntry.sectors[joystickSlot] : selectedEntry;
+  const pickerActions = editingJoystickSlot
+    ? Object.values(ACTIONS).filter((action) => action.controlTypes.includes("key"))
+    : selectedControl.type === "joystick"
+      ? []
+      : availableActions;
 
   const duplicateControlFor = (entry) => {
     if (entry === "none" || selectedControl.type !== "key") return null;
@@ -534,8 +740,31 @@ export function App() {
 
   const closeConfigurator = () => setPanelOpen(false);
 
+  // Éditer une direction écrit dans le secteur visé, pas sur le contrôle : le
+  // joystick reste une seule entrée du mapping.
   const assignEntry = (entry) => {
-    setMapping((current) => ({ ...current, [selectedControl.id]: entry }));
+    setMapping((current) => {
+      if (selectedControl.id !== "joystick" || joystickSlot === null) {
+        return { ...current, [selectedControl.id]: entry };
+      }
+      const joystick = current.joystick;
+      if (!isCustomJoystick(joystick)) return current;
+      const sectors = joystick.sectors.map((sector, index) =>
+        index === joystickSlot ? entry : sector,
+      );
+      return { ...current, joystick: { ...joystick, sectors } };
+    });
+  };
+
+  const setJoystickMode = (mode) => {
+    setJoystickSlot(null);
+    setMapping((current) => {
+      if (mode === "navigation" || mode === "none") {
+        return { ...current, joystick: mode };
+      }
+      const previous = isCustomJoystick(current.joystick) ? current.joystick.sectors : [];
+      return { ...current, joystick: makeCustomJoystick(mode, previous) };
+    });
   };
 
   const resetMapping = () => {
@@ -758,6 +987,7 @@ export function App() {
   // premier élément apparaît coupé sous l'en-tête.
   useEffect(() => {
     dialogRef.current?.querySelector(".dialog-scroll")?.scrollTo({ top: 0 });
+    setJoystickSlot(null);
   }, [panelMode, panelOpen, selectedControlId]);
 
   useEffect(() => {
@@ -936,6 +1166,32 @@ export function App() {
         </section>
       </div>
 
+
+      {/* Légende des couleurs d'état poussées sur les six touches Agent par
+          `npm run lighting -- watch`. Les teintes viennent de la source unique
+          partagée avec l'outillage Node, jamais réécrites ici.
+
+          Hors du flux, en bas à gauche : la coque ne défile pas et la colonne
+          centrale n'a plus un pixel avant la ligne de flottaison. Repliée par
+          défaut, elle s'ouvre vers le haut. */}
+      <details className="state-legend">
+        <summary className="state-legend-title">{t("stateLegend.title")}</summary>
+        <ul className="state-legend-list">
+          {LEGEND_ORDER.map((state) => (
+            <li key={state} className="state-legend-item">
+              <span
+                className={`state-legend-swatch ${STATE_COLORS[state] ? "" : "is-off"}`}
+                style={STATE_COLORS[state] ? { background: STATE_COLORS[state] } : undefined}
+                aria-hidden="true"
+              />
+              <span className="state-legend-label">{t(`stateLegend.states.${state}`)}</span>
+              <code className="state-legend-hex">{STATE_COLORS[state] ?? t("stateLegend.off")}</code>
+            </li>
+          ))}
+        </ul>
+        <p className="state-legend-note">{t("stateLegend.note")}</p>
+      </details>
+
       <aside
         ref={dialogRef}
         className={`mapping-dialog ${panelOpen ? "is-open" : ""}`}
@@ -951,10 +1207,17 @@ export function App() {
                 {selectedControl.shortLabel}
               </span>
               <div>
-                <h2 id="mapping-dialog-title">{controlLabel(selectedControl)}</h2>
+                <h2 id="mapping-dialog-title">
+                  {editingJoystickSlot
+                    ? t("joystick.editingSlot", {
+                        control: controlLabel(selectedControl),
+                        index: joystickSlot + 1,
+                      })
+                    : controlLabel(selectedControl)}
+                </h2>
                 <p className="key-header-current">
-                  {entryLabel(selectedEntry)}
-                  <kbd>{entryShortcut(selectedEntry)}</kbd>
+                  {entryLabel(activeEntry)}
+                  <kbd>{entryShortcut(activeEntry)}</kbd>
                 </p>
               </div>
             </div>
@@ -1089,11 +1352,59 @@ export function App() {
 
           {panelMode === "key" && (
           <>
+            {selectedControl.type === "joystick" && (
+              <section className="joystick-editor" aria-label={t("joystick.legend")}>
+                <div className="joystick-modes" role="group">
+                  {["navigation", ...JOYSTICK_DIRECTION_COUNTS, "none"].map((mode) => {
+                    const active =
+                      typeof mode === "number"
+                        ? isCustomJoystick(selectedEntry) && selectedEntry.directions === mode
+                        : selectedEntry === mode;
+                    return (
+                      <button
+                        key={mode}
+                        type="button"
+                        className={active ? "is-active" : ""}
+                        aria-pressed={active}
+                        onClick={() => setJoystickMode(mode)}
+                      >
+                        {typeof mode === "number"
+                          ? t("joystick.directions", { count: mode })
+                          : t(`actions.${mode}.label`)}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {isCustomJoystick(selectedEntry) && (
+                  <>
+                    <p className="joystick-hint">{t("joystick.hint")}</p>
+                    <JoystickDial
+                      directions={selectedEntry.directions}
+                      sectors={selectedEntry.sectors}
+                      selectedIndex={joystickSlot}
+                      onSelect={(index) =>
+                        setJoystickSlot(joystickSlot === index ? null : index)
+                      }
+                      badgeFor={(sector, index) => ({
+                        assigned: sector !== "none",
+                        label: sector === "none" ? index + 1 : entryExportLabel(sector),
+                        title: entryLabel(sector),
+                      })}
+                      sectorTitle={t("joystick.sector")}
+                      closeTitle={t("joystick.closeZone")}
+                    />
+                  </>
+                )}
+              </section>
+            )}
+
+            {pickerActions.length > 0 && (
             <section className="action-picker" aria-label={t("dialog.actionTitle")}>
               <div className="action-list">
-                {availableActions.map((action) => {
+                {pickerActions.map((action) => {
                   const Icon = action.icon;
-                  const active = !isCustom(selectedEntry) && selectedEntry === action.id;
+                  const active = !isCustom(activeEntry) && activeEntry === action.id;
                   const duplicateControl = duplicateControlFor(action.id);
                   return (
                     <button
@@ -1131,12 +1442,12 @@ export function App() {
                   );
                 })}
 
-                {selectedControl.type === "key" && (
+                {(selectedControl.type === "key" || editingJoystickSlot) && (
                   <button
-                    className={isCustom(selectedEntry) ? "is-active" : ""}
-                    aria-pressed={isCustom(selectedEntry)}
+                    className={isCustom(activeEntry) ? "is-active" : ""}
+                    aria-pressed={isCustom(activeEntry)}
                     onClick={() => {
-                      if (!isCustom(selectedEntry)) assignEntry(DEFAULT_CUSTOM);
+                      if (!isCustom(activeEntry)) assignEntry(DEFAULT_CUSTOM);
                     }}
                   >
                     <span className="action-icon">
@@ -1154,18 +1465,18 @@ export function App() {
                       )}
                     </span>
                     <kbd>
-                      {isCustom(selectedEntry)
-                        ? formatCustomKeys(selectedEntry.keys)
+                      {isCustom(activeEntry)
+                        ? formatCustomKeys(activeEntry.keys)
                         : "⌘ …"}
                     </kbd>
                     <span className="check-slot" aria-hidden="true">
-                      {isCustom(selectedEntry) && <Check size={18} />}
+                      {isCustom(activeEntry) && <Check size={18} />}
                     </span>
                   </button>
                 )}
               </div>
 
-              {isCustom(selectedEntry) && (
+              {isCustom(activeEntry) && (
                 <div className="custom-editor">
                   <div className="custom-editor-row">
                     <span className="custom-editor-label">
@@ -1173,7 +1484,7 @@ export function App() {
                     </span>
                     <div className="custom-modifiers">
                       {MODIFIERS.map((modifier) => {
-                        const active = selectedEntry.keys.slice(0, -1).includes(modifier);
+                        const active = activeEntry.keys.slice(0, -1).includes(modifier);
                         return (
                           <button
                             key={modifier}
@@ -1194,7 +1505,7 @@ export function App() {
                     </label>
                     <select
                       id="custom-final-key"
-                      value={selectedEntry.keys.at(-1)}
+                      value={activeEntry.keys.at(-1)}
                       onChange={(event) => changeFinalKey(event.target.value)}
                     >
                       {FINAL_KEY_OPTIONS.map((key) => (
@@ -1213,6 +1524,8 @@ export function App() {
                 </div>
               )}
             </section>
+            )}
+
           </>
           )}
 
@@ -1328,6 +1641,7 @@ export function App() {
               </div>
             )}
           </section>
+
 
           <p className="panel-note">{t("panelNote")}</p>
           </>
