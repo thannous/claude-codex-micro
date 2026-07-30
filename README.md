@@ -22,6 +22,11 @@
 - the configurator now includes a calibrated effort wheel, eight-direction
   joystick actions, AppSense controls, and a mobile-friendly layout.
 
+| Live Claude Code session colours | Calibrated effort wheel |
+| :---: | :---: |
+| ![Six Agent keys showing the Claude Code session state colour legend](docs/assets/readme/agent-key-colours.png) | ![Codex Micro wheel configured to change the Claude effort level](docs/assets/readme/effort-wheel.png) |
+| See which session needs you, is working, has finished, or can be resumed. | Move one Claude effort level up or down with each wheel notch. |
+
 ## Map Claude to your fingertips
 
 This project turns a real Work Louder Input profile into a dedicated
@@ -29,12 +34,12 @@ This project turns a real Work Louder Input profile into a dedicated
 Codex layer.
 
 **Current mapping:** `K1 ⌘N` new session · `K2 ⌘D` voice · `K3 ⌘⇧D` diff ·
-`K4 Esc` stop · dial to scroll · joystick to navigate.
+`K4 Esc` stop · dial to adjust Claude effort · joystick to navigate.
 
-| Guided mapping | Safety review before export |
+| Expanded action catalog | AppSense safety review |
 | :---: | :---: |
-| ![Three-step Claude mapping wizard](docs/assets/readme/mapping-wizard.png) | ![Native layer and AppSense preservation report](docs/assets/readme/safety-review.png) |
-| Pick a control, choose an action, and keep the mapping readable. | Verify preservation rules and the SHA-256 fingerprint before downloading. |
+| ![Claude action catalog with next and previous session shortcuts](docs/assets/readme/mapping-wizard.png) | ![Native layer and AppSense preservation report](docs/assets/readme/safety-review.png) |
+| Add session navigation, voice, diff, search, window actions, or a safe custom shortcut. | Verify the native layer, AppSense link, other layers, and SHA-256 fingerprint before downloading. |
 
 > [!IMPORTANT]
 > This is an actively developed community project. The local configurator and
