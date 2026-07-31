@@ -15,7 +15,7 @@ import {
   escapeUnicode,
 } from "../scripts/lib/hid-frame.mjs";
 
-test("l'identifiant RPC reste dans la borne firmware [0, 999)", () => {
+test("the RPC id stays within the firmware bound [0, 999)", () => {
   for (let index = 0; index < 200; index += 1) {
     const id = createRpcId();
     assert.ok(Number.isInteger(id));
@@ -23,7 +23,7 @@ test("l'identifiant RPC reste dans la borne firmware [0, 999)", () => {
   }
 });
 
-test("l'enveloppe de requête est {method, params, id}, params null par défaut", () => {
+test("the request envelope is {method, params, id}, params null by default", () => {
   assert.equal(buildRequest({ method: "sys.version", id: 42 }), '{"method":"sys.version","params":null,"id":42}');
   assert.equal(
     buildRequest({ method: "v.oai.thstatus", params: [{ id: 0, c: 1 }], id: 7 }),
@@ -31,19 +31,19 @@ test("l'enveloppe de requête est {method, params, id}, params null par défaut"
   );
 });
 
-test("l'enveloppe valide la méthode et la borne de l'identifiant", () => {
-  assert.throws(() => buildRequest({ method: "", id: 1 }), /méthode/);
-  assert.throws(() => buildRequest({ method: "x", id: -1 }), /entre 0/);
-  assert.throws(() => buildRequest({ method: "x", id: RPC_ID_LIMIT }), /entre 0/);
+test("the envelope validates the method and the id bound", () => {
+  assert.throws(() => buildRequest({ method: "", id: 1 }), /RPC method name/);
+  assert.throws(() => buildRequest({ method: "x", id: -1 }), /between 0/);
+  assert.throws(() => buildRequest({ method: "x", id: RPC_ID_LIMIT }), /between 0/);
 });
 
-test("les caractères non ASCII sont échappés, y compris hors BMP", () => {
+test("non-ASCII characters are escaped, including beyond the BMP", () => {
   assert.equal(escapeUnicode("aéb"), "a\\u00e9b");
   assert.equal(escapeUnicode("🎹"), "\\ud83c\\udfb9");
   assert.equal(escapeUnicode("ascii"), "ascii");
 });
 
-test("un message court tient en un rapport de 64 octets avec en-tête 06/02/longueur", () => {
+test("a short message fits one 64-byte report with a 06/02/length header", () => {
   const frames = encodeFrames('{"a":1}');
   assert.equal(frames.length, 1);
   const frame = frames[0];
@@ -55,31 +55,31 @@ test("un message court tient en un rapport de 64 octets avec en-tête 06/02/long
   assert.equal(frame.subarray(10).every((byte) => byte === 0), true);
 });
 
-test("la frontière de 61 octets découpe exactement", () => {
+test("the 61-byte boundary splits exactly", () => {
   assert.equal(encodeFrames("x".repeat(CHUNK_PAYLOAD)).length, 1);
   const frames = encodeFrames("x".repeat(CHUNK_PAYLOAD + 1));
   assert.equal(frames.length, 2);
   assert.equal(frames[0][2], CHUNK_PAYLOAD);
   assert.equal(frames[1][2], 1);
-  // Même en-tête sur les rapports de continuation, seule la longueur varie.
+  // Same header on the continuation reports, only the length varies.
   assert.equal(frames[1][0], REPORT_ID);
   assert.equal(frames[1][1], CHANNEL_RPC);
 });
 
-test("un message vide n'émet aucun rapport", () => {
+test("an empty message emits no report", () => {
   assert.equal(encodeFrames("").length, 0);
 });
 
-test("un rapport se décode : canal, longueur, charge utile", () => {
+test("a report decodes into channel, length and payload", () => {
   const [frame] = encodeFrames("bonjour");
   const decoded = decodeReport(frame);
   assert.equal(decoded.channel, CHANNEL_RPC);
   assert.equal(decoded.length, 7);
   assert.equal(decoded.payload, "bonjour");
-  assert.throws(() => decodeReport(Buffer.alloc(2)), /trop court/);
+  assert.throws(() => decodeReport(Buffer.alloc(2)), /too short/);
 });
 
-test("l'assembleur réunit les fragments et découpe aux sauts de ligne", () => {
+test("the assembler joins fragments and splits on newlines", () => {
   const assemble = createLineAssembler();
   const frames = encodeFrames('{"a":"' + "x".repeat(80) + '"}\n');
   assert.ok(frames.length > 1);
@@ -90,7 +90,7 @@ test("l'assembleur réunit les fragments et découpe aux sauts de ligne", () => 
   assert.equal(JSON.parse(lines[0].line).a, "x".repeat(80));
 });
 
-test("l'assembleur gère \\r\\n, plusieurs lignes et la séparation des canaux", () => {
+test("the assembler handles \\r\\n, several lines and channel separation", () => {
   const assemble = createLineAssembler();
   const rpcFrame = Buffer.alloc(REPORT_SIZE);
   rpcFrame[0] = REPORT_ID;
@@ -115,7 +115,7 @@ test("l'assembleur gère \\r\\n, plusieurs lignes et la séparation des canaux",
   );
 });
 
-test("l'accumulateur classe réponses, notifications et messages invalides", () => {
+test("the accumulator sorts responses, notifications and invalid messages", () => {
   const accumulate = createRpcAccumulator();
   const response = accumulate('{"result":{"ok":1},"id":475,"method":"v.oai.thstatus"}');
   assert.equal(response.kind, "response");
@@ -131,7 +131,7 @@ test("l'accumulateur classe réponses, notifications et messages invalides", () 
   assert.equal(invalid.kind, "invalid");
 });
 
-test("l'accumulateur attend la fin d'un JSON fragmenté et saute les préfixes parasites", () => {
+test("the accumulator waits for the end of a fragmented JSON and skips stray prefixes", () => {
   const accumulate = createRpcAccumulator();
   assert.equal(accumulate('bruit sans json'), null);
   assert.equal(accumulate('{"id":12,"res'), null);
@@ -139,7 +139,7 @@ test("l'accumulateur attend la fin d'un JSON fragmenté et saute les préfixes p
   assert.equal(message.kind, "response");
   assert.equal(message.id, "12");
 
-  // Après un message complet, l'accumulateur repart à zéro.
+  // After a complete message, the accumulator starts over.
   const next = accumulate('{"i":3,"result":2}');
   assert.equal(next.kind, "response");
   assert.equal(next.id, "3");

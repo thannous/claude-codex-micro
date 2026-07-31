@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
-// Pilotage local de l'éclairage du Codex Micro : couleur et effet des six
-// touches Agent, zones globales, écoute des événements touches et joystick.
+// Local control of the Codex Micro lighting: colour and effect of the six Agent
+// keys, global zones, and listening to key and joystick events.
 //
-// Réimplémentation originale du format observé, documentée dans
-// docs/research/hid-lighting-protocol.md. Aucune écriture persistante : seuls
-// des rapports HID volatils sont émis ; rien n'est flashé, rien n'est écrit
-// dans le stockage d'Input.
+// Original reimplementation of the observed format, documented in
+// docs/research/hid-lighting-protocol.md. Nothing persistent is written: only
+// volatile HID reports are emitted; nothing is flashed, nothing goes into
+// Input's storage.
 //
-// Contention : l'app ChatGPT pousse sa propre configuration toutes les 35 à
-// 40 s et la dernière écriture gagne. Sans --hold, un état posé ici peut être
-// recouvert ; avec --hold, toute poussée étrangère détectée déclenche une
-// réapplication immédiate (plus un filet de sécurité périodique).
+// Contention: the ChatGPT app pushes its own configuration every 35 to 40s and
+// the last write wins. Without --hold, a state set here can be overwritten;
+// with --hold, any detected foreign push triggers an immediate reapply (plus a
+// periodic safety net).
 
 import { spawn } from "node:child_process";
 import { promises as fs, watch } from "node:fs";
@@ -35,35 +35,35 @@ const stateDir =
   process.env.CLAUDE_THREAD_STATUS_DIR || path.join(os.homedir(), ".claude", "thread-status");
 const slotsPath = path.join(stateDir, "slots.json");
 
-// Garde-temps contre les répétitions de touche du firmware.
+// Guard time against the firmware's key repeats.
 const FOCUS_DEBOUNCE_MS = 300;
 const HOLD_SAFETY_MS = 10000;
 
 function usage() {
-  return `Usage: node scripts/lighting.mjs <commande> [options]
+  return `Usage: node scripts/lighting.mjs <command> [options]
 
-Commandes
-  list [--json]               énumère les interfaces HID vendeur du Codex Micro
-  probe [--delay=ms]          vérifie le canal (sys.version) puis allume les six
-                              touches une par une pour confirmer le mapping
-  set slot <1-${SLOT_COUNT}> <#RRGGBB> [opts]   couleur/effet d'une touche Agent
-  set all <#RRGGBB> [opts]                    même réglage sur les six touches
-  set zones --keys=#RRGGBB --ambient=#RRGGBB [opts]   les deux zones globales
-  watch [--hold] [--focus]    pousse les couleurs d'état de slots.json en continu
-                              --focus : un appui sur une touche Agent va à sa session
-  listen                      journalise touches et joystick (v.oai.hid / v.oai.rad)
-  off                         éteint les six touches Agent
+Commands
+  list [--json]               list the Codex Micro vendor HID interfaces
+  probe [--delay=ms]          check the channel (sys.version), then light the six
+                              keys one by one to confirm the mapping
+  set slot <1-${SLOT_COUNT}> <#RRGGBB> [opts]   colour/effect of one Agent key
+  set all <#RRGGBB> [opts]                    same setting on all six keys
+  set zones --keys=#RRGGBB --ambient=#RRGGBB [opts]   the two global zones
+  watch [--hold] [--focus]    push slots.json state colours continuously
+                              --focus: pressing an Agent key goes to its session
+  listen                      log key and joystick events (v.oai.hid / v.oai.rad)
+  off                         turn the six Agent keys off
 
 Options
-  --effect=nom                ${Object.keys(EFFECTS).join(", ")}
-  --brightness=0..1           intensité (0 = éteint, 1 = plein)
-  --speed=0..1                vitesse d'effet
-  --magic=n                   paramètre magic de zone (défaut 1)
-  --hold                      réapplique dès qu'une écriture étrangère est détectée
-  --path=chemin               interface HID précise (défaut : première trouvée)
+  --effect=name               ${Object.keys(EFFECTS).join(", ")}
+  --brightness=0..1           intensity (0 = off, 1 = full)
+  --speed=0..1                effect speed
+  --magic=n                   zone magic parameter (default 1)
+  --hold                      reapply as soon as a foreign write is detected
+  --path=path                 specific HID interface (default: first one found)
 
-Contention : l'app ChatGPT repousse sa configuration toutes les 35 à 40 s et la
-dernière écriture gagne. Sans --hold, l'état posé ici peut être recouvert.
+Contention: the ChatGPT app pushes its own configuration every 35 to 40s and the
+last write wins. Without --hold, the state set here can be overwritten.
 `;
 }
 
@@ -87,7 +87,7 @@ function parseUnit(name, value, fallback) {
   if (value === undefined) return fallback;
   const parsed = Number(value);
   if (Number.isNaN(parsed) || parsed < 0 || parsed > 1) {
-    throw new Error(`--${name} attendu entre 0 et 1 : ${value}`);
+    throw new Error(`--${name} expected between 0 and 1: ${value}`);
   }
   return parsed;
 }
@@ -96,7 +96,7 @@ function parseEffect(value) {
   if (value === undefined) return EFFECTS.solid;
   const effect = EFFECTS[value];
   if (effect === undefined) {
-    throw new Error(`--effect inconnu : ${value} (${Object.keys(EFFECTS).join(", ")})`);
+    throw new Error(`unknown --effect: ${value} (${Object.keys(EFFECTS).join(", ")})`);
   }
   return effect;
 }
@@ -119,7 +119,7 @@ async function commandList(flags) {
     return;
   }
   if (interfaces.length === 0) {
-    return fail("Aucune interface vendeur (VID 0x303a, usage 0xFF00). Clavier connecté ?");
+    return fail("No vendor interface (VID 0x303a, usage 0xFF00). Is the keyboard plugged in?");
   }
   for (const device of interfaces) {
     process.stdout.write(
@@ -140,7 +140,7 @@ async function commandProbe(flags) {
   if (!session) return;
 
   session.onNotification(METHODS.notifyHid, (params) => {
-    process.stdout.write(`  [touche] ${JSON.stringify(params)}\n`);
+    process.stdout.write(`  [key] ${JSON.stringify(params)}\n`);
   });
   session.onNotification(METHODS.notifyJoystick, (params) => {
     process.stdout.write(`  [joystick] ${JSON.stringify(params)}\n`);
@@ -148,15 +148,15 @@ async function commandProbe(flags) {
 
   try {
     const version = await session.call("sys.version");
-    process.stdout.write(`✔ canal RPC fonctionnel — sys.version : ${JSON.stringify(version.result ?? version)}\n`);
+    process.stdout.write(`✔ RPC channel works — sys.version: ${JSON.stringify(version.result ?? version)}\n`);
   } catch (error) {
     await session.close();
-    return fail(`✘ pas de réponse à sys.version : ${error.message}`);
+    return fail(`✘ no answer to sys.version: ${error.message}`);
   }
 
   process.stdout.write(
-    `\nAllumage des six emplacements, un par un (thread id → touche attendue).\n` +
-      `Noter toute divergence : la table SLOT_THREAD_IDS de scripts/lib/hid-lighting.mjs sera figée d'après cette observation.\n`,
+    `\nLighting the six slots one by one (thread id → expected key).\n` +
+      `Note any divergence: the SLOT_THREAD_IDS table in scripts/lib/hid-lighting.mjs is frozen from this observation.\n`,
   );
   for (let index = 0; index < SLOT_COUNT; index += 1) {
     const entries = SLOT_THREAD_IDS.map((id, other) =>
@@ -170,15 +170,15 @@ async function commandProbe(flags) {
       await session.call(METHODS.threadsLighting, entries);
     } catch (error) {
       await session.close();
-      return fail(`✘ échec d'écriture thstatus : ${error.message}`);
+      return fail(`✘ thstatus write failed: ${error.message}`);
     }
     process.stdout.write(
-      `  thread ${SLOT_THREAD_IDS[index]} allumé → emplacement ${index + 1} attendu (${SLOT_CONTROLS[index]})\n`,
+      `  thread ${SLOT_THREAD_IDS[index]} lit → slot ${index + 1} expected (${SLOT_CONTROLS[index]})\n`,
     );
     await wait(Number.isNaN(delay) ? 2000 : delay);
   }
   await session.call(METHODS.threadsLighting, allOffParams());
-  process.stdout.write(`✔ sonde terminée, touches éteintes.\n`);
+  process.stdout.write(`✔ probe finished, keys turned off.\n`);
   await session.close();
 }
 
@@ -186,7 +186,7 @@ async function commandProbe(flags) {
 
 function holdNote(flags) {
   if (!flags.hold) {
-    process.stdout.write(`  (sans --hold, l'app ChatGPT peut recouvrir cet état toutes les 35 à 40 s)\n`);
+    process.stdout.write(`  (without --hold, the ChatGPT app can overwrite this state every 35 to 40s)\n`);
   }
 }
 
@@ -196,7 +196,7 @@ async function commandSet(flags, positional) {
     const keys = flags.keys;
     const ambient = flags.ambient;
     if (keys === undefined || ambient === undefined || keys === true || ambient === true) {
-      return fail("set zones exige --keys=#RRGGBB et --ambient=#RRGGBB (rgbcfg décrit les deux zones d'un coup).");
+      return fail("set zones requires --keys=#RRGGBB and --ambient=#RRGGBB (rgbcfg describes both zones at once).");
     }
     const side = {
       effect: parseEffect(flags.effect),
@@ -219,7 +219,7 @@ async function commandSet(flags, positional) {
   let entries;
   try {
     if (target === "all") {
-      if (!color) return fail("set all exige une couleur #RRGGBB.");
+      if (!color) return fail("set all requires a #RRGGBB colour.");
       const base = {
         color,
         brightness: parseUnit("brightness", flags.brightness, 1),
@@ -230,9 +230,9 @@ async function commandSet(flags, positional) {
     } else if (target === "slot") {
       const slot = Number.parseInt(positional[1] ?? "", 10);
       if (!Number.isInteger(slot) || slot < 1 || slot > SLOT_COUNT) {
-        return fail(`Emplacement attendu entre 1 et ${SLOT_COUNT}.`);
+        return fail(`Expected a slot between 1 and ${SLOT_COUNT}.`);
       }
-      if (!positional[2]) return fail("set slot exige une couleur #RRGGBB.");
+      if (!positional[2]) return fail("set slot requires a #RRGGBB colour.");
       const base = {
         id: SLOT_THREAD_IDS[slot - 1],
         color: positional[2],
@@ -242,9 +242,9 @@ async function commandSet(flags, positional) {
       if (flags.speed !== undefined) base.speed = parseUnit("speed", flags.speed, 0.5);
       entries = [threadEntry(base)];
     } else {
-      return fail(`Cible inconnue : ${target ?? "(absente)"}\n\n${usage()}`);
+      return fail(`Unknown target: ${target ?? "(missing)"}\n\n${usage()}`);
     }
-    colorToInt(entries[0].c); // valide avant d'ouvrir le périphérique
+    colorToInt(entries[0].c); // validate before opening the device
   } catch (error) {
     return fail(error.message);
   }
@@ -256,7 +256,7 @@ async function applyOnce(flags, method, params, label) {
   const session = await openSession(flags, {
     onForeignWrite: flags.hold
       ? async (foreignMethod) => {
-          process.stdout.write(`  ! poussée étrangère (${foreignMethod}) — réapplication\n`);
+          process.stdout.write(`  ! foreign write (${foreignMethod}) — reapplying\n`);
           await session.call(method, current).catch(() => {});
         }
       : undefined,
@@ -265,18 +265,18 @@ async function applyOnce(flags, method, params, label) {
 
   try {
     await session.call(method, current);
-    process.stdout.write(`✔ ${label} appliqué.\n`);
+    process.stdout.write(`✔ ${label} applied.\n`);
     holdNote(flags);
   } catch (error) {
     await session.close();
-    return fail(`✘ échec d'écriture : ${error.message}`);
+    return fail(`✘ write failed: ${error.message}`);
   }
 
   if (!flags.hold) return session.close();
   const timer = setInterval(() => {
     session.call(method, current).catch(() => {});
   }, HOLD_SAFETY_MS);
-  process.stdout.write(`  maintien actif (--hold), filet de sécurité ${HOLD_SAFETY_MS / 1000} s. Ctrl-C pour quitter.\n`);
+  process.stdout.write(`  hold active (--hold), safety net every ${HOLD_SAFETY_MS / 1000}s. Ctrl-C to quit.\n`);
   process.on("SIGINT", async () => {
     clearInterval(timer);
     await session.close();
@@ -288,7 +288,7 @@ async function applyOnce(flags, method, params, label) {
 
 async function readSlots() {
   const raw = JSON.parse(await fs.readFile(slotsPath, "utf8"));
-  if (!Array.isArray(raw.slots)) throw new Error("slots.json sans tableau slots");
+  if (!Array.isArray(raw.slots)) throw new Error("slots.json has no slots array");
   return raw.slots;
 }
 
@@ -298,7 +298,7 @@ async function commandWatch(flags) {
     rows = await readSlots();
   } catch {
     return fail(
-      `${slotsPath} illisible. Lancer d'abord \`npm run thread-status -- watch\` pour produire l'état.`,
+      `${slotsPath} is unreadable. Run \`npm run thread-status -- watch\` first to produce the state.`,
     );
   }
 
@@ -306,24 +306,24 @@ async function commandWatch(flags) {
   const apply = async (reason) => {
     if (!lastApplied) return;
     await session.call(METHODS.threadsLighting, lastApplied).catch((error) => {
-      process.stderr.write(`  ! écriture impossible (${reason}) : ${error.message}\n`);
+      process.stderr.write(`  ! write failed (${reason}): ${error.message}\n`);
     });
   };
 
   const session = await openSession(flags, {
     onForeignWrite: flags.hold
       ? (foreignMethod) => {
-          process.stdout.write(`  ! poussée étrangère (${foreignMethod}) — réapplication\n`);
+          process.stdout.write(`  ! foreign write (${foreignMethod}) — reapplying\n`);
           void apply("hold");
         }
       : undefined,
   });
   if (!session) return;
 
-  // Les six touches Agent émettent `v.oai.hid` avec `k` valant `AG00` à `AG05` :
-  // le clavier désigne lui-même l'emplacement pressé, sur le canal HID déjà
-  // ouvert. Aucun raccourci global, aucune API native, aucune autorisation macOS.
-  // `act` vaut 1 à l'appui et 0 au relâchement.
+  // The six Agent keys emit `v.oai.hid` with `k` set to `AG00` through `AG05`:
+  // the keyboard itself names the slot that was pressed, over the HID channel
+  // already open. No global shortcut, no native API, no macOS permission.
+  // `act` is 1 on press and 0 on release.
   if (flags.focus) {
     let lastPress = 0;
     const focusScript = fileURLToPath(new URL("./thread-status.mjs", import.meta.url));
@@ -341,19 +341,19 @@ async function commandWatch(flags) {
       child.stdout.on("data", (chunk) => (output += chunk));
       child.stderr.on("data", (chunk) => (output += chunk));
       child.on("close", () => {
-        // Toutes les lignes, pas seulement la première : pour une session fermée,
-        // `focus` répond sur deux lignes et c'est la seconde qui porte la commande
-        // de reprise. N'en afficher qu'une revenait à masquer l'essentiel.
+        // Every line, not only the first: for a closed session, `focus` answers
+        // over two lines and the second one carries the resume command. Showing
+        // only one hid the part that mattered.
         const lines = output.trim().split("\n").filter((line) => line.trim());
-        const stamp = `${new Date().toISOString()}  [touche ${slot}]  `;
+        const stamp = `${new Date().toISOString()}  [key ${slot}]  `;
         process.stdout.write(
           lines.length
             ? `${stamp}${lines[0]}\n${lines.slice(1).map((line) => `${" ".repeat(stamp.length)}${line.trim()}\n`).join("")}`
-            : `${stamp}sans retour\n`,
+            : `${stamp}no output\n`,
         );
       });
     });
-    process.stdout.write("Appui sur une touche Agent → navigation vers sa session.\n");
+    process.stdout.write("Pressing an Agent key navigates to its session.\n");
   }
 
   const push = async (nextRows, reason) => {
@@ -378,15 +378,15 @@ async function commandWatch(flags) {
       try {
         await push(await readSlots(), "slots.json");
       } catch (error) {
-        process.stderr.write(`  ! relecture : ${error.message}\n`);
+        process.stderr.write(`  ! re-read: ${error.message}\n`);
       }
     }, 100);
   });
 
-  // Filet de sécurité : en --hold, réapplication périodique quoi qu'il arrive.
-  const timer = flags.hold ? setInterval(() => void apply("filet"), HOLD_SAFETY_MS) : null;
+  // Safety net: under --hold, reapply periodically whatever happens.
+  const timer = flags.hold ? setInterval(() => void apply("safety-net"), HOLD_SAFETY_MS) : null;
 
-  process.stdout.write(`Surveillance de ${slotsPath}. Ctrl-C pour quitter.\n`);
+  process.stdout.write(`Watching ${slotsPath}. Ctrl-C to quit.\n`);
   process.on("SIGINT", async () => {
     watcher.close();
     if (timer) clearInterval(timer);
@@ -401,12 +401,12 @@ async function commandListen(flags) {
   const session = await openSession(flags);
   if (!session) return;
   session.onNotification(METHODS.notifyHid, (params) => {
-    process.stdout.write(`${new Date().toISOString()}  touche    ${JSON.stringify(params)}\n`);
+    process.stdout.write(`${new Date().toISOString()}  key       ${JSON.stringify(params)}\n`);
   });
   session.onNotification(METHODS.notifyJoystick, (params) => {
     process.stdout.write(`${new Date().toISOString()}  joystick  ${JSON.stringify(params)}\n`);
   });
-  process.stdout.write(`Écoute des notifications du périphérique. Ctrl-C pour quitter.\n`);
+  process.stdout.write(`Listening for device notifications. Ctrl-C to quit.\n`);
   process.on("SIGINT", async () => {
     await session.close();
     process.exit(0);
@@ -420,15 +420,15 @@ async function commandOff(flags) {
   if (!session) return;
   try {
     await session.call(METHODS.threadsLighting, allOffParams());
-    process.stdout.write(`✔ six emplacements éteints.\n`);
+    process.stdout.write(`✔ six slots turned off.\n`);
   } catch (error) {
     await session.close();
-    return fail(`✘ échec d'écriture : ${error.message}`);
+    return fail(`✘ write failed: ${error.message}`);
   }
   return session.close();
 }
 
-// --- entrée ------------------------------------------------------------------
+// --- entry point --------------------------------------------------------------
 
 async function main(argv) {
   const [command, ...rest] = argv;
@@ -445,7 +445,7 @@ async function main(argv) {
     if (command === "watch") return await commandWatch(flags);
     if (command === "listen") return await commandListen(flags);
     if (command === "off") return await commandOff(flags);
-    return fail(`Commande inconnue : ${command}\n\n${usage()}`);
+    return fail(`Unknown command: ${command}\n\n${usage()}`);
   } catch (error) {
     if (error instanceof DeviceError) return fail(error.message);
     throw error;

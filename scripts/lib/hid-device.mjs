@@ -1,17 +1,17 @@
-// Transport HID du Codex Micro au-dessus de node-hid (dépendance optionnelle,
-// chargée paresseusement : le reste du dépôt fonctionne sans elle).
+// Codex Micro HID transport on top of node-hid (an optional dependency, loaded
+// lazily: the rest of the repository works without it).
 //
-// Réimplémentation originale d'après le format observé et documenté dans
-// docs/research/hid-lighting-protocol.md :
+// Original reimplementation from the format observed and documented in
+// docs/research/hid-lighting-protocol.md:
 //
-//   - interface vendeur : VID 0x303a, usage page 0xFF00 ;
-//   - ouverture non exclusive sur macOS : les lectures sont diffusées à tous
-//     les lecteurs, les écritures se disputent (dernière écriture gagnante) ;
-//   - une requête en vol à la fois, 50 ms de pause entre appels, 10 s de
-//     garde-fou par réponse ;
-//   - une réponse dont l'identifiant n'est pas le nôtre est le signe qu'un
-//     autre écrivain (l'app ChatGPT) vient de pousser : elle sert de
-//     déclencheur de réapplication au mode --hold.
+//   - vendor interface: VID 0x303a, usage page 0xFF00;
+//   - non-exclusive open on macOS: reads are broadcast to every reader, writes
+//     compete (last write wins);
+//   - one request in flight at a time, 50ms of spacing between calls, a 10s
+//     guard per response;
+//   - a response whose id is not ours is the sign that another writer (the
+//     ChatGPT app) has just pushed: it serves as the reapply trigger in --hold
+//     mode.
 
 import {
   CHANNEL_DEBUG,
@@ -39,44 +39,45 @@ export class DeviceError extends Error {
   }
 }
 
-// Import paresseux : node-hid est une optionalDependency native. Le message
-// d'erreur doit dire quoi faire, pas seulement que ça manque.
+// Lazy import: node-hid is a native optionalDependency. The error message has to
+// say what to do, not only that it is missing.
 export async function loadHid() {
   try {
     return await import("node-hid");
   } catch {
     throw new DeviceError(
       "HID_UNAVAILABLE",
-      "node-hid est absente : lancer `npm install` (optionalDependencies) pour activer le pilotage HID.",
+      "node-hid is missing: run `npm install` (optionalDependencies) to enable HID control.",
     );
   }
 }
 
-// Énumère les interfaces vendeur du Codex Micro. Le clavier expose plusieurs
-// collections HID ; seule la page d'usage 0xFF00 transporte le canal RPC.
+// Lists the Codex Micro vendor interfaces. The keyboard exposes several HID
+// collections; only usage page 0xFF00 carries the RPC channel.
+export function isCodexVendorInterface(device) {
+  return (
+    device?.vendorId === VENDOR_ID &&
+    device?.productId === PRODUCT_ID &&
+    device?.usagePage === VENDOR_USAGE_PAGE
+  );
+}
+
 export async function listInterfaces() {
   const hid = await loadHid();
-  return hid
-    .devices()
-    .filter(
-      (device) =>
-        device.vendorId === VENDOR_ID &&
-        device.productId === PRODUCT_ID &&
-        device.usagePage === VENDOR_USAGE_PAGE,
-    );
+  return hid.devices().filter(isCodexVendorInterface);
 }
 
 async function openHandle(path) {
   const hid = await loadHid();
-  // Non exclusif sur macOS : coexister avec Input et l'app ChatGPT, qui
-  // tiennent le même périphérique. Ailleurs, ouverture standard.
+  // Non-exclusive on macOS: coexist with Input and the ChatGPT app, which hold
+  // the same device. Elsewhere, a standard open.
   if (process.platform === "darwin") return hid.HIDAsync.open(path, { nonExclusive: true });
   return hid.HIDAsync.open(path);
 }
 
-// Session RPC : file séquentielle cadencée, corrélation des réponses par
-// identifiant, distribution des notifications, détection des écritures
-// étrangères. Une session = une requête en vol, comme le firmware l'attend.
+// RPC session: paced sequential queue, responses correlated by id, notifications
+// dispatched, foreign writes detected. One session = one request in flight, the
+// way the firmware expects it.
 export class DeviceSession {
   #handle;
   #assembler = createLineAssembler();
@@ -88,6 +89,7 @@ export class DeviceSession {
   #queue = [];
   #running = false;
   #closed = false;
+  #lastCallStartedAt = 0;
 
   constructor(handle, { onForeignWrite, onDebugLine } = {}) {
     this.#handle = handle;
@@ -97,7 +99,7 @@ export class DeviceSession {
     handle.on("error", (error) => this.#failAll(new DeviceError("DEVICE_ERROR", error.message)));
     handle.on("close", () => {
       this.#closed = true;
-      this.#failAll(new DeviceError("DEVICE_DISCONNECTED", "Périphérique déconnecté."));
+      this.#failAll(new DeviceError("DEVICE_DISCONNECTED", "Device disconnected."));
     });
   }
 
@@ -106,7 +108,7 @@ export class DeviceSession {
     if (!target) {
       throw new DeviceError(
         "DEVICE_NOT_FOUND",
-        "Codex Micro introuvable sur l'interface vendeur (VID 0x303a, usage 0xFF00). Vérifier la connexion, puis `list`.",
+        "Codex Micro not found on the vendor interface (VID 0x303a, usage 0xFF00). Check the connection, then run `list`.",
       );
     }
     return new DeviceSession(await openHandle(target), options);
@@ -114,12 +116,14 @@ export class DeviceSession {
 
   onNotification(method, handler) {
     this.#notifyHandlers.set(method, handler);
-    return () => this.#notifyHandlers.delete(method);
+    return () => {
+      if (this.#notifyHandlers.get(method) === handler) this.#notifyHandlers.delete(method);
+    };
   }
 
-  // Enfile un appel et attend sa réponse. Les tâches s'exécutent une par une
-  // avec CALL_SPACING_MS de pause, le firmware traitant les commandes au
-  // compte-goutte.
+  // Queues a call and waits for its response. Tasks run one at a time with
+  // CALL_SPACING_MS of spacing, since the firmware handles commands in a
+  // trickle.
   call(method, params = null, id = createRpcId()) {
     return new Promise((resolve, reject) => {
       this.#queue.push({ method, params, id, resolve, reject });
@@ -133,31 +137,44 @@ export class DeviceSession {
     try {
       let task;
       while ((task = this.#queue.shift())) {
-        await this.#run(task);
-        await new Promise((resolve) => setTimeout(resolve, CALL_SPACING_MS));
+        const remainingSpacing =
+          CALL_SPACING_MS - (Date.now() - this.#lastCallStartedAt);
+        if (remainingSpacing > 0) {
+          await new Promise((resolve) => setTimeout(resolve, remainingSpacing));
+        }
+        try {
+          task.resolve(await this.#run(task));
+        } catch (error) {
+          task.reject(error);
+        }
       }
     } finally {
       this.#running = false;
     }
   }
 
-  async #run({ method, params, id, resolve, reject }) {
-    if (this.#closed) return reject(new DeviceError("DEVICE_DISCONNECTED", "Session fermée."));
+  async #run({ method, params, id }) {
+    if (this.#closed) throw new DeviceError("DEVICE_DISCONNECTED", "Session closed.");
+    this.#lastCallStartedAt = Date.now();
     const key = String(id);
-    const timer = setTimeout(() => {
-      this.#resolvers.delete(key);
-      reject(new DeviceError("TIMEOUT", `Pas de réponse à ${method} en ${CALL_TIMEOUT_MS / 1000} s.`));
-    }, CALL_TIMEOUT_MS);
-    this.#resolvers.set(key, { resolve, reject, timer });
-    try {
-      for (const frame of encodeFrames(buildRequest({ method, params, id }))) {
-        await this.#handle.write(frame);
-      }
-    } catch (error) {
-      clearTimeout(timer);
-      this.#resolvers.delete(key);
-      reject(new DeviceError("WRITE_FAILED", error.message));
-    }
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.#resolvers.delete(key);
+        reject(new DeviceError("TIMEOUT", `No answer to ${method} within ${CALL_TIMEOUT_MS / 1000}s.`));
+      }, CALL_TIMEOUT_MS);
+      this.#resolvers.set(key, { resolve, reject, timer });
+
+      const write = async () => {
+        for (const frame of encodeFrames(buildRequest({ method, params, id }))) {
+          await this.#handle.write(frame);
+        }
+      };
+      void write().catch((error) => {
+        clearTimeout(timer);
+        this.#resolvers.delete(key);
+        reject(new DeviceError("WRITE_FAILED", error.message));
+      });
+    });
   }
 
   #dispatch(data) {
@@ -165,7 +182,7 @@ export class DeviceSession {
     try {
       lines = this.#assembler(data);
     } catch {
-      return; // Rapport malformé : ignoré, le flux suivant resynchronisera.
+      return; // Malformed report: ignored; the next valid report resynchronizes the stream.
     }
     for (const { channel, line } of lines) {
       if (channel === CHANNEL_DEBUG) {
@@ -177,7 +194,7 @@ export class DeviceSession {
       if (!message) continue;
       if (message.kind === "response") this.#resolve(message);
       else if (message.kind === "notification") this.#notifyHandlers.get(message.method)?.(message.params);
-      // Les messages sans id ni méthode sont abandonnés par l'accumulateur.
+      // Messages with neither id nor method are dropped by the accumulator.
     }
   }
 
@@ -193,10 +210,9 @@ export class DeviceSession {
       }
       return;
     }
-    // Réponse orpheline sur une méthode d'éclairage : un autre écrivain vient
-    // de pousser sa configuration. C'est le seul signal fiable de
-    // coexistence, et il est gratuit — les rapports d'entrée sont diffusés à
-    // tous les lecteurs.
+    // Orphan response on a lighting method: another writer has just pushed its
+    // configuration. This is the only reliable coexistence signal, and it is
+    // free — input reports are broadcast to every reader.
     if (message.method === METHODS.threadsLighting || message.method === METHODS.rgbConfig) {
       this.#onForeignWrite?.(message.method, message.parsed);
     }
@@ -213,11 +229,11 @@ export class DeviceSession {
 
   async close() {
     this.#closed = true;
-    this.#failAll(new DeviceError("DEVICE_DISCONNECTED", "Session fermée."));
+    this.#failAll(new DeviceError("DEVICE_DISCONNECTED", "Session closed."));
     try {
       await this.#handle.close();
     } catch {
-      // Fermeture déjà effective côté pile HID.
+      // Already closed on the HID stack side.
     }
   }
 }

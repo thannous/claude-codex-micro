@@ -15,6 +15,8 @@
   --shadow: rgba(126, 73, 52, 0.2);
   --glass-border: rgba(255, 255, 255, 0.55);
   --glass-blur: blur(18px) saturate(1.6);
+  --solid-glass-background: #fffaf6;
+  --solid-toast-background: #453a36;
 }
 
 * {
@@ -58,9 +60,9 @@ a:focus-visible {
   --panel-reserve: 0px;
 }
 
-/* Panneau non modal sur desktop : la page se décale vers la gauche pour que
-   le clavier reste entièrement visible à côté du configurateur. Sur mobile la
-   sheet recouvre la page, aucune réservation (voir la media query dédiée). */
+/* Non-modal panel on desktop: the page shifts left so the keyboard stays fully
+   visible next to the configurator. On mobile the sheet covers the page, with no
+   reservation (see the dedicated media query). */
 @media (min-width: 761px) {
   .app-shell.is-panel-open {
     --panel-reserve: calc(min(470px, 46vw) + 30px);
@@ -91,8 +93,8 @@ a:focus-visible {
   position: absolute;
   z-index: 3;
   top: 0;
-  /* Position absolue : le padding de .page-content ne s'applique pas,
-     le décalage du panneau passe donc par `right`. */
+  /* Absolutely positioned: .page-content's padding does not apply, so the
+     panel offset goes through `right` instead. */
   right: var(--panel-reserve);
   left: 0;
   transition: right 280ms cubic-bezier(0.2, 0.9, 0.25, 1);
@@ -236,22 +238,21 @@ a:focus-visible {
 .device-stage {
   position: relative;
   width: min(510px, 72vh, 88vw);
-  /* Quand le panneau réserve la droite de l'écran, le device se réduit pour
-     rester entièrement visible dans la colonne restante. */
+  /* When the panel reserves the right of the screen, the device shrinks to stay
+     fully visible in the remaining column. */
   max-width: 100%;
   margin-top: 20px;
 }
 
-/* La boîte est recadrée sur le device lui-même, pas sur le cadre du PNG.
-   Le fichier est un détourage de 1254x1254 dont la partie opaque n'occupe que
-   851x855, soit 68% : cadrer sur le fichier gaspillait 32% de la largeur en
-   transparent et rendait le clavier d'autant plus petit. Le recadrage se fait
-   ici, sans toucher à l'asset — l'image est agrandie et décalée pour que sa
-   zone opaque remplisse exactement la boîte.
+/* The box is cropped to the device itself, not to the PNG's frame. The file is a
+   1254x1254 cut-out whose opaque part only occupies 851x855, so 68%: framing on
+   the file wasted 32% of the width on transparency and made the keyboard that
+   much smaller. The crop happens here, without touching the asset — the image is
+   scaled up and offset so its opaque area fills the box exactly.
 
-   Conséquence : les coordonnées des hotspots dans App.jsx sont des pourcentages
-   de CE cadre, pas du fichier. Remplacer l'image impose de les recalculer, et
-   les valeurs en `cqw` ci-dessous suivent la même référence. */
+   Consequence: the hotspot coordinates in App.jsx are percentages of THIS frame,
+   not of the file. Replacing the image forces them to be recomputed, and the
+   `cqw` values below follow the same reference. */
 .device-wrap {
   position: relative;
   width: 100%;
@@ -313,8 +314,8 @@ a:focus-visible {
   border-color: rgb(var(--selected-glow) / 1);
   background: rgba(255, 255, 255, 0.36);
   transform: translateY(-1px) scale(1.03);
-  /* Liseré blanc entre la touche et l'anneau accent : la sélection reste
-     lisible même sur les zones claires ou chargées de la photo. */
+  /* White hairline between the key and the accent ring: the selection stays
+     readable even over light or busy areas of the photo. */
   box-shadow:
     0 0 0 3px rgba(255, 255, 255, 0.95),
     0 0 0 7px rgb(var(--selected-glow) / 0.95),
@@ -352,11 +353,10 @@ a:focus-visible {
   box-shadow:
     0 3px 10px rgba(45, 28, 20, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
-  /* Taille indexée sur la photo, pas sur le viewport : le plafond `max-width`
-     de la pastille se réduit avec la touche, donc un libellé en pixels fixes
-     finit tronqué aux petites tailles — « VOICE » se coupait en « VO… » dès que
-     le device passait sous ~330px. Les bornes du clamp reproduisent exactement
-     l'aspect actuel à la grande taille. */
+  /* Sized against the photo, not the viewport: the pill's `max-width` ceiling
+     shrinks with the key, so a label in fixed pixels ends up truncated at small
+     sizes — "VOICE" was cut to "VO…" as soon as the device went below ~330px.
+     The clamp bounds reproduce exactly the current look at the large size. */
   padding: clamp(2px, 1.18cqw, 4px) clamp(3px, 1.77cqw, 6px);
   font: 800 clamp(7px, 2.73cqw, 9px) / 1 "SFMono-Regular", Consolas, monospace;
   letter-spacing: 0.025em;
@@ -365,12 +365,11 @@ a:focus-visible {
   transition: background 140ms ease, box-shadow 140ms ease;
 }
 
-/* Empilement de la molette, en trois étages qui ne peuvent pas se croiser :
-   le libellé du clic au-dessus du cercle, l'icône du clic centrée dedans, le
-   libellé de rotation sous le cercle. Tout est exprimé en `cqw` pour que les
-   trois gardent leurs écarts quelle que soit la taille de la photo — c'est le
-   mélange de pixels fixes et de pourcentages qui faisait chevaucher l'icône du
-   clic et le libellé de rotation. */
+/* The wheel stack, in three tiers that cannot cross: the press label above the
+   circle, the press icon centred inside it, the rotation label below the circle.
+   Everything is expressed in `cqw` so the three keep their spacing whatever the
+   size of the photo — it was the mix of fixed pixels and percentages that made
+   the press icon and the rotation label overlap. */
 .key-hotspot-label--dial {
   display: inline-flex;
   bottom: -2.06cqw;
@@ -385,14 +384,14 @@ a:focus-visible {
   flex: none;
 }
 
-/* Les deux libellés de la molette débordent volontairement de la boîte de leur
-   bouton, et celui du clic recouvre le cercle de rotation. Avec
-   `pointer-events: none` le pointeur les traversait et atteignait le contrôle
-   du dessous : survoler « PRESS » mettait la molette en avant. Les rendre
-   sensibles au pointeur suffit — ce sont des enfants de leur bouton, le survol
-   et le clic remontent donc au bon contrôle, et le contrôle voisin n'est plus
-   atteint. Les autres libellés gardent `none` : ils ne dépassent que de
-   quelques pixels sous leur touche, où il n'y a rien à protéger. */
+/* Both wheel labels deliberately overflow their button's box, and the press one
+   covers the rotation circle. With `pointer-events: none` the pointer went
+   straight through them and reached the control underneath: hovering "PRESS"
+   highlighted the wheel. Making them pointer-sensitive is enough — they are
+   children of their own button, so hover and click bubble to the right control
+   and the neighbouring one is no longer reached. The other labels keep `none`:
+   they only overhang their key by a few pixels, where there is nothing to
+   protect. */
 .key-hotspot--dial > .key-hotspot-label,
 .key-hotspot--encoder-button > .key-hotspot-label {
   pointer-events: auto;
@@ -412,20 +411,25 @@ a:focus-visible {
 
 .keycap-action-asset {
   position: absolute;
-  top: 43%;
+  /* Centré sur le hotspot, qui recouvre la face de la keycap. */
+  top: 50%;
   left: 50%;
   display: grid;
-  width: 10.98cqw;
-  height: 10.98cqw;
+  /* Le disque doit couvrir la sérigraphie de la keycap sur la photo, sinon le
+     picto d'origine reste visible derrière l'icône de l'action. Il est donc
+     nettement plus large que l'icône, et sa zone pleine est poussée vers
+     l'extérieur — le dégradé ne s'éteint qu'au bord. */
+  width: 13.2cqw;
+  height: 13.2cqw;
   place-items: center;
   transform: translate(-50%, -50%);
   border: 0;
   border-radius: 50%;
   background: radial-gradient(
     circle,
-    rgb(var(--keycap-tone) / 0.98) 0 48%,
-    rgb(var(--keycap-tone) / 0.9) 62%,
-    rgb(var(--keycap-tone) / 0) 82%
+    rgb(var(--keycap-tone) / 0.99) 0 62%,
+    rgb(var(--keycap-tone) / 0.94) 76%,
+    rgb(var(--keycap-tone) / 0) 94%
   );
   color: rgba(62, 46, 39, 0.96);
   box-shadow: none;
@@ -438,8 +442,8 @@ a:focus-visible {
   transform: translate(-50%, -50%) scale(1.06);
 }
 
-/* Étage du milieu : nettement plus petit que le cercle du clic, pour laisser
-   respirer les deux libellés au-dessus et en dessous. */
+/* Middle tier: clearly smaller than the press circle, to let both labels above
+   and below breathe. */
 .key-hotspot--encoder-button > .keycap-action-asset {
   top: 50%;
   width: 6.04cqw;
@@ -447,13 +451,18 @@ a:focus-visible {
   color: #fffaf6;
 }
 
-/* Les icônes sont rendues avec une taille en attribut par React : les
-   contraindre en CSS pour qu'elles suivent leur disque, lui-même indexé sur la
-   photo. Les proportions reprennent celles d'origine, 19px dans 38px pour une
-   keycap et 13px dans 24px pour le clic de molette. */
-.keycap-action-asset > svg {
-  width: 50%;
-  height: 50%;
+/* React renders the icons with a size attribute: constrain them in CSS so they
+   follow their disc, which is itself sized against the photo. The proportions
+   keep the original ones, 19px within 38px for a keycap and 13px within 24px for
+   the wheel press. */
+/* La marque Claude est un `img` porteur d'attributs de taille, pas un `svg` :
+   sans cette règle la touche Envoyer gardait une icône figée pendant que les
+   autres suivaient la photo. Le pourcentage est calculé pour que l'icône garde
+   sa taille absolue après l'élargissement du disque. */
+.keycap-action-asset > svg,
+.keycap-action-asset > .claude-mark-icon {
+  width: 35%;
+  height: 35%;
 }
 
 .key-hotspot--encoder-button > .keycap-action-asset > svg {
@@ -461,7 +470,7 @@ a:focus-visible {
   height: 54%;
 }
 
-/* Étage du haut : posé sur le bandeau vide au-dessus de la molette. */
+/* Top tier: sits on the empty band above the wheel. */
 .key-hotspot--encoder-button > .key-hotspot-label {
   top: -5.01cqw;
   bottom: auto;
@@ -514,18 +523,15 @@ a:focus-visible {
   font-size: 12px;
 }
 
-/* Légende des couleurs d'état des six touches Agent. Les teintes ne sont pas
-   écrites ici : elles viennent en style inline de shared/thread-status-palette.mjs,
-   source unique partagée avec l'outillage Node. */
-/* Légende des couleurs d'état des six touches Agent. Les teintes ne sont pas
-   écrites ici : elles arrivent en style inline depuis
-   shared/thread-status-palette.mjs, source unique partagée avec l'outillage Node.
+/* State colour legend for the six Agent keys. The hues are not written here:
+   they arrive as inline styles from shared/thread-status-palette.mjs, the single
+   source shared with the Node tooling.
 
-   Hors du flux, dans la marge gauche du clavier, à mi-hauteur. La colonne centrale
-   du héros n'a plus de budget vertical avant la ligne de flottaison et la coque ne
-   défile pas : une légende dans le flux y serait inatteignable. Le bas de page
-   n'est pas libre non plus — les deux notes centrées y courent sur presque toute
-   la largeur. Reste la marge latérale, face au clavier. */
+   Out of the flow, in the left margin of the keyboard, at mid-height. The hero's
+   centre column has no vertical budget left above the fold and the shell does not
+   scroll: a legend in the flow would be unreachable there. The bottom of the page
+   is not free either — the two centred notes run across almost its whole width.
+   That leaves the side margin, facing the keyboard. */
 .state-legend {
   position: fixed;
   z-index: 4;
@@ -553,8 +559,24 @@ a:focus-visible {
   margin-bottom: 10px;
 }
 
-/* Une seule colonne : la carte est étroite, et l'ordre de lecture va du plus
-   urgent au plus inerte. */
+/* Lighting is the experimental half of the project: say so here, and not only in
+   the README — otherwise the interface is what users go by, and it promises a
+   stable feature. */
+.state-legend-badge {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  vertical-align: 1px;
+}
+
+/* A single column: the card is narrow, and the reading order runs from the most
+   urgent to the most inert. */
 .state-legend-list {
   display: grid;
   gap: 6px;
@@ -578,8 +600,7 @@ a:focus-visible {
   border-radius: 4px;
 }
 
-/* Un emplacement libre n'a pas de couleur : la pastille montre une touche
-   éteinte, pas une teinte de plus. */
+/* A free slot has no colour: the swatch shows an unlit key, not one more hue. */
 .state-legend-swatch.is-off {
   background: transparent;
   border-style: dashed;
@@ -604,10 +625,10 @@ a:focus-visible {
   line-height: 1.45;
 }
 
-/* La carte n'apparaît que là où la marge la contient réellement. Sous cette
-   largeur elle recouvrirait le clavier : mieux vaut ne rien montrer qu'un panneau
-   posé par-dessus le contenu. Même raison quand le panneau de configuration est
-   ouvert : le héros se décale vers la gauche et la marge disparaît. */
+/* The card only appears where the margin actually holds it. Below this width it
+   would cover the keyboard: better to show nothing than a panel laid over the
+   content. Same reason when the configuration panel is open: the hero shifts left
+   and the margin disappears. */
 @media (max-width: 1239px) {
   .state-legend {
     display: none;
@@ -619,11 +640,10 @@ a:focus-visible {
 }
 
 
-/* Dans le flux, sous le clavier. Ce bouton était auparavant en position absolue
-   par-dessus le bas du stage, qui était vide : le cadre de l'image laissait
-   18,6% de transparent sous le device. Depuis que la boîte est recadrée sur le
-   device, ce vide n'existe plus et le bouton recouvrirait les touches. */
-.configure-button {
+/* Both primary actions share one stable footprint, so changing copy or language
+   does not move the device stage. */
+.configure-button,
+.generate-button {
   position: relative;
   z-index: 3;
   display: inline-flex;
@@ -631,10 +651,17 @@ a:focus-visible {
   min-height: 50px;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+  font-size: 13px;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+/* In the flow, below the keyboard. Its old absolute position covered keys once
+   the transparent image margin was removed. */
+.configure-button {
   gap: 9px;
   margin: 18px auto 0;
   border: 1px solid rgba(255, 255, 255, 0.78);
-  border-radius: 999px;
   background: rgba(255, 251, 247, 0.6);
   padding: 0 17px;
   color: var(--ink);
@@ -642,10 +669,8 @@ a:focus-visible {
     0 16px 42px rgba(112, 70, 51, 0.18),
     inset 0 1px 0 rgba(255, 255, 255, 0.92),
     inset 0 -1px 1px rgba(255, 255, 255, 0.28);
-  font-size: 13px;
   font-weight: 720;
   backdrop-filter: var(--glass-blur);
-  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .configure-button:hover {
@@ -661,19 +686,11 @@ a:focus-visible {
 }
 
 .generate-button {
-  position: relative;
-  z-index: 3;
-  display: inline-flex;
-  width: min(240px, calc(100vw - 32px));
-  min-height: 50px;
-  align-items: center;
-  justify-content: center;
   gap: 8px;
-  /* Marge positive : ce bouton remontait de 44px pour combler le vide sous le
-     device, vide supprimé par le recadrage de la boîte sur le clavier. */
+  /* Positive margin: this button used to pull up by 44px to fill the empty space
+     under the device, space removed by cropping the box to the keyboard. */
   margin-top: 12px;
   border: 1px solid rgba(255, 255, 255, 0.45);
-  border-radius: 999px;
   background: rgba(201, 95, 67, 0.82);
   padding: 0 20px;
   color: #fffaf6;
@@ -682,9 +699,7 @@ a:focus-visible {
     inset 0 1px 0 rgba(255, 255, 255, 0.42),
     inset 0 -1px 1px rgba(255, 255, 255, 0.14);
   backdrop-filter: blur(14px) saturate(1.5);
-  font-size: 13px;
   font-weight: 750;
-  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
 }
 
 .generate-button:hover {
@@ -754,9 +769,8 @@ a:focus-visible {
   right: 12px;
   bottom: 12px;
   display: flex;
-  /* 46vw : sur les desktops étroits, panneau et clavier se partagent
-     l'écran au lieu de se recouvrir (la media query mobile prend le relais
-     sous 760px). */
+  /* 46vw: on narrow desktops, panel and keyboard share the screen instead of
+     overlapping (the mobile media query takes over below 760px). */
   width: min(470px, 46vw);
   flex-direction: column;
   overflow: hidden;
@@ -805,8 +819,8 @@ a:focus-visible {
   letter-spacing: -0.045em;
 }
 
-/* Mode « touche » : l'en-tête EST la touche sélectionnée — badge, nom et
-   action actuelle — à la place d'un titre générique. */
+/* "Key" mode: the header IS the selected key — badge, name and current action —
+   instead of a generic title. */
 .key-header {
   display: flex;
   min-width: 0;
@@ -851,8 +865,8 @@ a:focus-visible {
   }
 }
 
-/* Le contenu du panneau glisse en place à l'ouverture et au changement
-   de mode (touche ↔ export). */
+/* The panel content slides into place on open and on mode change
+   (key ↔ export). */
 .dialog-scroll > * {
   animation: panel-swap-in 240ms cubic-bezier(0.2, 0.9, 0.25, 1);
 }
@@ -946,10 +960,9 @@ kbd {
   font-size: 13px;
 }
 
-/* Deux lignes plutôt qu'une seule tronquée : la colonne du raccourci est en
-   `auto`, donc les raccourcis larges comme celui du mode Effort écrasaient la
-   description jusqu'à la rendre illisible. La hauteur de rangée de 67px les
-   accueille sans décaler la liste. */
+/* Two lines rather than a single truncated one: the shortcut column is `auto`,
+   so wide shortcuts like the Effort one squeezed the description until it became
+   unreadable. The 67px row height fits them without shifting the list. */
 .action-copy small {
   display: -webkit-box;
   overflow: hidden;
@@ -1379,8 +1392,8 @@ kbd {
   line-height: 1.45;
 }
 
-/* Roue de secteurs, dessinée depuis les mêmes angles que le profil : le
-   secteur cliqué est celui qui sera écrit, à l'angle près. */
+/* Sector wheel, drawn from the same angles as the profile: the sector clicked is
+   the one that will be written, down to the angle. */
 .joystick-dial-wrap {
   position: relative;
   width: min(228px, 78%);
@@ -1392,9 +1405,9 @@ kbd {
   width: 100%;
 }
 
-/* Même convention que les keycaps : le numéro du secteur tant qu'il est libre,
-   le libellé de l'action une fois affectée. Purement décoratif — le secteur SVG
-   dessous reste le seul contrôle. */
+/* Same convention as the keycaps: the sector number while it is free, the action
+   label once assigned. Purely decorative — the SVG sector underneath stays the
+   only control. */
 .joystick-dial-badge {
   position: absolute;
   max-width: 30%;
@@ -1694,10 +1707,10 @@ kbd {
     line-height: 1.4;
   }
 
-  /* Pas de bottom sheet sur mobile. La photo du device reste visible en haut
-     et le panneau prend le reste de la hauteur : seule sa liste défile. C'est
-     ce qui a permis de supprimer le mini-schéma du clavier, le piège à focus
-     et le scrim — le vrai clavier est là, et il reste cliquable. */
+  /* No bottom sheet on mobile. The device photo stays visible at the top and the
+     panel takes the rest of the height: only its list scrolls. That is what
+     allowed removing the mini keyboard diagram, the focus trap and the scrim —
+     the real keyboard is right there, and it stays clickable. */
   .app-shell.is-panel-open {
     display: flex;
     height: 100dvh;
@@ -1715,7 +1728,7 @@ kbd {
     padding: 56px 14px 0;
   }
 
-  /* Tout ce qui n'aide pas à choisir une touche laisse la place au panneau. */
+  /* Anything that does not help pick a key gives way to the panel. */
   .app-shell.is-panel-open .hero-copy,
   .app-shell.is-panel-open .configure-button,
   .app-shell.is-panel-open .generate-button,
@@ -1725,9 +1738,8 @@ kbd {
     display: none;
   }
 
-  /* La boîte est désormais recadrée sur le device, donc plus de vide à
-     récupérer par une marge négative : la largeur du stage est directement
-     celle du clavier. */
+  /* The box is now cropped to the device, so there is no empty space left to
+     reclaim with a negative margin: the stage width is the keyboard's width. */
   .app-shell.is-panel-open .device-stage {
     width: min(285px, 78vw);
     margin: 0 auto;
@@ -1833,7 +1845,7 @@ kbd {
   .mapping-preview button,
   .brand-mark,
   .mapping-dialog {
-    background: #fffaf6;
+    background: var(--solid-glass-background);
     backdrop-filter: none;
   }
 
@@ -1843,11 +1855,8 @@ kbd {
   }
 
   .toast {
+    background: var(--solid-toast-background);
     backdrop-filter: none;
-  }
-
-  .toast {
-    background: #453a36;
   }
 }
 
@@ -1869,6 +1878,8 @@ kbd {
     --line-strong: rgba(240, 225, 214, 0.28);
     --shadow: rgba(0, 0, 0, 0.45);
     --glass-border: rgba(255, 255, 255, 0.24);
+    --solid-glass-background: #2e231d;
+    --solid-toast-background: #362a23;
   }
 
   body {
@@ -2225,21 +2236,4 @@ kbd {
       inset 0 1px 0 rgba(255, 255, 255, 0.14);
   }
 
-  @media (prefers-reduced-transparency: reduce) {
-    .local-status,
-    .language-select,
-    .theme-toggle,
-    .configure-button,
-    .mapping-preview button,
-    .brand-mark,
-    .mapping-dialog {
-      background: #2e231d;
-      backdrop-filter: none;
-    }
-
-    .toast {
-      background: #362a23;
-      backdrop-filter: none;
-    }
-  }
 }

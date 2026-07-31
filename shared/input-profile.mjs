@@ -8,9 +8,9 @@ const MODIFIER_KEYCODES = {
   Control: "KC_LCTL",
 };
 
-// Touches finales autorisées pour un raccourci. Retour/Entrée, Suppression et
-// Retour arrière sont volontairement absents : un appui accidentel ne doit
-// jamais envoyer, approuver ou détruire quoi que ce soit.
+// Final keys allowed in a shortcut. Return/Enter, Delete and Backspace are
+// deliberately absent: an accidental press must never send, approve or destroy
+// anything.
 const FINAL_KEYCODES = {
   ...Object.fromEntries(
     Array.from({ length: 26 }, (_, index) => {
@@ -52,8 +52,8 @@ const MODIFIER_KEY_BY_KEYCODE = Object.fromEntries(
 
 const FORBIDDEN_KEYS = Object.freeze(["Enter", "Return", "Delete", "Backspace"]);
 
-// Une touche imprimable seule taperait du texte dans la conversation : elle
-// n'est acceptée qu'accompagnée d'un modificateur.
+// A printable key on its own would type text into the conversation: it is only
+// accepted together with a modifier.
 const PRINTABLE_KEYS = new Set([
   ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)),
   ...Array.from({ length: 10 }, (_, digit) => String(digit)),
@@ -65,9 +65,9 @@ const PRINTABLE_KEYS = new Set([
   "Minus",
 ]);
 
-// Les douze keycaps programmables sont répartis sur quatre rangées. La
-// première cellule de la dernière rangée est le capteur de changement de
-// layer : elle est volontairement absente de cette table et reste intacte.
+// The twelve programmable keycaps are spread over four rows. The first cell of
+// the last row is the layer-change sensor: it is deliberately absent from this
+// table and stays untouched.
 const KEY_CONTROL_LOCATIONS = Object.freeze({
   "key-9": { row: 0, column: 0 },
   "key-10": { row: 0, column: 1 },
@@ -89,10 +89,10 @@ const ENCODER_PRESS_CONTROL = "key-13";
 
 const DEFAULT_MAPPING = {
   joystick: "navigation",
-  // La molette est en mode Effort par défaut : c'est le geste distinctif de cette
-  // carte pour Claude, et il est calibré et documenté (voir
-  // docs/research/effort-wheel-calibration.md). Les autres modes restent
-  // disponibles dans le GUI, le défilement compris.
+  // The wheel is in Effort mode by default: that is this board's distinctive
+  // gesture for Claude, and it is calibrated and documented (see
+  // docs/research/effort-wheel-calibration.md). The other modes stay available
+  // in the GUI, scrolling included.
   wheel: "effort",
   "key-9": "none",
   "key-10": "none",
@@ -148,10 +148,10 @@ const ACTION_DEFINITIONS = {
     type: "direct",
     key: "Escape",
   },
-  // Cycle entre les sessions du Code tab de Claude Desktop. La documentation
-  // précise que ce raccourci utilise Control sur toutes les plateformes,
-  // contrairement aux autres. Il n'existe aucun raccourci pour choisir une
-  // session par son rang : seul le cycle est adressable.
+  // Cycles through the sessions of Claude Desktop's Code tab. The documentation
+  // states that this shortcut uses Control on every platform, unlike the
+  // others. There is no shortcut to pick a session by its rank: only cycling is
+  // addressable.
   nextSession: {
     name: "Claude Next Session",
     type: "shortcut",
@@ -162,7 +162,7 @@ const ACTION_DEFINITIONS = {
     type: "shortcut",
     keys: ["Control", "Shift", "Tab"],
   },
-  // Ouvre le menu d'effort, où les chiffres 1 à 9 sélectionnent une entrée.
+  // Opens the effort menu, where the digits 1 to 9 select an entry.
   effortMenu: {
     name: "Claude Effort Menu",
     type: "shortcut",
@@ -229,45 +229,44 @@ const ACTION_DEFINITIONS = {
   },
 };
 
-// Attente laissée au sélecteur d'effort pour apparaître, en millisecondes.
+// Time given to the effort picker to appear, in milliseconds.
 //
-// Input ne documente pas si `delay` s'applique avant ou après son étape, et
-// aucune source ne permet de le trancher : le champ est transmis verbatim au
-// firmware, qui seul l'interprète. La macro contourne la question par sa forme
-// plutôt que par une mesure. Toute l'attente est posée sur la libération de ⌘ et
-// la flèche reçoit 0, ce qui rend les deux lectures équivalentes :
+// Input does not document whether `delay` applies before or after its step, and
+// no source settles it: the field is passed verbatim to the firmware, which
+// alone interprets it. The macro sidesteps the question by its shape rather
+// than by a measurement. All of the wait is placed on the ⌘ release and the
+// arrow gets 0, which makes both readings equivalent:
 //
-//   - lecture « après »  : ⌘ relâché, attente, flèche  -> sélecteur : ce délai
-//   - lecture « avant »  : attente, ⌘ relâché, flèche  -> sélecteur : ce délai
+//   - "after" reading:  ⌘ released, wait, arrow  -> picker gets this delay
+//   - "before" reading: wait, ⌘ released, arrow  -> picker gets this delay
 //
-// Même marge et même durée totale dans les deux cas. Ne pas répartir cette
-// attente sur les deux étapes : cela double le délai d'ouverture sans rien
-// garantir de plus.
+// Same margin and same total duration either way. Do not split this wait across
+// both steps: that doubles the opening delay and guarantees nothing more.
 //
-// Calibrage matériel, échelle descendante testée sur Codex Micro : 40 ms tient,
-// 20 ms échoue. La valeur retenue double ce plancher mesuré. Le délai
-// d'ouverture est donc de 80 ms, auquel s'ajoutent les 10 ms de retour visuel
-// ci-dessous, contre 900 ms pour la première version de la macro.
+// Hardware calibration, descending scale tested on the Codex Micro: 40ms holds,
+// 20ms fails. The chosen value doubles that measured floor. The opening delay is
+// therefore 80ms, plus the 10ms of visual feedback below, against 900ms for the
+// first version of the macro.
 //
-// En descendant plus bas, l'échec n'est pas bruyant : la flèche part avant que
-// le sélecteur ait le focus et le changement de niveau est perdu sans trace.
-// Toute nouvelle baisse doit donc être validée par plusieurs répétitions ET par
-// une première ouverture à froid, au retour d'une autre application.
+// Going lower fails quietly: the arrow leaves before the picker has focus and
+// the level change is lost without a trace. Any further reduction must be
+// validated over several repetitions AND on a cold first open, coming back from
+// another application.
 const EFFORT_PICKER_DELAY_MS = 80;
 
-// Attente portée par l'étape Escape, en millisecondes. Elle sert au retour
-// visuel, pas à la fiabilité, et ne doit pas être ramenée à 0.
+// Wait carried by the Escape step, in milliseconds. It serves visual feedback,
+// not reliability, and must not be dropped to 0.
 //
-// Sans elle, la flèche et Escape sont émis sans écart et Claude les traite dans
-// le même tour de boucle : le sélecteur s'ouvre et se referme sans jamais peindre
-// une image montrant le slider à son nouveau niveau. On change donc l'effort à
-// l'aveugle, et l'effet visible est un simple clignotement. 10 ms suffisent à
-// laisser passer une image, et le niveau atteint devient lisible.
+// Without it, the arrow and Escape are emitted with no gap and Claude handles
+// them in the same loop turn: the picker opens and closes without ever painting
+// a frame showing the slider at its new level. Effort then changes blind, and
+// the visible effect is a mere flicker. 10ms is enough to let one frame through,
+// and the level reached becomes readable.
 //
-// Cette attente est payée APRÈS que le niveau a changé : elle allonge la macro
-// sans retarder son effet. C'est aussi ce qui indique que `delay` s'applique
-// avant son étape et non après — dans la lecture « après » ces 10 ms seraient du
-// temps mort en fin de macro et ne changeraient rien à l'affichage.
+// This wait is paid AFTER the level has changed: it lengthens the macro without
+// delaying its effect. That is also what indicates `delay` applies before its
+// step and not after — under the "after" reading these 10ms would be dead time
+// at the end of the macro and would change nothing on screen.
 const EFFORT_FEEDBACK_DELAY_MS = 10;
 
 const WHEEL_MODES = {
@@ -389,17 +388,17 @@ function buildKeyInputs(keys) {
   ];
 }
 
-// Claude Desktop ouvre le sélecteur d'effort avec ⌘⇧E. Son curseur ARIA
-// accepte ensuite gauche/droite pour passer au niveau disponible précédent ou
-// suivant. ⌘⇧E est une bascule vérifiée sur Claude Desktop : chaque cran doit
-// donc refermer le sélecteur avec Escape, sinon le cran suivant le referme au
-// lieu de l'ouvrir et le niveau est sauté.
+// Claude Desktop opens the effort picker with ⌘⇧E. Its ARIA slider then takes
+// left/right to move to the previous or next available level. ⌘⇧E is a toggle,
+// verified on Claude Desktop: every notch must therefore close the picker with
+// Escape, otherwise the next notch closes it instead of opening it and the level
+// is skipped.
 //
-// Le sélecteur est rendu de façon asynchrone, il faut donc l'attendre avant
-// d'envoyer la flèche : EFFORT_PICKER_DELAY_MS, porté par la seule libération de
-// ⌘. Puis il faut le laisser peindre le niveau atteint avant de le refermer :
-// EFFORT_FEEDBACK_DELAY_MS, porté par Escape. L'étape de la flèche reste à 0,
-// c'est elle qui rend les deux lectures possibles de `delay` équivalentes.
+// The picker renders asynchronously, so it has to be waited for before sending
+// the arrow: EFFORT_PICKER_DELAY_MS, carried by the ⌘ release alone. Then it has
+// to be allowed to paint the level reached before closing:
+// EFFORT_FEEDBACK_DELAY_MS, carried by Escape. The arrow step stays at 0, and
+// that is what makes both possible readings of `delay` equivalent.
 function buildEffortWheelKeyInputs(directionKeycode) {
   return [
     { keycode: "KC_LGUI", delay: 0, actionType: 1 },
@@ -435,6 +434,29 @@ function decodeKeyInputs(keyInputs) {
   return keys;
 }
 
+let actionDecodingIndexes;
+
+function getActionDecodingIndexes() {
+  if (actionDecodingIndexes) return actionDecodingIndexes;
+
+  const directActionByKeycode = new Map();
+  const sequencedActionByInputs = new Map();
+  for (const [id, definition] of Object.entries(ACTION_DEFINITIONS)) {
+    if (definition.type === "direct") {
+      directActionByKeycode.set(FINAL_KEYCODES[definition.key], id);
+    } else if (definition.type === "directKeycode") {
+      directActionByKeycode.set(definition.keycode, id);
+    } else if (definition.type === "shortcut") {
+      sequencedActionByInputs.set(JSON.stringify(buildKeyInputs(definition.keys)), id);
+    } else if (definition.type === "sequence") {
+      sequencedActionByInputs.set(JSON.stringify(definition.keyInputs), id);
+    }
+  }
+
+  actionDecodingIndexes = { directActionByKeycode, sequencedActionByInputs };
+  return actionDecodingIndexes;
+}
+
 function nextId(items) {
   return items.reduce((highest, item) => Math.max(highest, Number(item.id) || 0), -1) + 1;
 }
@@ -444,12 +466,7 @@ function findOrCreateAction(profile, name, keyInputs, createdActionIds) {
   if (existing) return existing.id;
 
   const id = nextId(profile.actions);
-  profile.actions.push({
-    id,
-    name,
-    color: null,
-    keyInputs,
-  });
+  profile.actions.push({ id, name, color: null, keyInputs });
   createdActionIds.push(id);
   return id;
 }
@@ -479,12 +496,7 @@ function resolveKeyAssignment(profile, assignment, createdActionIds) {
   }
   if (definition.type === "sequence") {
     const keyInputs = clone(definition.keyInputs);
-    const id = findOrCreateAction(
-      profile,
-      definition.name,
-      keyInputs,
-      createdActionIds,
-    );
+    const id = findOrCreateAction(profile, definition.name, keyInputs, createdActionIds);
     return `KA_${id}`;
   }
   if (definition.type === "direct") {
@@ -533,21 +545,22 @@ function addActionsToGroup(profile, actionIds) {
   group.actionIds = [...new Set([...group.actionIds, ...actionIds])];
 }
 
-// Le joystick accepte, en plus des deux préréglages `navigation` et `none`, une
-// affectation par direction :
+// On top of the two `navigation` and `none` presets, the joystick accepts a
+// per-direction assignment:
 //
 //   { directions: 4, sectors: ["newSession", "voice", "diff", "stop"] }
 //
-// Chaque secteur prend la même valeur qu'une touche — identifiant du catalogue,
-// raccourci personnalisé, ou `none`. La sérialisation d'Input convertit bien les
-// références `KA_` dans les secteurs, donc une macro complète y est possible et
-// pas seulement un keycode nu.
+// Each sector takes the same value as a key — catalogue id, custom shortcut, or
+// `none`. Input's serialisation does convert `KA_` references inside sectors, so
+// a full macro is possible there and not only a bare keycode.
 //
-// 45° restent réservés à la zone de fermeture `KI_X` en haut, exactement comme
-// le gabarit par défaut d'Input. Les 315° restants se partagent, soit 78,75° à
-// quatre directions et 39,4° à huit. Au-delà de huit, viser au pouce devient
-// hasardeux : la borne est ergonomique, le format n'en impose aucune.
+// 45° stay reserved for the `KI_X` close zone at the top, exactly like Input's
+// default template. The remaining 315° are shared out, so 78.75° at four
+// directions and 39.4° at eight. Beyond eight, aiming with a thumb gets
+// unreliable: the bound is ergonomic, the format imposes none.
 const JOYSTICK_DIRECTION_COUNTS = Object.freeze([4, 8]);
+const JOYSTICK_CLOSE_ANGLE = 45 / 360;
+const JOYSTICK_START_ANGLE = (90 - 45 / 2) / 360;
 
 function isCustomJoystick(value) {
   return Boolean(value) && typeof value === "object" && Array.isArray(value.sectors);
@@ -566,23 +579,35 @@ function validateCustomJoystick(joystick) {
   );
 }
 
+function radialSectorGeometry(directionCount) {
+  assert(
+    Number.isInteger(directionCount) && directionCount > 0,
+    `Le joystick doit contenir au moins une direction, reçu : ${JSON.stringify(directionCount)}`,
+    "JOYSTICK_SECTOR_COUNT",
+  );
+  const sectorAngle = (1 - JOYSTICK_CLOSE_ANGLE) / directionCount;
+  return {
+    close: {
+      a1: JOYSTICK_START_ANGLE,
+      a2: (JOYSTICK_START_ANGLE + JOYSTICK_CLOSE_ANGLE) % 1,
+    },
+    sectors: Array.from({ length: directionCount }, (_, index) => {
+      const a1 = JOYSTICK_START_ANGLE + JOYSTICK_CLOSE_ANGLE + sectorAngle * index;
+      return { index, a1: a1 % 1, a2: (a1 + sectorAngle) % 1 };
+    }),
+  };
+}
+
 function radialSectors(keycodes) {
-  const closeAngle = 45 / 360;
-  const start = (90 - 45 / 2) / 360;
-  const remainingAngle = 1 - closeAngle;
-  const sectorAngle = remainingAngle / keycodes.length;
-  const sectors = [{ k: "KI_X", a1: start, a2: (start + closeAngle) % 1 }];
-
-  keycodes.forEach((keycode, index) => {
-    const a1 = start + closeAngle + sectorAngle * index;
-    sectors.push({
-      k: keycode,
-      a1: a1 % 1,
-      a2: (a1 + sectorAngle) % 1,
-    });
-  });
-
-  return sectors;
+  const geometry = radialSectorGeometry(keycodes.length);
+  return [
+    { k: "KI_X", ...geometry.close },
+    ...geometry.sectors.map(({ a1, a2 }, index) => ({
+      k: keycodes[index],
+      a1,
+      a2,
+    })),
+  ];
 }
 
 export function inspectInputProfile(source, { requireAppSense = true } = {}) {
@@ -688,10 +713,10 @@ function hasClaudeLayout(layer) {
   );
 }
 
-// Crée le layer « Claude » à partir d'un export qui n'en contient pas, en
-// clonant la structure d'un layer existant. Le lien AppSense (linkedAppId)
-// référence le registre local d'Input et ne peut pas être inventé ici : le
-// layer créé doit être lié via « Auto detect » après import.
+// Creates the "Claude" layer from an export that has none, by cloning the
+// structure of an existing layer. The AppSense link (linkedAppId) references
+// Input's local registry and cannot be invented here: the created layer has to
+// be linked through "Auto detect" after import.
 export function addClaudeLayer(source) {
   assert(source && typeof source === "object", "Le fichier JSON est vide.", "EMPTY_FILE");
   assert(
@@ -737,9 +762,9 @@ export function addClaudeLayer(source) {
   layer.id = nextId(output.profile.layers);
   layer.name = TARGET_LAYER_NAME;
   delete layer.linkedAppId;
-  // Sécurité par défaut : les contrôles assignables hérités du modèle sont
-  // neutralisés. Le capteur base[3][0] conserve sa fonction de changement de
-  // layer et ne sera jamais exposé dans le configurateur.
+  // Safe by default: the assignable controls inherited from the template are
+  // cleared. The base[3][0] sensor keeps its layer-change function and is never
+  // exposed in the configurator.
   for (const [rowIndex, row] of layer.layout.base.entries()) {
     if (!Array.isArray(row)) continue;
     for (const [columnIndex, cell] of row.entries()) {
@@ -767,33 +792,20 @@ export function deriveMappingFromProfile(source) {
   const inspection = inspectInputProfile(source, { requireAppSense: false });
   const layer = source.profile.layers[inspection.layerIndex];
   const actionsById = new Map(source.actions.map((action) => [String(action.id), action]));
+  const { directActionByKeycode, sequencedActionByInputs } = getActionDecodingIndexes();
 
   const decodeCell = (cell) => {
     const keycode = cell?.keycode;
     if (!keycode || keycode === "KC_NONE") return "none";
-    for (const [id, definition] of Object.entries(ACTION_DEFINITIONS)) {
-      if (
-        (definition.type === "direct" && FINAL_KEYCODES[definition.key] === keycode) ||
-        (definition.type === "directKeycode" && definition.keycode === keycode)
-      ) {
-        return id;
-      }
-    }
+    const directAction = directActionByKeycode.get(keycode);
+    if (directAction) return directAction;
 
     const reference = /^KA_(\d+)$/.exec(keycode);
     if (reference) {
       const action = actionsById.get(reference[1]);
       if (!action) return "none";
-      for (const [id, definition] of Object.entries(ACTION_DEFINITIONS)) {
-        if (
-          (definition.type === "shortcut" &&
-            sameJson(action.keyInputs, buildKeyInputs(definition.keys))) ||
-          (definition.type === "sequence" &&
-            sameJson(action.keyInputs, definition.keyInputs))
-        ) {
-          return id;
-        }
-      }
+      const sequencedAction = sequencedActionByInputs.get(JSON.stringify(action.keyInputs));
+      if (sequencedAction) return sequencedAction;
       const keys = decodeKeyInputs(action.keyInputs);
       return keys ? { type: "custom", keys } : "none";
     }
@@ -839,8 +851,8 @@ export function deriveMappingFromProfile(source) {
     encoder[PHYSICAL_ENCODER_SLOTS.press],
   );
 
-  // Le premier secteur est toujours la zone de fermeture `KI_X` : les
-  // directions utiles sont les suivants, dans l'ordre où radialSectors les pose.
+  // The first sector is always the `KI_X` close zone: the useful directions are
+  // the ones after it, in the order radialSectors lays them down.
   const sectors = (layer.layout.joystick?.sectors ?? []).filter(
     (sector) => sector.k !== "KI_X",
   );
@@ -861,12 +873,11 @@ export function deriveMappingFromProfile(source) {
   return { mapping, assigned };
 }
 
-// Un fichier `*-profile.json` exporté par Input ne transporte PAS la table
-// `linkedApps`, seulement les références `linkedAppId` posées sur les layers.
-// Aucune des deux options ci-dessous ne peut donc créer une entrée : elles
-// écrivent une référence vers une entrée qui doit déjà exister sur la carte,
-// créée une fois dans l'UI d'Input. Une référence vers une entrée absente
-// s'importe sans erreur et laisse AppSense mort sans le dire.
+// A `*-profile.json` exported by Input does NOT carry the `linkedApps` table,
+// only the `linkedAppId` references set on the layers. Neither option below can
+// therefore create an entry: they write a reference to an entry that must
+// already exist on the board, created once in Input's UI. A reference to a
+// missing entry imports without error and leaves AppSense dead without saying so.
 function validateAppSenseId(value, label) {
   assert(
     Number.isInteger(value) && value >= 0,
@@ -886,8 +897,8 @@ export function buildInputProfile(
   if (forcesClaudeLink) validateAppSenseId(appSenseId, "appSenseId");
   if (linksBaseLayer) validateAppSenseId(baseLayerAppSenseId, "baseLayerAppSenseId");
 
-  // Deux layers liés à la même entrée rendent la bascule ambiguë : le firmware
-  // ne documente pas dans quel ordre il parcourt sa table.
+  // Two layers linked to the same entry make the switch ambiguous: the firmware
+  // does not document the order in which it walks its table.
   if (forcesClaudeLink && linksBaseLayer) {
     assert(
       appSenseId !== baseLayerAppSenseId,
@@ -896,8 +907,8 @@ export function buildInputProfile(
     );
   }
 
-  // Forcer le lien du layer Claude rend son absence dans la source acceptable :
-  // c'est précisément le cas d'usage, réparer un lien perdu.
+  // Forcing the Claude layer's link makes its absence in the source acceptable:
+  // that is precisely the use case, repairing a lost link.
   const inspection = inspectInputProfile(source, {
     requireAppSense: requireAppSense && !forcesClaudeLink,
   });
@@ -921,9 +932,10 @@ export function buildInputProfile(
     );
   }
 
-  const wheelMode = WHEEL_MODES[mapping.wheel];
+  const hasWheelMode = Object.hasOwn(WHEEL_MODES, mapping.wheel);
+  const wheelMode = hasWheelMode ? WHEEL_MODES[mapping.wheel] : null;
   assert(
-    mapping.wheel in WHEEL_MODES,
+    hasWheelMode,
     `Action inconnue pour la molette : ${mapping.wheel}`,
     "UNKNOWN_ASSIGNMENT",
   );
@@ -982,9 +994,9 @@ export function buildInputProfile(
   addActionsToGroup(output, createdActionIds);
 
   if (forcesClaudeLink) targetLayer.linkedAppId = appSenseId;
-  // AppSense n'a pas de retour : chaque règle est une transition aller. Lier le
-  // layer natif à une seconde application est le seul moyen de quitter le layer
-  // Claude automatiquement, en entrant dans ce layer-là. Voir
+  // AppSense has no return path: every rule is a one-way transition. Linking the
+  // native layer to a second application is the only way to leave the Claude
+  // layer automatically, by entering that one. See
   // docs/research/appsense-behavior.md.
   if (linksBaseLayer) output.profile.layers[0].linkedAppId = baseLayerAppSenseId;
 
@@ -1004,8 +1016,8 @@ export function buildInputProfile(
     "Le lien AppSense du layer Claude n’a pas été préservé.",
   );
   if (linksBaseLayer) {
-    // Le lien change, jamais le keymap : les touches natives OpenAI doivent
-    // rester intactes au keycode près.
+    // The link changes, never the keymap: the native OpenAI keys must stay
+    // intact down to the keycode.
     assert(
       sameJson(source.profile.layers[0].layout, output.profile.layers[0].layout),
       "Le keymap du layer natif Work Louder a été modifié.",
@@ -1033,12 +1045,12 @@ export function buildInputProfile(
       preservedLayers: output.profile.layers.length - 1,
       nativeLayerPreserved: true,
       appSensePreserved: inspection.appSenseLinked,
-      // Référence effectivement écrite sur le layer Claude, forcée ou héritée.
+      // Reference actually written on the Claude layer, forced or inherited.
       appSenseId: forcesClaudeLink
         ? appSenseId
         : output.profile.layers[inspection.layerIndex].linkedAppId,
       appSenseForced: forcesClaudeLink,
-      // Lien du layer natif, qui fournit la transition de sortie du layer Claude.
+      // Native layer link, which provides the exit transition out of the Claude layer.
       baseLayerAppSenseId: linksBaseLayer ? baseLayerAppSenseId : null,
       assignedSwitches: [...KEY_CONTROL_ORDER, ENCODER_PRESS_CONTROL].filter(
         (controlId) => mapping[controlId] !== "none",
@@ -1061,7 +1073,9 @@ export {
   FORBIDDEN_KEYS,
   KEY_CONTROL_LOCATIONS,
   KEY_CONTROL_ORDER,
+  JOYSTICK_DIRECTION_COUNTS,
   MODIFIER_KEYCODES,
   PRINTABLE_KEYS,
   WHEEL_MODES,
+  radialSectorGeometry,
 };

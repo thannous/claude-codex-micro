@@ -1,16 +1,15 @@
-// Modèle d'éclairage du Codex Micro, réimplémenté d'après le format observé
-// et documenté dans docs/research/hid-lighting-protocol.md. Code original.
+// Codex Micro lighting model, reimplemented from the format observed and
+// documented in docs/research/hid-lighting-protocol.md. Original code.
 //
-// Deux méthodes JSON-RPC vendeur couvrent l'éclairage :
+// Two vendor JSON-RPC methods cover the lighting:
 //
-//   v.oai.thstatus  éclairage par emplacement (« thread ») : les six touches
-//                   Agent, adressées par `id`, mises à jour partielles
-//                   possibles — un champ omis reste inchangé sur le
-//                   périphérique ;
-//   v.oai.rgbcfg    deux zones globales : `ambient` (anneau extérieur) et
-//                   `keys` (sous les keycaps).
+//   v.oai.thstatus  per-slot ("thread") lighting: the six Agent keys, addressed
+//                   by `id`, with partial updates possible — an omitted field
+//                   stays unchanged on the device;
+//   v.oai.rgbcfg    two global zones: `ambient` (outer ring) and `keys`
+//                   (under the keycaps).
 //
-// Le module est pur : il ne produit que des objets de paramètres, sans I/O.
+// The module is pure: it only produces parameter objects, with no I/O.
 
 import { SLOT_CONTROLS, STATE_COLORS, STATES } from "./thread-slots.mjs";
 
@@ -21,8 +20,8 @@ export const METHODS = Object.freeze({
   notifyJoystick: "v.oai.rad",
 });
 
-// Effets d'animation du firmware. `solid` est le seul utile pour un témoin
-// d'état stable ; les autres sont exposés pour les usages libres.
+// Firmware animation effects. `solid` is the only useful one for a steady state
+// light; the others are exposed for free-form use.
 export const EFFECTS = Object.freeze({
   off: 0,
   solid: 1,
@@ -33,40 +32,40 @@ export const EFFECTS = Object.freeze({
   shallowBreath: 6,
 });
 
-// Correspondance emplacement → identifiant de thread sur le canal. CONFIRMÉE sur
-// matériel par `node scripts/lighting.mjs probe --delay=3000`, qui allume les
-// touches une par une : la séquence des identifiants 0 à 5 suit exactement
-// l'ordre physique de SLOT_CONTROLS — les deux touches de la rangée du haut, de
-// gauche à droite, puis les quatre de la rangée suivante.
+// Slot → thread id mapping on the channel. CONFIRMED on hardware by
+// `node scripts/lighting.mjs probe --delay=3000`, which lights the keys one by
+// one: the sequence of ids 0 to 5 follows exactly the physical order of
+// SLOT_CONTROLS — the two keys of the top row, left to right, then the four of
+// the next row.
 export const SLOT_THREAD_IDS = Object.freeze(SLOT_CONTROLS.map((_, index) => index));
 
-// « #D97757 » → 0xD97757. Le canal attend un entier RGB compacté.
+// "#D97757" → 0xD97757. The channel expects a packed RGB integer.
 export function colorToInt(color) {
   if (typeof color === "number" && Number.isInteger(color) && color >= 0 && color <= 0xffffff) {
     return color;
   }
   const match = typeof color === "string" && color.match(/^#?([0-9a-fA-F]{6})$/);
-  if (!match) throw new Error(`Couleur attendue au format #RRGGBB : ${color}`);
+  if (!match) throw new Error(`Expected a colour in #RRGGBB format: ${color}`);
   return Number.parseInt(match[1], 16);
 }
 
 function clampUnit(name, value) {
   if (typeof value !== "number" || Number.isNaN(value) || value < 0 || value > 1) {
-    throw new Error(`${name} attendu entre 0 et 1 : ${value}`);
+    throw new Error(`${name} expected between 0 and 1: ${value}`);
   }
   return value;
 }
 
-// Une entrée d'éclairage par emplacement. Seul `id` est obligatoire ; chaque
-// champ optionnel omis laisse le paramètre correspondant inchangé. Les clés
-// minimisées (`c`, `b`, `e`, `s`, `sk`, `sa`) sont le format du canal.
+// One per-slot lighting entry. Only `id` is required; every optional field
+// omitted leaves the corresponding parameter unchanged. The minified keys
+// (`c`, `b`, `e`, `s`, `sk`, `sa`) are the channel's own format.
 export function threadEntry({ id, color, brightness, effect, speed, syncKeysLighting, syncAmbientLighting }) {
-  if (!Number.isInteger(id) || id < 0) throw new Error(`Identifiant de thread attendu entier ≥ 0 : ${id}`);
+  if (!Number.isInteger(id) || id < 0) throw new Error(`Expected an integer thread id ≥ 0: ${id}`);
   const entry = { id };
   if (color !== undefined && color !== null) entry.c = colorToInt(color);
   if (brightness !== undefined) entry.b = clampUnit("brightness", brightness);
   if (effect !== undefined) {
-    if (!Object.values(EFFECTS).includes(effect)) throw new Error(`Effet inconnu : ${effect}`);
+    if (!Object.values(EFFECTS).includes(effect)) throw new Error(`Unknown effect: ${effect}`);
     entry.e = effect;
   }
   if (speed !== undefined) entry.s = clampUnit("speed", speed);
@@ -75,13 +74,13 @@ export function threadEntry({ id, color, brightness, effect, speed, syncKeysLigh
   return entry;
 }
 
-// Paramètres de v.oai.thstatus : un tableau d'entrées, une par emplacement.
+// v.oai.thstatus parameters: an array of entries, one per slot.
 export function threadsLightingParams(entries) {
   return entries.map(threadEntry);
 }
 
-// Une zone de v.oai.rgbcfg. Les cinq champs sont obligatoires : la méthode
-// décrit une configuration complète de zone, pas une mise à jour partielle.
+// One v.oai.rgbcfg zone. All five fields are required: the method describes a
+// complete zone configuration, not a partial update.
 export function zoneSide({ effect, brightness, speed, magic, color }) {
   return {
     e: effect,
@@ -96,12 +95,12 @@ export function rgbConfigParams({ ambient, keys }) {
   return { ambient: zoneSide(ambient), keys: zoneSide(keys) };
 }
 
-// Traduction des six emplacements de thread-status en entrées thstatus.
-// Un emplacement libre est éteint (brightness 0) ; les autres portent la
-// couleur d'état de la palette du dépôt en effet fixe.
+// Translates the six thread-status slots into thstatus entries. A free slot is
+// unlit (brightness 0); the others carry their state colour from the repository
+// palette, as a solid effect.
 export function slotsToThreadEntries(rows, { brightness = 1 } = {}) {
   if (!Array.isArray(rows) || rows.length !== SLOT_CONTROLS.length) {
-    throw new Error(`${SLOT_CONTROLS.length} emplacements attendus.`);
+    throw new Error(`Expected ${SLOT_CONTROLS.length} slots.`);
   }
   return rows.map((row, index) => {
     const state = row?.state ?? STATES.free;
@@ -111,7 +110,7 @@ export function slotsToThreadEntries(rows, { brightness = 1 } = {}) {
   });
 }
 
-// Éteint les six emplacements sans toucher aux autres paramètres.
+// Turns the six slots off without touching the other parameters.
 export function allOffParams() {
   return SLOT_THREAD_IDS.map((id) => threadEntry({ id, brightness: 0 }));
 }

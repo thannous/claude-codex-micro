@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Couleurs des touches Agent",
+    experimental: "expérimental",
     off: "éteinte",
     states: {
       blocked: "Une décision est attendue",
@@ -38,7 +39,7 @@ export default {
       free: "Aucune session sur cette touche",
     },
     note:
-      "Poussées par « npm run lighting -- watch » d'après l'état réel des sessions Claude Code. L'app ChatGPT doit être quittée : elle réécrit ces LED toutes les 35 à 40 secondes et intercepte les appuis.",
+      "Poussées par « npm run lighting -- watch » d'après l'état réel des sessions Claude Code. L'app ChatGPT doit être quittée : elle réécrit ces LED toutes les 35 à 40 secondes et intercepte les appuis. Rien d'autre n'en dépend : si l'éclairage échoue, vos touches continuent d'envoyer leurs raccourcis.",
   },
   controls: {
     joystick: "Joystick directionnel — sans clic",

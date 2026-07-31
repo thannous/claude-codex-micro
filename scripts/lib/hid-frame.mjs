@@ -1,33 +1,33 @@
-// Cadrage HID du canal RPC du Codex Micro, réimplémenté d'après le format
-// observé et documenté dans docs/research/hid-lighting-protocol.md. Code
-// original, sans aucune reprise du SDK Work Louder : seuls les faits du
-// format (constantes, positions d'octets, champs JSON) sont exploités.
+// HID framing of the Codex Micro RPC channel, reimplemented from the format
+// observed and documented in docs/research/hid-lighting-protocol.md. Original
+// code, with nothing taken from the Work Louder SDK: only the facts of the
+// format (constants, byte positions, JSON fields) are used.
 //
-// Le module est volontairement pur : aucun I/O, aucune dépendance au
-// périphérique. Toute la logique est testable sans matériel.
+// The module is deliberately pure: no I/O, no dependency on the device. All the
+// logic is testable without hardware.
 
 import { randomInt } from "node:crypto";
 
-// Rapport de 64 octets : [0] identifiant de rapport, [1] canal, [2] longueur
-// du fragment transporté par CE rapport, [3..63] charge utile UTF-8.
+// 64-byte report: [0] report id, [1] channel, [2] length of the chunk carried by
+// THIS report, [3..63] UTF-8 payload.
 export const REPORT_SIZE = 64;
 export const REPORT_ID = 0x06;
 export const CHANNEL_DEBUG = 1;
 export const CHANNEL_RPC = 2;
-export const CHUNK_PAYLOAD = REPORT_SIZE - 3; // 61 octets par rapport
+export const CHUNK_PAYLOAD = REPORT_SIZE - 3; // 61 bytes per report
 
-// L'identifiant d'appel est borné par le firmware, qui refuse les valeurs hors
-// de [0, 999). Des identifiants courts évitent aussi de faire passer une
-// requête d'un rapport à deux pour quelques octets.
+// The call id is bounded by the firmware, which rejects values outside
+// [0, 999). Short ids also avoid pushing a request from one report to two for
+// the sake of a few bytes.
 export const RPC_ID_LIMIT = 999;
 
 export function createRpcId() {
   return randomInt(0, RPC_ID_LIMIT);
 }
 
-// Le canal remplace tout caractère non ASCII par son échappement \uXXXX (ou la
-// paire de substitution au-delà du BMP). Les charges d'éclairage sont en
-// pratique déjà ASCII ; l'échappement est appliqué pour coller au format.
+// The channel replaces every non-ASCII character with its \uXXXX escape (or the
+// surrogate pair beyond the BMP). Lighting payloads are already ASCII in
+// practice; the escaping is applied to match the format.
 export function escapeUnicode(text) {
   return text.replace(/[^\x00-\x7F]/gu, (char) => {
     const codePoint = char.codePointAt(0);
@@ -40,19 +40,19 @@ export function escapeUnicode(text) {
   });
 }
 
-// Enveloppe JSON-RPC du canal : { method, params, id }. `params` vaut null
-// quand la méthode n'en attend pas.
+// The channel's JSON-RPC envelope: { method, params, id }. `params` is null when
+// the method expects none.
 export function buildRequest({ method, params = null, id }) {
-  if (typeof method !== "string" || !method) throw new Error("Nom de méthode RPC attendu.");
+  if (typeof method !== "string" || !method) throw new Error("Expected an RPC method name.");
   if (!Number.isInteger(id) || id < 0 || id >= RPC_ID_LIMIT) {
-    throw new Error(`Identifiant RPC attendu entre 0 et ${RPC_ID_LIMIT - 1}.`);
+    throw new Error(`Expected an RPC id between 0 and ${RPC_ID_LIMIT - 1}.`);
   }
   return escapeUnicode(JSON.stringify({ method, params, id }));
 }
 
-// Découpe un message en rapports de 64 octets. Un message plus long que
-// CHUNK_PAYLOAD est fragmenté en rapports consécutifs qui répètent le même
-// en-tête ; seul l'octet de longueur varie. Un message vide n'émet rien.
+// Splits a message into 64-byte reports. A message longer than CHUNK_PAYLOAD is
+// fragmented into consecutive reports that repeat the same header; only the
+// length byte varies. An empty message emits nothing.
 export function encodeFrames(message) {
   const buffer = Buffer.from(message, "utf8");
   const frames = [];
@@ -70,11 +70,11 @@ export function encodeFrames(message) {
   return frames;
 }
 
-// Extrait canal et charge utile d'un rapport entrant. Le tampon livré par la
-// pile HID inclut l'identifiant de rapport en octet 0, comme à l'émission.
+// Extracts channel and payload from an incoming report. The buffer delivered by
+// the HID stack includes the report id in byte 0, as it does on the way out.
 export function decodeReport(report) {
   const data = Buffer.isBuffer(report) ? report : Buffer.from(report);
-  if (data.length < 3) throw new Error(`Rapport HID trop court : ${data.length} octet(s).`);
+  if (data.length < 3) throw new Error(`HID report too short: ${data.length} byte(s).`);
   const channel = data[1];
   const length = data[2];
   return {
@@ -84,10 +84,10 @@ export function decodeReport(report) {
   };
 }
 
-// Réassemble le flux de rapports en lignes. Le périphérique termine chaque
-// message par un saut de ligne ; un message long arrive fragmenté sur
-// plusieurs rapports et n'est complet qu'au saut de ligne final. Chaque canal
-// a son propre tampon : les journaux de débogage ne se mélangent pas au RPC.
+// Reassembles the stream of reports into lines. The device terminates each
+// message with a newline; a long message arrives fragmented over several
+// reports and is only complete at the final newline. Each channel has its own
+// buffer: debug logs do not mix into the RPC.
 export function createLineAssembler() {
   const buffers = new Map();
   return function push(report) {
@@ -99,13 +99,13 @@ export function createLineAssembler() {
   };
 }
 
-// Reconstitue les messages JSON-RPC à partir des lignes du canal RPC. Un
-// document peut lui-même arriver en plusieurs lignes (JSON indenté) : on
-// accumule jusqu'à ce que l'analyse réussisse. Trois formes sur le canal :
+// Rebuilds JSON-RPC messages from the lines of the RPC channel. A document can
+// itself arrive over several lines (indented JSON): accumulate until parsing
+// succeeds. Three shapes on the channel:
 //
-//   - réponse :      { "result": …, "id": n }          (id aussi sous « i »)
-//   - notification : { "method": "v.oai.hid", "params": … }  (aussi « m »/« p »)
-//   - invalide :     ni id ni méthode — tampon abandonné
+//   - response:     { "result": …, "id": n }          (id also carried as "i")
+//   - notification: { "method": "v.oai.hid", "params": … }  (also "m"/"p")
+//   - invalid:      neither id nor method — buffer dropped
 export function createRpcAccumulator() {
   let pending = "";
   return function push(text) {

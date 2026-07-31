@@ -1,48 +1,48 @@
 #!/usr/bin/env node
 
-// SPIKE — sonde de cadrage HID, côté Node.
+// SPIKE — HID framing probe, Node side.
 //
-// PÉRIMÉ POUR L'ÉCRITURE. Mesuré depuis : `node-hid` ne peut pas ouvrir ce
-// périphérique sur macOS. Il embarque hidapi 0.15.0, qui ouvre en mode *seize*
-// et n'expose pas `hid_darwin_set_open_exclusive` ; macOS refuse la saisie même
-// avec « Surveillance des saisies » accordée. `--send` échouera donc toujours.
-// Le cadre a été confirmé autrement, par scripts/lib/hid-probe.swift, en
-// ouverture non exclusive via IOKit.
+// OBSOLETE FOR WRITING. Measured since: `node-hid` cannot open this device on
+// macOS. It ships hidapi 0.15.0, which opens in *seize* mode and does not expose
+// `hid_darwin_set_open_exclusive`; macOS refuses the grab even with "Input
+// Monitoring" granted. `--send` will therefore always fail. The frame was
+// confirmed another way, by scripts/lib/hid-probe.swift, opening
+// non-exclusively through IOKit.
 //
-// Ce fichier reste utile pour une seule chose : l'énumération en lecture seule,
-// qui montre les quatre collections là où IOKit n'expose qu'un périphérique.
+// This file stays useful for one thing only: the read-only enumeration, which
+// shows the four collections where IOKit exposes a single device.
 //
-// Ce fichier existe pour lever une seule incertitude, pas pour devenir le
-// DeviceAdapter : il est destiné à être jeté une fois le vrai transport écrit.
+// It exists to settle one uncertainty, not to become the DeviceAdapter: it is
+// meant to be thrown away once the real transport is written.
 //
-// L'incertitude : le cadre rapporté — rapports de 64 octets, octet 0 = report ID
-// `0x06`, octet 1 = canal `2`, octet 2 = longueur, charge utile UTF-8 ensuite —
-// n'a jamais été vérifié à l'exécution. Tant qu'il ne l'est pas, écrire les
-// bibliothèques d'encodage et leurs tests reviendrait à fabriquer de la
-// confiance : les tests passeraient au vert en encodant du néant.
+// The uncertainty: the reported frame — 64-byte reports, byte 0 = report ID
+// `0x06`, byte 1 = channel `2`, byte 2 = length, UTF-8 payload after that — had
+// never been verified at runtime. Until it is, writing the encoding libraries
+// and their tests would be manufacturing confidence: the tests would go green
+// while encoding nothing.
 //
-// Deux précautions dictent la forme de la sonde :
+// Two precautions dictate the shape of the probe:
 //
-//   1. Elle ne fait rien par défaut. Sans `--send`, elle énumère et affiche la
-//      trame qu'elle enverrait. Écrire sur un périphérique est un effet de bord,
-//      il demande un geste explicite.
-//   2. Sa charge utile est un no-op. Le SDK observé documente « Only the thread
-//      id is required on each entry » et « omit optional fields to leave those
-//      parameters unchanged on the device » : une entrée réduite à `{"id":0}`
-//      prouve donc le cadre sans changer une seule couleur.
+//   1. It does nothing by default. Without `--send`, it enumerates and prints
+//      the frame it would send. Writing to a device is a side effect; it takes
+//      an explicit gesture.
+//   2. Its payload is a no-op. The observed SDK documents "Only the thread id is
+//      required on each entry" and "omit optional fields to leave those
+//      parameters unchanged on the device": an entry reduced to `{"id":0}`
+//      therefore proves the frame without changing a single colour.
 //
-// Elle n'écrit aucun fichier, ne touche ni au stockage Input, ni au firmware,
-// ni à l'app ChatGPT. Voir docs/research/thread-status-feasibility.md.
+// It writes no file, and touches neither Input's storage, nor the firmware, nor
+// the ChatGPT app. See docs/research/thread-status-feasibility.md.
 
 const VENDOR_ID = 0x303a;
 const PRODUCT_ID = 0x8360;
 
-// Le cadre à éprouver, surchargeable pour l'itération bornée de l'étape 2.
+// The frame under test, overridable for the bounded iteration of step 2.
 const DEFAULT_FRAME = { reportId: 0x06, channel: 0x02, size: 64, headerLength: 3 };
 
-// Variantes plausibles si le cadre par défaut échoue. Bornées volontairement :
-// une sonde qui balaie l'espace complet des octets écrit n'importe quoi sur un
-// périphérique qui est aussi un clavier.
+// Plausible variants should the default frame fail. Deliberately bounded: a
+// probe sweeping the full byte space writes anything at all to a device that is
+// also a keyboard.
 const FRAME_VARIANTS = [
   { reportId: 0x06, channel: 0x02, size: 64, headerLength: 3 },
   { reportId: 0x06, channel: 0x02, size: 65, headerLength: 3 },
@@ -90,11 +90,11 @@ function encode(payload, frame) {
   const bytes = Buffer.from(payload, "utf8");
   const capacity = frame.size - frame.headerLength;
   if (bytes.length > capacity) {
-    // La continuation multi-rapports est hors périmètre de la sonde : toutes ses
-    // charges utiles tiennent dans un rapport, par construction.
+    // Multi-report continuation is out of scope for the probe: all of its
+    // payloads fit in one report, by construction.
     throw new Error(
-      `Charge utile de ${bytes.length} octets pour une capacité de ${capacity}. ` +
-        "La sonde n'implémente pas la continuation.",
+      `Payload of ${bytes.length} bytes for a capacity of ${capacity}. ` +
+        "The probe does not implement continuation.",
     );
   }
   const report = Buffer.alloc(frame.size, 0);
@@ -105,13 +105,13 @@ function encode(payload, frame) {
   return report;
 }
 
-// La lecture est volontairement tolérante : savoir *quelle* interprétation
-// fonctionne est précisément ce que la sonde doit rapporter.
+// Reading is deliberately tolerant: knowing *which* interpretation works is
+// precisely what the probe has to report.
 function decode(buffer) {
   const bytes = Buffer.from(buffer);
   const attempts = [
-    { label: "en-tête à 3 octets, longueur en [2]", start: 3, length: bytes[2] },
-    { label: "report ID retiré par hidapi, longueur en [1]", start: 2, length: bytes[1] },
+    { label: "3-byte header, length in [2]", start: 3, length: bytes[2] },
+    { label: "report ID stripped by hidapi, length in [1]", start: 2, length: bytes[1] },
   ];
   for (const attempt of attempts) {
     if (!Number.isInteger(attempt.length) || attempt.length <= 0) continue;
@@ -119,7 +119,7 @@ function decode(buffer) {
     try {
       return { json: JSON.parse(slice), interpretation: attempt.label, raw: slice };
     } catch {
-      // Interprétation suivante.
+      // Next interpretation.
     }
   }
   const text = bytes.toString("utf8");
@@ -129,7 +129,7 @@ function decode(buffer) {
     try {
       return {
         json: JSON.parse(text.slice(first, last + 1)),
-        interpretation: "JSON retrouvé par balayage, cadre non conforme",
+        interpretation: "JSON recovered by scanning, frame does not conform",
         raw: text.slice(first, last + 1),
       };
     } catch {
@@ -146,9 +146,9 @@ async function loadHid() {
     return (await import("node-hid")).default ?? (await import("node-hid"));
   } catch (error) {
     throw new Error(
-      "node-hid est absent. Il est en optionalDependencies :\n" +
+      "node-hid is missing. It sits in optionalDependencies:\n" +
         "  npm install node-hid\n" +
-        `Cause : ${error.message}`,
+        `Cause: ${error.message}`,
     );
   }
 }
@@ -162,9 +162,9 @@ function describe(entry) {
   ].join("  ");
 }
 
-// La collection vendor est préférée si elle existe : sur macOS, l'accès à une
-// collection d'usage clavier est soumis à l'autorisation « Surveillance des
-// saisies », pas celui d'une collection vendor.
+// The vendor collection is preferred when it exists: on macOS, access to a
+// keyboard-usage collection is gated by the "Input Monitoring" permission, where
+// access to a vendor collection is not.
 function chooseInterface(entries) {
   const vendor = entries.find((entry) => (entry.usagePage ?? 0) >= 0xff00);
   return { entry: vendor ?? entries[0], isVendor: Boolean(vendor) };
@@ -177,18 +177,18 @@ function openDevice(HID, entry) {
     const message = String(error?.message ?? error);
     if (/permission|not permitted|cannot open|privile/i.test(message)) {
       throw new Error(
-        "Ouverture refusée par macOS.\n" +
-          "  Mesuré : le refus vise aussi la collection vendor. Le verrou porte donc\n" +
-          "  sur le périphérique — qui expose un usage clavier — et non sur la\n" +
-          "  collection visée. L'autorisation « Surveillance des saisies » est requise.\n" +
+        "macOS refused to open the device.\n" +
+          "  Measured: the refusal covers the vendor collection too. The lock is on\n" +
+          "  the device — which exposes a keyboard usage — not on the targeted\n" +
+          "  collection. The \"Input Monitoring\" permission is required.\n" +
           "\n" +
-          "  Attention au processus responsable : macOS attribue l'autorisation à\n" +
-          "  l'application parente, pas à l'exécutable `node`. Lancée depuis un agent\n" +
-          "  ou un IDE, la sonde demande l'autorisation pour cette application-là.\n" +
-          "  Lancer depuis Terminal.app, et autoriser Terminal :\n" +
-          "    Réglages Système > Confidentialité et sécurité > Surveillance des saisies\n" +
+          "  Mind the responsible process: macOS grants the permission to the parent\n" +
+          "  application, not to the `node` executable. Started from an agent or an\n" +
+          "  IDE, the probe asks for the permission on behalf of that application.\n" +
+          "  Run it from Terminal.app, and authorise Terminal:\n" +
+          "    System Settings > Privacy & Security > Input Monitoring\n" +
           "\n" +
-          `  Message d'origine : ${message}`,
+          `  Original message: ${message}`,
       );
     }
     throw error;
@@ -209,7 +209,7 @@ function exchange(device, payload, frame) {
     const decoded = decode(data);
     if (decoded.json) return { ok: true, ...decoded };
   }
-  return { ok: false, error: "aucune réponse exploitable" };
+  return { ok: false, error: "no usable answer" };
 }
 
 // --- sonde -------------------------------------------------------------------
@@ -223,12 +223,12 @@ const NO_OP_REQUEST = JSON.stringify({
 function reportFrame(frame, payload) {
   const report = encode(payload, frame);
   process.stdout.write(
-    `  cadre       report ID ${hex(frame.reportId)}, canal ${hex(frame.channel)}, ` +
-      `${frame.size} octets, en-tête ${frame.headerLength}\n` +
-      `  charge      ${payload}\n` +
-      `              ${Buffer.byteLength(payload, "utf8")} octets sur ` +
-      `${frame.size - frame.headerLength} disponibles\n` +
-      `  trame       ${report.subarray(0, 16).toString("hex")}…\n`,
+    `  frame       report ID ${hex(frame.reportId)}, channel ${hex(frame.channel)}, ` +
+      `${frame.size} bytes, header ${frame.headerLength}\n` +
+      `  payload     ${payload}\n` +
+      `              ${Buffer.byteLength(payload, "utf8")} bytes of ` +
+      `${frame.size - frame.headerLength} available\n` +
+      `  report      ${report.subarray(0, 16).toString("hex")}…\n`,
   );
 }
 
@@ -238,24 +238,24 @@ async function probe(options) {
     (entry) => entry.vendorId === VENDOR_ID && entry.productId === PRODUCT_ID,
   );
 
-  process.stdout.write(`Périphérique ${hex(VENDOR_ID, 4)}:${hex(PRODUCT_ID, 4)}\n`);
+  process.stdout.write(`Device ${hex(VENDOR_ID, 4)}:${hex(PRODUCT_ID, 4)}\n`);
   if (entries.length === 0) {
-    return fail("  Introuvable. Le Codex Micro est-il connecté, en USB ou en Bluetooth ?");
+    return fail("  Not found. Is the Codex Micro connected, over USB or Bluetooth?");
   }
   for (const entry of entries) process.stdout.write(`${describe(entry)}\n`);
 
   const { entry, isVendor } = chooseInterface(entries);
   process.stdout.write(
-    `  choisie     interface ${entry.interface ?? "?"}, ` +
-      `${isVendor ? "collection vendor" : "collection clavier — autorisation macOS probable"}\n\n`,
+    `  chosen      interface ${entry.interface ?? "?"}, ` +
+      `${isVendor ? "vendor collection" : "keyboard collection — macOS permission likely needed"}\n\n`,
   );
 
   reportFrame(options.frame, NO_OP_REQUEST);
 
   if (!options.send) {
     process.stdout.write(
-      "\n  Rien n'a été écrit. Relancer avec --send pour éprouver le cadre.\n" +
-        "  La charge est un no-op : elle ne change aucune couleur.\n",
+      "\n  Nothing was written. Run again with --send to exercise the frame.\n" +
+        "  The payload is a no-op: it changes no colour.\n",
     );
     return undefined;
   }
@@ -264,13 +264,13 @@ async function probe(options) {
   try {
     const candidates = options.variants ? FRAME_VARIANTS : [options.frame];
     for (const [index, frame] of candidates.entries()) {
-      if (index > 0) process.stdout.write(`\n  variante ${index} :\n`), reportFrame(frame, NO_OP_REQUEST);
+      if (index > 0) process.stdout.write(`\n  variant ${index}:\n`), reportFrame(frame, NO_OP_REQUEST);
       const result = exchange(device, NO_OP_REQUEST, frame);
       if (result.ok) {
         process.stdout.write(
-          `\n  ✔ CADRE CONFIRMÉ\n` +
-            `    interprétation : ${result.interpretation}\n` +
-            `    réponse        : ${result.raw}\n`,
+          `\n  ✔ FRAME CONFIRMED\n` +
+            `    interpretation: ${result.interpretation}\n` +
+            `    answer:         ${result.raw}\n`,
         );
         if (options.map) await mapSlots(device, frame);
         return undefined;
@@ -278,20 +278,20 @@ async function probe(options) {
       process.stdout.write(`  ✘ ${result.error}\n`);
     }
     return fail(
-      "\n  Aucun cadre n'a répondu. Le format d'en-tête est à revoir :\n" +
-        "  relire localement le bundle ChatGPT.app pour fixer l'en-tête et la\n" +
-        "  continuation, puis élargir FRAME_VARIANTS de façon bornée.",
+      "\n  No frame answered. The header format needs revisiting:\n" +
+        "  re-read the ChatGPT.app bundle locally to pin down the header and the\n" +
+        "  continuation, then widen FRAME_VARIANTS in a bounded way.",
     );
   } finally {
     device.close();
   }
 }
 
-// Modifie l'éclairage : réservé à `--map`, jamais fait implicitement.
+// Changes the lighting: reserved for `--map`, never done implicitly.
 async function mapSlots(device, frame) {
   process.stdout.write(
-    "\n  Balayage des six emplacements. L'éclairage est modifié ;\n" +
-      "  l'app ChatGPT le rétablira à sa prochaine poussée, sous 35 à 40 s.\n",
+    "\n  Sweeping the six slots. The lighting is modified;\n" +
+      "  the ChatGPT app will restore it on its next push, within 35 to 40s.\n",
   );
   const restore = () => {
     try {
@@ -302,7 +302,7 @@ async function mapSlots(device, frame) {
       });
       device.write([...encode(off, frame)]);
     } catch {
-      // Le périphérique est peut-être déjà fermé : rien de mieux à tenter.
+      // The device may already be closed: nothing better to try.
     }
   };
   process.on("SIGINT", () => (restore(), process.exit(130)));
@@ -315,19 +315,19 @@ async function mapSlots(device, frame) {
     });
     const result = exchange(device, request, frame);
     process.stdout.write(
-      `    id ${id} → ${result.ok ? "accusé reçu" : `échec : ${result.error}`}` +
-        " — quelle touche s'est allumée ?\n",
+      `    id ${id} → ${result.ok ? "acknowledged" : `failed: ${result.error}`}` +
+        " — which key lit up?\n",
     );
     await new Promise((resolve) => setTimeout(resolve, 1200));
   }
   restore();
   process.stdout.write(
-    "\n  Reporter la correspondance id → touche dans SLOT_THREAD_IDS,\n" +
-      "  puis figer les lignes « rapporté, non revérifié » de la note de recherche.\n",
+    "\n  Record the id → key mapping in SLOT_THREAD_IDS,\n" +
+      "  then freeze the \"reported, not re-verified\" rows of the research note.\n",
   );
 }
 
-// --- entrée ------------------------------------------------------------------
+// --- entry point --------------------------------------------------------------
 
 function parseArguments(argv) {
   const numeric = (flag, fallback) => {

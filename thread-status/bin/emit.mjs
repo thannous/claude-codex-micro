@@ -1,39 +1,39 @@
 #!/usr/bin/env node
 
-// Émetteur de hook. Lit l'événement sur stdin, y joint l'identité du processus
-// prise dans l'environnement, et ajoute une ligne NDJSON au journal.
+// Hook emitter. Reads the event on stdin, attaches the process identity taken
+// from the environment, and appends one NDJSON line to the journal.
 //
-// Trois contraintes dictent la forme de ce fichier :
+// Three constraints dictate the shape of this file:
 //
-//   1. Il ne doit rien écrire sur stdout. La sortie d'un hook UserPromptSubmit
-//      est injectée dans le contexte de la conversation : un journal bavard
-//      finirait dans le prompt de l'utilisateur.
-//   2. Il doit toujours sortir avec le code 0. Un hook en échec remonte une
-//      erreur dans la session, pour un témoin lumineux qui n'a rien d'essentiel.
-//   3. Il ne doit dépendre de rien. Le plugin est distribuable seul, sans le
-//      dépôt : la résolution du chemin du journal est donc dupliquée ici et dans
-//      scripts/thread-status.mjs, qui en est le seul autre lecteur.
+//   1. It must write nothing to stdout. The output of a UserPromptSubmit hook is
+//      injected into the conversation context: a chatty journal would end up in
+//      the user's prompt.
+//   2. It must always exit with code 0. A failing hook raises an error in the
+//      session, over a status light that is not essential to anything.
+//   3. It must depend on nothing. The plugin is distributable on its own,
+//      without the repository: journal path resolution is therefore duplicated
+//      here and in scripts/thread-status.mjs, its only other reader.
 
 import { appendFileSync, mkdirSync, readFileSync, renameSync, statSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-// Le contrat de chemin, dupliqué : voir contrainte 3.
+// The path contract, duplicated: see constraint 3.
 const STATE_DIR =
   process.env.CLAUDE_THREAD_STATUS_DIR || path.join(os.homedir(), ".claude", "thread-status");
 const JOURNAL = path.join(STATE_DIR, "events.ndjson");
 const JOURNAL_MAX_BYTES = 4 * 1024 * 1024;
 
-// CLAUDE_PLUGIN_DATA n'est pas utilisé comme racine d'état : sa valeur diffère
-// selon le mode de chargement du plugin (`…/data/<nom>-inline` avec
-// --plugin-dir, `…/data/<nom>` après installation), ce qui perdrait les
-// emplacements entre le développement et l'usage réel.
+// CLAUDE_PLUGIN_DATA is not used as the state root: its value differs with how
+// the plugin is loaded (`…/data/<name>-inline` under --plugin-dir,
+// `…/data/<name>` once installed), which would lose the slots between
+// development and real use.
 
 function rotate() {
   try {
     if (statSync(JOURNAL).size > JOURNAL_MAX_BYTES) renameSync(JOURNAL, `${JOURNAL}.1`);
   } catch {
-    // Journal absent ou rotation impossible : l'append qui suit le recréera.
+    // Journal missing, or rotation impossible: the append below recreates it.
   }
 }
 
@@ -55,9 +55,8 @@ function main() {
     hostSessionId: process.env.CLAUDE_CODE_HOST_SESSION_ID ?? null,
   };
 
-  // Seuls les champs qui portent une transition sont conservés. Aucun contenu de
-  // message, aucun chemin de transcript, aucune entrée de tool : le journal doit
-  // rester publiable tel quel.
+  // Only the fields that carry a transition are kept. No message content, no
+  // transcript path, no tool input: the journal has to stay publishable as is.
   if (payload.notification_type) record.notificationType = payload.notification_type;
   if (payload.stop_reason) record.stopReason = payload.stop_reason;
   if (payload.reason) record.reason = payload.reason;
@@ -73,6 +72,6 @@ function main() {
 try {
   main();
 } catch {
-  // Contrainte 2 : aucune erreur ne remonte dans la session.
+  // Constraint 2: no error ever surfaces in the session.
 }
 process.exit(0);

@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Colores de las teclas Agent",
+    experimental: "experimental",
     off: "apagada",
     states: {
       blocked: "Se espera una decisión",
@@ -38,7 +39,7 @@ export default {
       free: "Ninguna sesión en esta tecla",
     },
     note:
-      "Enviados por «npm run lighting -- watch» según el estado real de las sesiones de Claude Code. Cierra la app ChatGPT: reescribe estos LED cada 35 a 40 segundos e intercepta las pulsaciones.",
+      "Enviados por «npm run lighting -- watch» según el estado real de las sesiones de Claude Code. Cierra la app ChatGPT: reescribe estos LED cada 35 a 40 segundos e intercepta las pulsaciones. Nada más depende de esto: si la iluminación falla, tus teclas siguen enviando sus atajos.",
   },
   controls: {
     joystick: "Joystick direccional — sin clic",

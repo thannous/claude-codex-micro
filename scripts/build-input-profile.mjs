@@ -15,7 +15,7 @@ for (const argument of process.argv.slice(2)) {
   }
   const value = Number(match[2]);
   if (!Number.isInteger(value) || value < 0) {
-    console.error(`Valeur invalide pour --${match[1]} : ${match[2]}`);
+    console.error(`Invalid value for --${match[1]}: ${match[2]}`);
     process.exit(1);
   }
   options[match[1] === "app-sense-id" ? "appSenseId" : "baseLayerAppSenseId"] = value;
@@ -52,13 +52,13 @@ await writeFile(outputPath, `${JSON.stringify(profile, null, 2)}\n`, {
   flag: "wx",
 });
 
-console.log(`OK: profil Input créé dans ${outputPath}`);
+console.log(`OK: Input profile written to ${outputPath}`);
 console.log(
-  `Layer ${report.layerName}; ${report.preservedLayers} layer(s) préservé(s); AppSense préservé`,
+  `Layer ${report.layerName}; ${report.preservedLayers} layer(s) preserved; AppSense preserved`,
 );
 console.log(
-  `Lien AppSense du layer Claude : ${report.appSenseId ?? "aucun"}` +
-    `${report.appSenseForced ? " (forcé)" : ""}`,
+  `Claude layer AppSense link: ${report.appSenseId ?? "none"}` +
+    `${report.appSenseForced ? " (forced)" : ""}`,
 );
 if (report.baseLayerAppSenseId !== null) {
   console.log(

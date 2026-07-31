@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Agent key colours",
+    experimental: "experimental",
     off: "unlit",
     states: {
       blocked: "A decision is waiting for you",
@@ -38,7 +39,7 @@ export default {
       free: "No session on this key",
     },
     note:
-      "Pushed by \"npm run lighting -- watch\" from live Claude Code session state. Quit the ChatGPT app first: it rewrites these LEDs every 35 to 40 seconds and intercepts the key presses.",
+      "Pushed by \"npm run lighting -- watch\" from live Claude Code session state. Quit the ChatGPT app first: it rewrites these LEDs every 35 to 40 seconds and intercepts the key presses. Nothing else depends on this: if the lighting fails, your keys keep sending their shortcuts.",
   },
   controls: {
     joystick: "Directional joystick — no press",

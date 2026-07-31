@@ -166,6 +166,147 @@ test("validators reject a sensitive key and an unprotected native layer", async 
   assert.match(staleResult.errors.join(" "), /first-free layer selection is forbidden/);
 });
 
+test("preset diagnostics cover every safety contract with actionable messages", async (t) => {
+  const original = await loadPreset(path.join(projectRoot, "profiles", "claude-shortcuts"));
+  const cases = [
+    {
+      name: "manifest identity and compatibility",
+      mutate({ manifest }) {
+        manifest.formatVersion = "2.0.0";
+        manifest.status = "unknown";
+        manifest.target.platform = "Linux";
+        manifest.target.application.bundleId = "wrong.app";
+        manifest.compatibility.input.bundleId = "wrong.input";
+        manifest.compatibility.input.supportedVersions = [];
+      },
+      expected: [
+        /formatVersion must be 1\.0\.0/,
+        /Unsupported preset status/,
+        /target\.platform must be macOS/,
+        /Claude Desktop bundle identifier/,
+        /Input bundle identifier/,
+        /supportedVersions must include/,
+      ],
+    },
+    {
+      name: "preservation and installation",
+      mutate({ manifest }) {
+        manifest.preservation.protectedLayerIndexes = [];
+        manifest.preservation.replaceExisting = true;
+        manifest.preservation.targetLayerPolicy = "first-free";
+        manifest.preservation.targetLayerName = "Other";
+        manifest.preservation.targetAppSenseLink = "replace";
+        manifest.preservation.maxLayers = 7;
+        manifest.preservation.otherProfiles = "changed";
+        manifest.preservation.otherLayers = "changed";
+        manifest.preservation.otherAppSenseLinks = "changed";
+        manifest.installation.mechanism = "direct-write";
+        manifest.installation.applyMode = "automatic";
+        manifest.installation.sourceArtifact = "private-storage";
+        manifest.installation.outputArtifact = "storage-patch";
+        manifest.validation.required = [];
+      },
+      expected: [
+        /index 0 must be protected/,
+        /replaceExisting must be false/,
+        /targetLayerPolicy/,
+        /targetLayerName must be Claude/,
+        /AppSense link must be preserved/,
+        /maxLayers must be 6/,
+        /otherProfiles must be unchanged/,
+        /otherLayers must be unchanged/,
+        /otherAppSenseLinks must be unchanged/,
+        /local profile transform/,
+        /applyMode must be guided-ui/,
+        /sourceArtifact/,
+        /outputArtifact/,
+        /existing Claude layer/,
+      ],
+    },
+    {
+      name: "artifact evidence",
+      mutate({ manifest }) {
+        manifest.installation.layerArtifact = "artifacts/Claude-layer.json";
+        manifest.installation.layerArtifactSha256 = "INVALID";
+        manifest.installation.layerArtifactStatus = "roundtrip-verified";
+        manifest.validation.completed = [];
+      },
+      expected: [
+        /exact lowercase SHA-256/,
+        /official-layer-export-roundtrip evidence/,
+      ],
+      warning: /layer artifact is declared/i,
+    },
+    {
+      name: "mapping identity and controls",
+      mutate({ manifest, mapping }) {
+        mapping.formatVersion = "2.0.0";
+        mapping.presetId = `${manifest.id}-other`;
+        mapping.layer.rgb.hex = "orange";
+        mapping.layer.name = "Other";
+        mapping.controls[1].id = mapping.controls[0].id;
+        mapping.controls = mapping.controls.filter((control) => control.id !== "command-row-right");
+        mapping.controls.find((control) => control.id === "command-row-center-right").action = {
+          type: "shortcut",
+          keys: ["Meta", "X"],
+        };
+        mapping.controls.find((control) => control.id === "encoder-rotate").action = {};
+        mapping.controls.find((control) => control.id === "joystick").action = {};
+        mapping.unusedControls = [];
+      },
+      expected: [
+        /mapping\.formatVersion/,
+        /mapping\.presetId/,
+        /layer RGB/,
+        /layer name/,
+        /duplicate control id/,
+        /missing required control/,
+        /command-row-center-right must exactly match/,
+        /encoder rotation/,
+        /joystick action/,
+        /unused controls/,
+      ],
+    },
+    {
+      name: "activation and exclusions",
+      mutate({ mapping }) {
+        mapping.activation = {
+          type: "manual",
+          application: { bundleId: "wrong.app" },
+          detection: "none",
+          linkPolicy: "replace",
+          duplicatePolicy: "allow",
+        };
+        mapping.excludedByDefault = [];
+      },
+      expected: [
+        /activation must use AppSense/,
+        /AppSense bundle identifier/,
+        /existing link/,
+        /linkPolicy/,
+        /duplicate AppSense links/,
+        /excludedByDefault must include send-message/,
+        /excludedByDefault must include destructive-command/,
+      ],
+    },
+  ];
+
+  for (const scenario of cases) {
+    await t.test(scenario.name, () => {
+      const value = {
+        manifest: structuredClone(original.manifest),
+        mapping: structuredClone(original.mapping),
+      };
+      scenario.mutate(value);
+      const result = validatePreset(value.manifest, value.mapping);
+      const messages = result.errors.join("\n");
+      assert.equal(result.ok, false);
+      for (const expected of scenario.expected) assert.match(messages, expected);
+      if (scenario.warning) assert.match(result.warnings.join("\n"), scenario.warning);
+    });
+  }
+});
+
 test("official profile export inventory protects index 0 and finds one existing Claude layer", async (t) => {
   const temp = await fs.mkdtemp(path.join(os.tmpdir(), "codex-inventory-"));
   t.after(() => fs.rm(temp, { recursive: true, force: true }));

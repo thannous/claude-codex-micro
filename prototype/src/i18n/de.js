@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Farben der Agent-Tasten",
+    experimental: "experimentell",
     off: "aus",
     states: {
       blocked: "Eine Entscheidung wird erwartet",
@@ -38,7 +39,7 @@ export default {
       free: "Keine Sitzung auf dieser Taste",
     },
     note:
-      "Von „npm run lighting -- watch“ aus dem echten Zustand der Claude-Code-Sitzungen gesendet. Die ChatGPT-App muss beendet sein: sie überschreibt diese LEDs alle 35 bis 40 Sekunden und fängt die Tastendrücke ab.",
+      "Von „npm run lighting -- watch“ aus dem echten Zustand der Claude-Code-Sitzungen gesendet. Die ChatGPT-App muss beendet sein: sie überschreibt diese LEDs alle 35 bis 40 Sekunden und fängt die Tastendrücke ab. Nichts anderes hängt davon ab: Schlägt die Beleuchtung fehl, senden die Tasten weiterhin ihre Kürzel.",
   },
   controls: {
     joystick: "Richtungs-Joystick – ohne Druckfunktion",

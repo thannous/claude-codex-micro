@@ -1,11 +1,11 @@
-// Palette des états de session Claude Code, partagée entre l'outillage Node et le
-// GUI. Elle vit dans `shared/` parce que c'est la seule chose que les deux côtés
-// ont besoin de connaître en commun : le réducteur reste dans `scripts/lib/`, où
-// le GUI n'a rien à aller chercher.
+// Claude Code session state palette, shared between the Node tooling and the
+// GUI. It lives in `shared/` because it is the only thing both sides need to
+// know in common: the reducer stays in `scripts/lib/`, where the GUI has nothing
+// to look for.
 //
-// Source unique de vérité. `scripts/lib/thread-slots.mjs` la réexporte pour ne
-// pas casser ses importateurs, et le GUI l'importe pour afficher sa légende — les
-// deux ne peuvent donc pas diverger.
+// Single source of truth. `scripts/lib/thread-slots.mjs` re-exports it so its
+// importers keep working, and the GUI imports it to draw its legend — so the two
+// cannot diverge.
 
 export const STATES = Object.freeze({
   free: "free",
@@ -16,9 +16,9 @@ export const STATES = Object.freeze({
   ended: "ended",
 });
 
-// Teintes reprises de la palette du dépôt. `blocked` est la seule ajoutée :
-// aucune couleur existante ne signifiait « une décision est attendue ».
-// `free` vaut `null` : un emplacement libre est éteint, pas coloré.
+// Hues taken from the repository palette. `blocked` is the only one added: no
+// existing colour meant "a decision is waiting".
+// `free` is `null`: a free slot is unlit, not coloured.
 export const STATE_COLORS = Object.freeze({
   free: null,
   idle: "#6D5A7D",
@@ -28,8 +28,8 @@ export const STATE_COLORS = Object.freeze({
   ended: "#2F2927",
 });
 
-// Ordre de lecture pour une légende : du plus urgent au plus inerte. Ce n'est pas
-// l'ordre de `STATES`, qui suit le cycle de vie d'une session.
+// Reading order for a legend: from the most urgent to the most inert. This is
+// not the order of `STATES`, which follows a session's life cycle.
 export const LEGEND_ORDER = Object.freeze([
   STATES.blocked,
   STATES.running,

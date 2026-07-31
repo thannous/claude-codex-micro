@@ -15,21 +15,23 @@ export const LOCALE_LABELS = {
 const STORAGE_KEY = "codex-micro-locale";
 const DEFAULT_LOCALE = "en";
 
-export function detectLocale() {
+export function detectLocale(storage) {
   try {
-    const saved = window.localStorage.getItem(STORAGE_KEY);
+    const target = storage ?? globalThis.window?.localStorage;
+    const saved = target?.getItem(STORAGE_KEY);
     if (saved && LOCALES[saved]) return saved;
   } catch {
-    // Stockage indisponible : on retombe sur la langue par défaut.
+    // Storage unavailable: fall back to the default language.
   }
   return DEFAULT_LOCALE;
 }
 
-export function saveLocale(locale) {
+export function saveLocale(locale, storage) {
   try {
-    window.localStorage.setItem(STORAGE_KEY, locale);
+    const target = storage ?? globalThis.window?.localStorage;
+    target?.setItem(STORAGE_KEY, locale);
   } catch {
-    // Ignoré : la préférence ne sera simplement pas mémorisée.
+    // Ignored: the preference simply will not be remembered.
   }
 }
 

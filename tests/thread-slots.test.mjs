@@ -29,14 +29,27 @@ function withRoster(rows, snapshot = emptySnapshot(), now = 1) {
   return applyRoster(snapshot, rows, now);
 }
 
-test("les événements de hook se traduisent en états", () => {
+function fullRunningRoster() {
+  const rows = Array.from({ length: SLOT_COUNT }, (_, index) => rosterRow(index + 1));
+  let snapshot = withRoster(rows).snapshot;
+  for (const row of rows) {
+    snapshot = applyHookEvent(
+      snapshot,
+      { event: "UserPromptSubmit", sessionId: row.sessionId },
+      2,
+    ).snapshot;
+  }
+  return { rows, snapshot };
+}
+
+test("hook events translate into states", () => {
   assert.equal(stateFromHookEvent({ event: "SessionStart" }), STATES.idle);
   assert.equal(stateFromHookEvent({ event: "UserPromptSubmit" }), STATES.running);
   assert.equal(stateFromHookEvent({ event: "Stop" }), STATES.done);
   assert.equal(stateFromHookEvent({ event: "SessionEnd" }), STATES.ended);
 });
 
-test("seules les notifications qui attendent une personne bloquent", () => {
+test("only notifications that wait on a person block", () => {
   for (const notificationType of ["permission_prompt", "agent_needs_input", "elicitation_dialog"]) {
     assert.equal(stateFromHookEvent({ event: "Notification", notificationType }), STATES.blocked);
   }
@@ -44,13 +57,13 @@ test("seules les notifications qui attendent une personne bloquent", () => {
     stateFromHookEvent({ event: "Notification", notificationType: "idle_prompt" }),
     STATES.idle,
   );
-  // Un témoin rouge doit signifier « on t'attend » : ces types ne changent rien.
+  // A red light must mean "you are being waited for": these types change nothing.
   for (const notificationType of ["auth_success", "elicitation_complete", "agent_completed"]) {
     assert.equal(stateFromHookEvent({ event: "Notification", notificationType }), null);
   }
 });
 
-test("le roster ouvre les emplacements dans l'ordre et rafraîchit les métadonnées", () => {
+test("the roster opens slots in order and refreshes the metadata", () => {
   const first = withRoster([rosterRow(1), rosterRow(2)]);
   const view = slotView(first.snapshot);
 
@@ -65,7 +78,7 @@ test("le roster ouvre les emplacements dans l'ordre et rafraîchit les métadonn
   assert.equal(renamed.snapshot.slots[0].sessionId, "session-1", "l'emplacement reste collant");
 });
 
-test("un état reçu avant le roster est mis en attente puis promu", () => {
+test("a state received before the roster is held pending, then promoted", () => {
   const early = applyHookEvent(emptySnapshot(), { event: "UserPromptSubmit", sessionId: "session-1" }, 1);
   assert.equal(early.changed, false, "aucun emplacement n'est ouvert par un hook seul");
   assert.equal(early.snapshot.pending["session-1"], STATES.running);
@@ -76,9 +89,9 @@ test("un état reçu avant le roster est mis en attente puis promu", () => {
   assert.equal("session-1" in confirmed.snapshot.pending, false);
 });
 
-test("une session absente du roster ne prend jamais d'emplacement", () => {
-  // Mesuré : les sessions `claude -p` et les sous-agents émettent des hooks sans
-  // apparaître dans `claude agents --json`.
+test("a session missing from the roster never takes a slot", () => {
+  // Measured: `claude -p` sessions and subagents emit hooks without ever showing
+  // up in `claude agents --json`.
   let snapshot = emptySnapshot();
   for (let index = 0; index < 50; index += 1) {
     snapshot = applyHookEvent(snapshot, { event: "Stop", sessionId: `fantome-${index}` }, index).snapshot;
@@ -88,29 +101,24 @@ test("une session absente du roster ne prend jamais d'emplacement", () => {
   assert.ok(snapshot.dropped > 0, "les abandons sont comptés, pas silencieux");
 });
 
-test("un hook manqué est rattrapé par la disparition du roster", () => {
+test("a missed hook is caught by the session leaving the roster", () => {
   const live = withRoster([rosterRow(1)]);
   const busy = applyHookEvent(live.snapshot, { event: "UserPromptSubmit", sessionId: "session-1" }, 2);
   assert.equal(busy.snapshot.slots[0].state, STATES.running);
 
-  // Le processus meurt sans émettre Stop ni SessionEnd.
+  // The process dies without emitting Stop or SessionEnd.
   const gone = withRoster([], busy.snapshot, 3);
   assert.equal(gone.changed, true);
   assert.equal(gone.snapshot.slots[0].state, STATES.ended);
   assert.equal(gone.snapshot.slots[0].sessionId, "session-1", "l'emplacement reste consultable");
 });
 
-test("une session fermée est évincée avant toute session vivante", () => {
-  let snapshot = emptySnapshot();
-  const rows = Array.from({ length: SLOT_COUNT }, (_, index) => rosterRow(index + 1));
-  snapshot = withRoster(rows, snapshot).snapshot;
-  for (const row of rows) {
-    snapshot = applyHookEvent(snapshot, { event: "UserPromptSubmit", sessionId: row.sessionId }, 2).snapshot;
-  }
+test("a closed session is evicted before any live one", () => {
+  const { rows, snapshot: fullSnapshot } = fullRunningRoster();
 
-  // La troisième meurt, une septième arrive : elle doit prendre cet emplacement.
+  // The third one dies and a seventh arrives: it must take that slot.
   const survivors = rows.filter((row) => row.sessionId !== "session-3");
-  snapshot = withRoster(survivors, snapshot, 3).snapshot;
+  let snapshot = withRoster(survivors, fullSnapshot, 3).snapshot;
   assert.equal(snapshot.slots[2].state, STATES.ended);
 
   const crowded = withRoster([...survivors, rosterRow(7)], snapshot, 4);
@@ -123,13 +131,8 @@ test("une session fermée est évincée avant toute session vivante", () => {
   );
 });
 
-test("le débordement est signalé au lieu d'être tronqué en silence", () => {
-  let snapshot = emptySnapshot();
-  const rows = Array.from({ length: SLOT_COUNT }, (_, index) => rosterRow(index + 1));
-  snapshot = withRoster(rows, snapshot).snapshot;
-  for (const row of rows) {
-    snapshot = applyHookEvent(snapshot, { event: "UserPromptSubmit", sessionId: row.sessionId }, 2).snapshot;
-  }
+test("overflow is reported instead of being silently truncated", () => {
+  const { rows, snapshot } = fullRunningRoster();
 
   const overflow = withRoster([...rows, rosterRow(7)], snapshot, 3);
   assert.equal(overflow.snapshot.overflow, 1);
@@ -137,7 +140,7 @@ test("le débordement est signalé au lieu d'être tronqué en silence", () => {
   assert.equal(overflow.snapshot.slots.some((entry) => entry?.sessionId === "session-7"), false);
 });
 
-test("la navigation ne suppose aucune route", () => {
+test("navigation assumes no route", () => {
   assert.equal(resolveNavigation(null).kind, "empty");
 
   const terminal = resolveNavigation({
@@ -152,9 +155,9 @@ test("la navigation ne suppose aucune route", () => {
   assert.equal(closed.kind, "resume");
   assert.equal(closed.sessionId, "session-1");
 
-  // Session hébergée par Claude Desktop : pas de tty. `claude://resume` la
-  // désigne par le `sessionId` du roster — jamais par le `hostSessionId`, qui
-  // regroupe plusieurs sessions.
+  // Session hosted by Claude Desktop: no tty. `claude://resume` addresses it by
+  // the roster's `sessionId` — never by the `hostSessionId`, which groups
+  // several sessions together.
   const hosted = resolveNavigation({
     sessionId: "6f2d3f4a-8c11-4b2e-9a77-0d5e1c8b4a30",
     state: STATES.running,
@@ -165,8 +168,8 @@ test("la navigation ne suppose aucune route", () => {
   assert.equal(hosted.url, "claude://resume?session=6f2d3f4a-8c11-4b2e-9a77-0d5e1c8b4a30");
   assert.equal(hosted.hostSessionId, "local_f92b6e6a");
 
-  // L'application valide la cible par une regex UUID stricte. Un identifiant
-  // d'une autre forme ne donne pas lieu à une URL que le handler refuserait.
+  // The application validates the target against a strict UUID regex. An id of
+  // any other shape yields no URL that the handler would reject.
   const opaque = resolveNavigation({
     sessionId: "session-1",
     state: STATES.running,
@@ -176,21 +179,21 @@ test("la navigation ne suppose aucune route", () => {
   assert.equal(opaque.url, undefined);
 });
 
-test("le tty de `ps` devient un chemin de périphérique qui existe", () => {
-  // La forme que renvoie macOS. Un préfixe `/dev/tty` inconditionnel donnait
-  // `/dev/ttyttys001`, et le focus AppleScript ne trouvait jamais la fenêtre.
+test("the tty from `ps` becomes a device path that exists", () => {
+  // The form macOS returns. An unconditional `/dev/tty` prefix produced
+  // `/dev/ttyttys001`, and the AppleScript focus never found the window.
   assert.equal(ttyDevice("ttys001"), "/dev/ttys001");
-  // La forme courte des autres BSD, qui exige bien le préfixe complet.
+  // The short form of other BSDs, which does need the full prefix.
   assert.equal(ttyDevice("s001"), "/dev/ttys001");
-  // Déjà absolu : conservé tel quel, sans double préfixe.
+  // Already absolute: kept as is, with no double prefix.
   assert.equal(ttyDevice("/dev/ttys006"), "/dev/ttys006");
-  // Sessions sans terminal : Claude Desktop, un IDE, un `claude -p`.
+  // Sessions with no terminal: Claude Desktop, an IDE, a `claude -p`.
   for (const absent of ["??", "-", "", null, undefined]) {
     assert.equal(ttyDevice(absent), null);
   }
 });
 
-test("un instantané corrompu retombe sur six emplacements libres", () => {
+test("a corrupted snapshot falls back to six free slots", () => {
   assert.equal(normalizeSnapshot(null).slots.length, SLOT_COUNT);
   assert.equal(normalizeSnapshot({ slots: "nope" }).slots.length, SLOT_COUNT);
   const partial = normalizeSnapshot({ slots: [{ sessionId: "session-1", state: STATES.done }, 42] });
