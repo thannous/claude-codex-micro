@@ -161,7 +161,15 @@ test("parses optional AppSense ids and preserves the stable error code", () => {
   assert.equal(parseOptionalNonNegativeInteger(""), undefined);
   assert.equal(parseOptionalNonNegativeInteger(" 12 "), 12);
   assert.equal(parseOptionalNonNegativeInteger(0), 0);
-  for (const value of ["-1", "1.5", "not-a-number"]) {
+  for (const value of [
+    "-1",
+    "1.5",
+    "0x10",
+    "0b11",
+    "1e3",
+    "9007199254740992",
+    "not-a-number",
+  ]) {
     assert.throws(() => parseOptionalNonNegativeInteger(value), {
       code: "INVALID_APPSENSE_ID",
     });

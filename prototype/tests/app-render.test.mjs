@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { after, before, test } from "node:test";
-import React from "../node_modules/react/index.js";
-import { renderToString } from "../node_modules/react-dom/server.node.js";
-import { createServer } from "../node_modules/vite/dist/node/index.js";
+import React from "react";
+import { renderToString } from "react-dom/server";
+import { createServer } from "vite";
 import { LOCALES } from "../src/i18n/index.js";
 import { createProfileSession } from "../src/profile-session.js";
 
@@ -85,6 +85,7 @@ test("presents catalogue, custom, joystick, and fallback entries consistently", 
   assert.equal(presenter.entryExportLabel(custom), "⌘⇧K");
   assert.equal(presenter.entryExportLabel(joystick), "4 DIR");
   assert.equal(presenter.entryExportLabel("unknown"), "NONE");
+  assert.equal(presenter.entryExportLabel("toString"), "NONE");
   assert.equal(presenter.entryLabel(custom, t), "actions.custom.label");
   assert.equal(presenter.entryLabel(joystick, t), "actions.joystickCustom.label");
   assert.equal(presenter.entryShortcut(custom, t), "⌘⇧K");
@@ -92,6 +93,8 @@ test("presents catalogue, custom, joystick, and fallback entries consistently", 
   assert.ok(presenter.entryIcon(custom));
   assert.ok(presenter.entryIcon(joystick));
   assert.ok(presenter.entryIcon("unknown"));
+  assert.equal(presenter.entryLabel("constructor", t), "actions.none.label");
+  assert.equal(presenter.entryShortcut("toString", t), "actions.none.shortcut");
   const control = { id: "key-1", shortLabel: "C1" };
   assert.equal(presenter.controlLabel(control, t), "controls.key-1");
   assert.equal(presenter.controlBadgeLabel(control, "none"), "C1");

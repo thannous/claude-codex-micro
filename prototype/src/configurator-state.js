@@ -213,8 +213,8 @@ export function indexDuplicateKeyControls(controls, mapping, selectedControlId) 
 export function parseOptionalNonNegativeInteger(value) {
   const trimmed = String(value).trim();
   if (trimmed === "") return undefined;
-  const parsed = Number(trimmed);
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  const parsed = /^\d+$/.test(trimmed) ? Number(trimmed) : Number.NaN;
+  if (!Number.isSafeInteger(parsed)) {
     const error = new Error("Expected a non-negative integer.");
     error.code = "INVALID_APPSENSE_ID";
     throw error;

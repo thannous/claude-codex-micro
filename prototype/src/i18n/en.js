@@ -191,6 +191,7 @@ export default {
     replace: "Replace",
     chooseJson: "Choose JSON",
     goExport: "Review and export",
+    retry: "Try again",
   },
   wizard: {
     step1Title: "Load the Input export",
@@ -292,6 +293,8 @@ export default {
       "This file is not valid JSON. Export the profile from Work Louder Input, then try again.",
     invalidFile: "Invalid Input file.",
     buildFailed: "Generation failed.",
+    exportPanelLoad:
+      "The export panel could not be loaded. Check your connection, then try again.",
     previousKept: "The previous valid backup is still loaded.",
     EMPTY_FILE: "The JSON file is empty.",
     WRONG_DEVICE: "This backup does not come from a Codex Micro.",

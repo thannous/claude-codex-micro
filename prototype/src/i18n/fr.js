@@ -191,6 +191,7 @@ export default {
     replace: "Remplacer",
     chooseJson: "Choisir le JSON",
     goExport: "Vérifier et exporter",
+    retry: "Réessayer",
   },
   wizard: {
     step1Title: "Charger l’export Input",
@@ -292,6 +293,8 @@ export default {
       "Ce fichier n’est pas un JSON valide. Exportez le profil depuis Work Louder Input, puis réessayez.",
     invalidFile: "Fichier Input invalide.",
     buildFailed: "Génération impossible.",
+    exportPanelLoad:
+      "Le panneau d’export n’a pas pu être chargé. Vérifiez votre connexion, puis réessayez.",
     previousKept: "La sauvegarde valide précédente reste chargée.",
     EMPTY_FILE: "Le fichier JSON est vide.",
     WRONG_DEVICE: "Cette sauvegarde ne provient pas d’un Codex Micro.",

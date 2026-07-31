@@ -28,6 +28,14 @@ async function writeJson(filePath, value) {
   await fs.writeFile(filePath, `${JSON.stringify(value, null, 2)}\n`);
 }
 
+function requiredControl(mapping, controlId) {
+  const control = mapping.controls.find(
+    (candidate) => candidate.id === controlId,
+  );
+  assert.ok(control, `Expected fixture control ${controlId}`);
+  return control;
+}
+
 function officialProfileExport() {
   return {
     keyboard: "codex_micro",
@@ -244,14 +252,17 @@ test("preset diagnostics cover every safety contract with actionable messages", 
         mapping.presetId = `${manifest.id}-other`;
         mapping.layer.rgb.hex = "orange";
         mapping.layer.name = "Other";
-        mapping.controls[1].id = mapping.controls[0].id;
+        requiredControl(mapping, "command-row-center-left").id = requiredControl(
+          mapping,
+          "command-row-left",
+        ).id;
         mapping.controls = mapping.controls.filter((control) => control.id !== "command-row-right");
-        mapping.controls.find((control) => control.id === "command-row-center-right").action = {
+        requiredControl(mapping, "command-row-center-right").action = {
           type: "shortcut",
           keys: ["Meta", "X"],
         };
-        mapping.controls.find((control) => control.id === "encoder-rotate").action = {};
-        mapping.controls.find((control) => control.id === "joystick").action = {};
+        requiredControl(mapping, "encoder-rotate").action = {};
+        requiredControl(mapping, "joystick").action = {};
         mapping.unusedControls = [];
       },
       expected: [

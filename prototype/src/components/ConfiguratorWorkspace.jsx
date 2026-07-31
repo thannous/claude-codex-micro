@@ -145,6 +145,7 @@ export const ConfiguratorWorkspace = memo(function ConfiguratorWorkspace({
                 return (
                   <button
                     key={control.id}
+                    type="button"
                     className={`key-hotspot key-hotspot--${control.type}${
                       control.className ? ` ${control.className}` : ""
                     }${panelOpen && control.id === selectedControlId ? " is-selected" : ""}`}
@@ -202,14 +203,18 @@ export const ConfiguratorWorkspace = memo(function ConfiguratorWorkspace({
               ))}
             </div>
 
-            <button className="configure-button" onClick={() => onOpenConfigurator("key-1")}>
+            <button
+              type="button"
+              className="configure-button"
+              onClick={() => onOpenConfigurator("key-1")}
+            >
               <SlidersHorizontal size={18} />
               {t("buttons.configureKeys")}
               <ChevronRight size={18} />
             </button>
           </div>
 
-          <button className="generate-button" onClick={onOpenExport}>
+          <button type="button" className="generate-button" onClick={onOpenExport}>
             <ArrowDownToLine size={18} />
             {t("buttons.generateJson")}
           </button>
@@ -221,6 +226,7 @@ export const ConfiguratorWorkspace = memo(function ConfiguratorWorkspace({
               return (
                 <button
                   key={control.id}
+                  type="button"
                   aria-label={t("hotspot.configure", {
                     control: controlLabel(control, t),
                     action: entryLabel(entry, t),

@@ -110,7 +110,7 @@ test("a missed hook is caught by the session leaving the roster", () => {
   const gone = withRoster([], busy.snapshot, 3);
   assert.equal(gone.changed, true);
   assert.equal(gone.snapshot.slots[0].state, STATES.ended);
-  assert.equal(gone.snapshot.slots[0].sessionId, "session-1", "l'emplacement reste consultable");
+  assert.equal(gone.snapshot.slots[0].sessionId, "session-1", "the slot remains inspectable");
 });
 
 test("a closed session is evicted before any live one", () => {

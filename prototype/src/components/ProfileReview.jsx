@@ -100,7 +100,11 @@ export function ProfileReview({
                 <code>{review.sha}</code>
               </p>
             )}
-            <button className="review-download" onClick={onDownloadReview}>
+            <button
+              type="button"
+              className="review-download"
+              onClick={onDownloadReview}
+            >
               <ArrowDownToLine size={18} />
               {t("buttons.download")}
             </button>
@@ -109,6 +113,7 @@ export function ProfileReview({
           <div className="review-empty">
             <p>{profile.source ? t("review.ready") : t("review.needProfile")}</p>
             <button
+              type="button"
               className="review-run"
               disabled={!profile.source}
               onClick={onRunReview}

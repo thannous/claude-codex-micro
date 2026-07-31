@@ -15,7 +15,18 @@ export function detectTheme(storage) {
 
 export function nextTheme(theme) {
   const index = THEME_ORDER.indexOf(theme);
-  return THEME_ORDER[(index + 1) % THEME_ORDER.length] ?? THEME_ORDER[0];
+  if (index < 0) return THEME_ORDER[0];
+  return THEME_ORDER[(index + 1) % THEME_ORDER.length];
+}
+
+export function saveTheme(theme, storage) {
+  try {
+    const target = storage ?? globalThis.window?.localStorage;
+    target?.setItem(THEME_STORAGE_KEY, theme);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function useTheme() {
@@ -30,11 +41,7 @@ export function useTheme() {
     };
 
     apply();
-    try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-    } catch {
-      // Private browsing: the preference just will not persist.
-    }
+    saveTheme(theme);
 
     if (theme !== "auto" || !media?.addEventListener) return undefined;
     media.addEventListener("change", apply);

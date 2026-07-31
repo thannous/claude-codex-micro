@@ -1,12 +1,55 @@
-import { lazy, Suspense } from "react";
+import { Component, lazy, Suspense, useMemo, useState } from "react";
 import { ArrowDownToLine, ChevronRight, RotateCcw, X } from "lucide-react";
 import { controlLabel, entryLabel, entryShortcut } from "../configurator-presenter.js";
 import { loadProfileExportPanel } from "../profile-panel-loader.js";
 import { KeyAssignmentEditor } from "./KeyAssignmentEditor.jsx";
 
-const ProfileExportPanel = lazy(() =>
-  loadProfileExportPanel().then((module) => ({ default: module.ProfileExportPanel })),
-);
+function loadProfileExportComponent() {
+  return loadProfileExportPanel().then((module) => ({
+    default: module.ProfileExportPanel,
+  }));
+}
+
+class ProfilePanelErrorBoundary extends Component {
+  state = { failed: false };
+
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+
+  render() {
+    return this.state.failed ? this.props.fallback : this.props.children;
+  }
+}
+
+function RetryableProfileExportPanel({ t, ...props }) {
+  const [attempt, setAttempt] = useState(0);
+  const ProfileExportPanel = useMemo(
+    () => lazy(loadProfileExportComponent),
+    [attempt],
+  );
+
+  const fallback = (
+    <div className="profile-panel-error profile-error" role="alert">
+      <p>{t("errors.exportPanelLoad")}</p>
+      <button
+        type="button"
+        className="profile-load-button"
+        onClick={() => setAttempt((current) => current + 1)}
+      >
+        {t("buttons.retry")}
+      </button>
+    </div>
+  );
+
+  return (
+    <ProfilePanelErrorBoundary key={attempt} fallback={fallback}>
+      <Suspense fallback={<p className="panel-note">{t("loader.hint")}</p>}>
+        <ProfileExportPanel t={t} {...props} />
+      </Suspense>
+    </ProfilePanelErrorBoundary>
+  );
+}
 
 export function MappingDialog({
   t,
@@ -74,6 +117,7 @@ export function MappingDialog({
           </div>
         )}
         <button
+          type="button"
           ref={refs.closeButton}
           className="icon-button"
           aria-label={t("dialog.close")}
@@ -104,34 +148,37 @@ export function MappingDialog({
         )}
 
         {panelMode === "export" && (
-          <Suspense fallback={<p className="panel-note">{t("loader.hint")}</p>}>
-            <ProfileExportPanel
-              t={t}
-              refs={refs}
-              profile={profile}
-              onLoadSourceProfile={onLoadSourceProfile}
-              onResolveMappingConflict={onResolveMappingConflict}
-              onAppSenseChange={onAppSenseChange}
-              onRunReview={onRunReview}
-              onDownloadReview={onDownloadReview}
-            />
-          </Suspense>
+          <RetryableProfileExportPanel
+            t={t}
+            refs={refs}
+            profile={profile}
+            onLoadSourceProfile={onLoadSourceProfile}
+            onResolveMappingConflict={onResolveMappingConflict}
+            onAppSenseChange={onAppSenseChange}
+            onRunReview={onRunReview}
+            onDownloadReview={onDownloadReview}
+          />
         )}
       </div>
 
       <div className="dialog-footer">
         {panelMode === "key" ? (
-          <button className="export-button export-button--full" onClick={onSwitchToExport}>
+          <button
+            type="button"
+            className="export-button export-button--full"
+            onClick={onSwitchToExport}
+          >
             {t("buttons.goExport")}
             <ChevronRight size={18} />
           </button>
         ) : (
           <>
-            <button className="reset-button" onClick={onResetMapping}>
+            <button type="button" className="reset-button" onClick={onResetMapping}>
               <RotateCcw size={17} />
               {t("buttons.reset")}
             </button>
             <button
+              type="button"
               className="export-button"
               onClick={profile.source ? onRunReview : onScrollToLoader}
             >

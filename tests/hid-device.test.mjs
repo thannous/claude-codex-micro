@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
 import test from "node:test";
 import {
+  CALL_SPACING_MS,
   DeviceSession,
   PRODUCT_ID,
   VENDOR_ID,
@@ -91,7 +92,7 @@ test("keeps exactly one request in flight and starts the next after its response
   const second = session.call("second", null, 2);
 
   await waitFor(() => handle.writes.length === 1, "the first queued request");
-  await new Promise((resolve) => setTimeout(resolve, 65));
+  await new Promise((resolve) => setTimeout(resolve, CALL_SPACING_MS + 15));
   assert.equal(handle.writes.length, 1, "the second request must wait for the first response");
 
   emitRpc(handle, { result: "one", id: 1 });

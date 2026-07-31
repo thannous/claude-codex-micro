@@ -29,7 +29,7 @@ export const PRODUCT_ID = 0x8360;
 export const VENDOR_USAGE_PAGE = 0xff00;
 
 const CALL_TIMEOUT_MS = 10000;
-const CALL_SPACING_MS = 50;
+export const CALL_SPACING_MS = 50;
 
 export class DeviceError extends Error {
   constructor(code, message) {

@@ -6,6 +6,10 @@ import {
   isCustomJoystick,
 } from "./configurator-state.js";
 
+function actionFor(entry) {
+  return Object.hasOwn(ACTIONS, entry) ? ACTIONS[entry] : ACTIONS.none;
+}
+
 export function entryFor(mapping, controlId) {
   return mapping[controlId] ?? "none";
 }
@@ -13,19 +17,19 @@ export function entryFor(mapping, controlId) {
 export function entryExportLabel(entry) {
   if (isCustomJoystick(entry)) return `${entry.directions} DIR`;
   if (isCustom(entry)) return formatCustomKeys(entry.keys);
-  return ACTIONS[entry]?.exportLabel ?? ACTIONS.none.exportLabel;
+  return actionFor(entry).exportLabel;
 }
 
 export function entryLabel(entry, t) {
   if (isCustomJoystick(entry)) return t("actions.joystickCustom.label");
   if (isCustom(entry)) return t("actions.custom.label");
-  return t(`actions.${entry}.label`);
+  return t(`actions.${actionFor(entry).id}.label`);
 }
 
 export function entryIcon(entry) {
   if (isCustomJoystick(entry)) return Move;
   if (isCustom(entry)) return Keyboard;
-  return ACTIONS[entry]?.icon ?? ACTIONS.none.icon;
+  return actionFor(entry).icon;
 }
 
 export function entryShortcut(entry, t) {
@@ -33,7 +37,8 @@ export function entryShortcut(entry, t) {
     return t("actions.joystickCustom.shortcut", { count: entry.directions });
   }
   if (isCustom(entry)) return formatCustomKeys(entry.keys);
-  return ACTIONS[entry]?.shortcut ?? t(`actions.${entry}.shortcut`);
+  const action = actionFor(entry);
+  return action.shortcut ?? t(`actions.${action.id}.shortcut`);
 }
 
 export function controlLabel(control, t) {

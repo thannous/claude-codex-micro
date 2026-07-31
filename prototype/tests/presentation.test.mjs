@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { detectTheme, nextTheme, THEME_STORAGE_KEY } from "../src/hooks/use-theme.js";
+import {
+  detectTheme,
+  nextTheme,
+  saveTheme,
+  THEME_STORAGE_KEY,
+} from "../src/hooks/use-theme.js";
 
 test("detects and cycles themes with storage failures isolated", () => {
   assert.equal(detectTheme({ getItem: (key) => key === THEME_STORAGE_KEY ? "dark" : null }), "dark");
@@ -10,4 +15,21 @@ test("detects and cycles themes with storage failures isolated", () => {
   assert.equal(nextTheme("light"), "dark");
   assert.equal(nextTheme("dark"), "auto");
   assert.equal(nextTheme("unknown"), "auto");
+});
+
+test("persists themes through an injectable, failure-safe storage boundary", () => {
+  const writes = [];
+  assert.equal(
+    saveTheme("dark", { setItem: (...args) => writes.push(args) }),
+    true,
+  );
+  assert.deepEqual(writes, [[THEME_STORAGE_KEY, "dark"]]);
+  assert.equal(
+    saveTheme("light", {
+      setItem() {
+        throw new Error("blocked");
+      },
+    }),
+    false,
+  );
 });

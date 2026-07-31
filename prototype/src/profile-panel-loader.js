@@ -1,6 +1,5 @@
-let profilePanelPromise;
+import { createRetryableLoader } from "./retryable-loader.js";
 
-export function loadProfileExportPanel() {
-  profilePanelPromise ??= import("./components/ProfileExportPanel.jsx");
-  return profilePanelPromise;
-}
+export const loadProfileExportPanel = createRetryableLoader(
+  () => import("./components/ProfileExportPanel.jsx"),
+);

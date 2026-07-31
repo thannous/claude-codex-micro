@@ -41,15 +41,18 @@ import {
   profileSessionReducer,
 } from "./profile-session.js";
 import { loadProfileExportPanel } from "./profile-panel-loader.js";
+import { createRetryableLoader } from "./retryable-loader.js";
 import { useTheme } from "./hooks/use-theme.js";
 
 const DEFAULT_CONTROL_ID = "key-1";
 const TOAST_DURATION_MS = 6000;
-let profileWorkflowPromise;
+const loadProfileWorkflow = createRetryableLoader(
+  () => import("./profile-workflow.js"),
+);
 
-function loadProfileWorkflow() {
-  profileWorkflowPromise ??= import("./profile-workflow.js");
-  return profileWorkflowPromise;
+function prefetchProfileModules() {
+  loadProfileWorkflow().catch(() => {});
+  loadProfileExportPanel().catch(() => {});
 }
 
 export function App() {
@@ -281,15 +284,13 @@ export function App() {
   }, [mapping, profile.appSenseIds, profile.source, scrollToLoader, scrollToReview, t]);
 
   const switchToExport = useCallback(() => {
-    void loadProfileWorkflow();
-    void loadProfileExportPanel();
+    prefetchProfileModules();
     setPanelMode("export");
     if (profile.source) void runReview();
   }, [profile.source, runReview]);
 
   const openReviewFromHero = useCallback(() => {
-    void loadProfileWorkflow();
-    void loadProfileExportPanel();
+    prefetchProfileModules();
     returnFocusRef.current = document.activeElement;
     setPanelOpen(true);
     setPanelMode("export");

@@ -35,7 +35,12 @@ export function KeyAssignmentEditor({
   onChangeFinalKey,
 }) {
   const duplicateControlFor = (entry) => {
-    if (entry === "none" || selectedControl.type !== "key") return null;
+    if (
+      entry === "none" ||
+      (selectedControl.type !== "key" && !editingJoystickSlot)
+    ) {
+      return null;
+    }
     return duplicateKeyControls.get(entryFingerprint(entry)) ?? null;
   };
 
@@ -96,6 +101,7 @@ export function KeyAssignmentEditor({
               return (
                 <button
                   key={action.id}
+                  type="button"
                   className={active ? "is-active" : ""}
                   aria-pressed={active}
                   onClick={() => onAssignEntry(action.id)}
@@ -129,6 +135,7 @@ export function KeyAssignmentEditor({
 
             {(selectedControl.type === "key" || editingJoystickSlot) && (
               <button
+                type="button"
                 className={isCustom(activeEntry) ? "is-active" : ""}
                 aria-pressed={isCustom(activeEntry)}
                 onClick={() => {

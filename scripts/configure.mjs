@@ -21,7 +21,7 @@ in the default browser. Extra options are passed to Vite.`);
     process.exit(error.exitCode ?? 1);
   }
 
-  console.log("Ouverture du configurateur Codex Micro…");
+  console.log("Opening the Codex Micro configurator…");
 
   const gui = spawn(
     npmCommand,

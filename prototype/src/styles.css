@@ -411,14 +411,13 @@ a:focus-visible {
 
 .keycap-action-asset {
   position: absolute;
-  /* Centré sur le hotspot, qui recouvre la face de la keycap. */
+  /* Centered on the hotspot, which covers the keycap face. */
   top: 50%;
   left: 50%;
   display: grid;
-  /* Le disque doit couvrir la sérigraphie de la keycap sur la photo, sinon le
-     picto d'origine reste visible derrière l'icône de l'action. Il est donc
-     nettement plus large que l'icône, et sa zone pleine est poussée vers
-     l'extérieur — le dégradé ne s'éteint qu'au bord. */
+  /* The disc covers the keycap legend in the photo so the original symbol does
+     not remain visible behind the action icon. Its solid area therefore extends
+     well beyond the icon and only fades near the outer edge. */
   width: 13.2cqw;
   height: 13.2cqw;
   place-items: center;
@@ -455,10 +454,9 @@ a:focus-visible {
    follow their disc, which is itself sized against the photo. The proportions
    keep the original ones, 19px within 38px for a keycap and 13px within 24px for
    the wheel press. */
-/* La marque Claude est un `img` porteur d'attributs de taille, pas un `svg` :
-   sans cette règle la touche Envoyer gardait une icône figée pendant que les
-   autres suivaient la photo. Le pourcentage est calculé pour que l'icône garde
-   sa taille absolue après l'élargissement du disque. */
+/* The Claude mark is a sized `img`, not an `svg`. This rule lets the Send icon
+   scale with the photo like the others. The percentage preserves its absolute
+   size after widening the disc. */
 .keycap-action-asset > svg,
 .keycap-action-asset > .claude-mark-icon {
   width: 35%;
@@ -1065,6 +1063,14 @@ kbd {
   color: var(--accent-dark);
   font-size: 10px;
   line-height: 1.4;
+}
+
+.profile-panel-error {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .profile-error p {

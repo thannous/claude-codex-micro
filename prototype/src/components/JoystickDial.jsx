@@ -79,8 +79,9 @@ export function JoystickDial({
         role="group"
         aria-label={sectorTitle}
       >
-        <title>{closeTitle}</title>
-        <path className="joystick-dial-close" d={geometry.close.path} />
+        <path className="joystick-dial-close" d={geometry.close.path}>
+          <title>{closeTitle}</title>
+        </path>
         <text
           className="joystick-dial-glyph"
           x={geometry.close.centroid[0]}

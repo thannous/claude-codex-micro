@@ -88,7 +88,7 @@ test("the six slots become state lighting entries", () => {
   assert.equal(entries[2].c, colorToInt(STATE_COLORS.idle));
 });
 
-test("slotsToThreadEntries exige exactement six lignes", () => {
+test("slotsToThreadEntries requires exactly six rows", () => {
   assert.throws(() => slotsToThreadEntries([{ state: STATES.free }]), /Expected 6 slots/);
   assert.throws(() => slotsToThreadEntries(null), /Expected 6 slots/);
 });
