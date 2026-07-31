@@ -1,142 +1,140 @@
-# Molette Effort Claude — calibrage de la macro
+[English](effort-wheel-calibration.md) · [Français](../fr/research/effort-wheel-calibration.md)
+
+# Claude Effort wheel — macro calibration
 
 ## Verdict
 
-La macro du mode Effort porte deux temporisations, pour environ **90 ms par
-cran** : `80 ms` sur la libération de ⌘ et `10 ms` sur `Esc`. L'étape de la
-flèche reste volontairement à `0`.
+The Effort mode macro carries two delays, for roughly **90ms per notch**: `80ms`
+on the ⌘ release and `10ms` on `Esc`. The arrow step deliberately stays at `0`.
 
-La première version de cette macro coûtait 900 ms par cran. Le facteur dix ne
-vient pas d'avoir essayé plus de valeurs, mais d'avoir changé la **forme** de la
-macro pour que chaque mesure devienne interprétable.
+The first version of this macro cost 900ms per notch. The factor of ten does not
+come from trying more values, but from changing the **shape** of the macro so
+that each measurement became interpretable.
 
-## Pourquoi `Esc` est obligatoire
+## Why `Esc` is mandatory
 
-`⌘⇧E` est une **bascule**, vérifié sur Claude Desktop : l'envoyer deux fois de
-suite ouvre puis referme le sélecteur.
+`⌘⇧E` is a **toggle**, verified on Claude Desktop: sending it twice in a row
+opens then closes the picker.
 
-Chaque cran doit donc refermer le sélecteur lui-même. Sans le `Esc` final, le
-cran suivant refermerait le sélecteur au lieu de l'ouvrir, et le niveau serait
-sauté. C'est aussi la cause la plus probable des niveaux perdus lors d'un
-balayage rapide : deux macros qui se chevauchent désynchronisent la bascule.
+Every notch therefore has to close the picker itself. Without the final `Esc`,
+the next notch would close the picker instead of opening it, and the level would
+be skipped. That is also the most likely cause of levels lost during a fast
+sweep: two overlapping macros desynchronise the toggle.
 
-## Pourquoi la forme est asymétrique
+## Why the shape is asymmetric
 
-Input ne documente pas si le champ `delay` d'une étape s'applique **avant** ou
-**après** cette étape, et aucune source ne permet de le trancher : l'application
-n'exécute jamais les macros, elle écrit `keymap.json` sur la flash de la carte et
-le firmware seul interprète le champ.
+Input does not document whether a step's `delay` field applies **before** or
+**after** that step, and no source settles it: the application never executes the
+macros, it writes `keymap.json` to the board's flash and the firmware alone
+interprets the field.
 
-Tant que l'attente était répartie sur deux étapes, les deux lectures donnaient au
-sélecteur des durées différentes, et chaque essai mesurait donc autre chose que
-ce qu'on croyait régler. En posant toute l'attente sur la libération de ⌘ et `0`
-sur la flèche, les deux lectures deviennent équivalentes :
+As long as the wait was split across two steps, the two readings gave the picker
+different durations, and every attempt was therefore measuring something other
+than what you thought you were tuning. Putting all the wait on the ⌘ release and
+`0` on the arrow makes both readings equivalent:
 
-| lecture | déroulé | attente reçue par le sélecteur |
+| reading | sequence | wait the picker receives |
 | --- | --- | --- |
-| « après » | ⌘ relâché, attente, flèche | la constante |
-| « avant » | attente, ⌘ relâché, flèche | la constante |
+| "after" | ⌘ released, wait, arrow | the constant |
+| "before" | wait, ⌘ released, arrow | the constant |
 
-Le délai d'ouverture devient alors exactement égal à la constante. Ne pas
-répartir cette attente sur les deux étapes : cela double ce délai sans rien
-garantir de plus. Le coût total d'un cran inclut aussi les `10 ms` de retour
-visuel portés par `Esc`.
+The opening delay then becomes exactly equal to the constant. Do not split this
+wait across both steps: that doubles the delay and guarantees nothing more. The
+total cost of a notch also includes the `10ms` of visual feedback carried by
+`Esc`.
 
-## Calibrage mesuré sur matériel
+## Calibration measured on hardware
 
-Échelle testée sur Codex Micro, une valeur par touche, toutes en « effort +1 »
-pour que le sens ne soit pas une variable :
+Scale tested on the Codex Micro, one value per key, all on "effort +1" so that
+direction is not a variable:
 
-| attente d'ouverture | résultat |
+| opening wait | result |
 | --- | --- |
-| 120 ms | change le niveau |
-| 80 ms | change le niveau |
-| 60 ms | change le niveau |
-| 40 ms | change le niveau |
-| 20 ms | échoue |
-| 0 ms | échoue |
+| 120ms | changes the level |
+| 80ms | changes the level |
+| 60ms | changes the level |
+| 40ms | changes the level |
+| 20ms | fails |
+| 0ms | fails |
 
-Le plancher est donc entre 20 et 40 ms. La valeur retenue, `80 ms`, double le
-plancher mesuré.
+The floor is therefore between 20 and 40ms. The value chosen, `80ms`, doubles the
+measured floor.
 
-`40 ms` a été essayé en exploitation et jugé moins fiable qu'en test isolé. C'est
-cohérent : le plancher a été mesuré sur un sélecteur déjà chaud, alors que le
-temps de montage réel dépend de la charge du renderer. **Un plancher n'est pas
-une valeur d'exploitation.** En dessous d'environ 100 ms la différence de latence
-n'est pas perceptible, alors qu'un niveau perdu l'est immédiatement : la bonne
-cible est la plus petite valeur qui ne rate jamais, pas la plus petite qui
-marche.
+`40ms` was tried in real use and judged less reliable than in isolated testing.
+That is consistent: the floor was measured on an already-warm picker, whereas the
+real mount time depends on the renderer's load. **A floor is not a production
+value.** Below roughly 100ms the difference in latency is not perceptible,
+whereas a lost level is noticed immediately: the right target is the smallest
+value that never misses, not the smallest one that works.
 
-L'échec en dessous du plancher n'est pas bruyant. La flèche part avant que le
-sélecteur ait le focus, et le changement est perdu sans message d'erreur. Toute
-baisse doit donc être validée par plusieurs répétitions **et** par une première
-ouverture à froid, au retour d'une autre application.
+Failure below the floor is quiet. The arrow leaves before the picker has focus,
+and the change is lost with no error message. Any reduction must therefore be
+validated over several repetitions **and** on a cold first open, coming back from
+another application.
 
-## Pourquoi `Esc` porte 10 ms
+## Why `Esc` carries 10ms
 
-Sans attente sur cette étape, la flèche et `Esc` sont émis sans écart et Claude
-les traite dans le même tour de boucle : le sélecteur s'ouvre et se referme sans
-jamais peindre une image montrant le slider à son nouveau niveau. Le niveau
-change bien, mais **à l'aveugle** — l'effet visible n'est qu'un clignotement.
+Without a wait on that step, the arrow and `Esc` are emitted with no gap and
+Claude handles them in the same loop turn: the picker opens and closes without
+ever painting a frame showing the slider at its new level. The level does change,
+but **blind** — the visible effect is only a flicker.
 
-`10 ms` suffisent à laisser passer une image, et le niveau atteint devient
-lisible. Cette attente est payée **après** que le niveau a changé : elle allonge
-la macro sans retarder son effet.
+`10ms` is enough to let one frame through, and the level reached becomes
+readable. This wait is paid **after** the level has changed: it lengthens the
+macro without delaying its effect.
 
-Conséquence méthodologique : les 300 ms que portait la première version de la
-macro à cet endroit n'étaient pas du temps mort. Elles avaient été supprimées sur
-le seul critère de la latence, ce qui a fait perdre le retour visuel sans que le
-critère retenu puisse le détecter.
+Methodological consequence: the 300ms the first version of the macro carried at
+that spot were not dead time. They had been removed on the sole criterion of
+latency, which lost the visual feedback without the chosen criterion being able
+to detect it.
 
-## Sens de rotation
+## Direction of rotation
 
-La cellule d'encodeur d'indice `0` est **physiquement horaire**, confirmé sur
-matériel. C'est l'inverse de ce que suggèrent les noms du gabarit d'usine, qui
-nomme les trois cellules `KV_OAI_ENC_CC`, `KV_OAI_ENC_CW`, `KV_OAI_ENC_CLK`.
+The encoder cell at index `0` is **physically clockwise**, confirmed on hardware.
+That is the opposite of what the factory template's names suggest, since it names
+the three cells `KV_OAI_ENC_CC`, `KV_OAI_ENC_CW`, `KV_OAI_ENC_CLK`.
 
-Deux inversions se superposent, ce qui rend l'erreur facile :
+Two inversions stack, which makes the mistake easy:
 
-- le firmware délivre les deux événements de rotation permutés par rapport aux
-  noms de cellules du vendeur ;
-- Input 0.17.3 permute en plus les libellés `CW` et `CCW` de son éditeur pour
-  tout encodeur à trois cellules, si bien que son interface contredit les noms de
-  keycodes de son propre gabarit par défaut.
+- the firmware delivers the two rotation events swapped relative to the vendor's
+  cell names;
+- Input 0.17.3 additionally swaps the `CW` and `CCW` labels in its editor for any
+  three-cell encoder, so its interface contradicts the keycode names of its own
+  default template.
 
-Le générateur écrit le JSON directement et contourne donc le second point. Ne pas
-aligner `PHYSICAL_ENCODER_SLOTS` sur ce qu'affiche l'éditeur, ni sur les noms de
-keycodes : cela inverse la molette.
+The generator writes the JSON directly and therefore bypasses the second point.
+Do not align `PHYSICAL_ENCODER_SLOTS` with what the editor displays, nor with the
+keycode names: that inverts the wheel.
 
-## Pourquoi le regroupement des crans a été écarté
+## Why grouping notches was ruled out
 
-Faire coûter un seul cycle `⌘⇧E` / `Esc` à N crans demande trois choses : un
-compteur persistant, une temporisation non bloquante, et l'émission de frappes
-clavier.
+Making a single `⌘⇧E` / `Esc` cycle cover N notches requires three things: a
+persistent counter, a non-blocking delay, and the ability to emit keystrokes.
 
-Le SDK MicroPython embarqué fournit les deux premières — un compteur de crans via
-`EVENT.ENCODER`, et une temporisation approchée via le hook de frame — mais
-**aucune API d'émission de frappes**. Ce SDK n'est de plus pas disponible sur le
-Codex Micro : il est réservé au Nomad [E] v1, et Input ne présente pas d'onglet
-Widgets pour ce modèle. Le format `keymap.json` n'offre pas d'alternative : ni
-compteur, ni condition, ni bascule, le seul état retenu par le firmware étant le
-layer et le profil actifs.
+The embedded MicroPython SDK provides the first two — a notch counter through
+`EVENT.ENCODER`, and an approximate delay through the frame hook — but **no
+keystroke-emitting API**. That SDK is moreover not available on the Codex Micro:
+it is reserved for the Nomad [E] v1, and Input shows no Widgets tab for this
+model. The `keymap.json` format offers no alternative: no counter, no condition,
+no toggle, the only state the firmware retains being the active layer and
+profile.
 
-Le regroupement exige donc un agent sur l'hôte. À 900 ms par cran il se
-justifiait largement ; à 90 ms, cinq crans coûtent 450 ms contre environ 300 ms
-pour un agent qui les regroupe, et l'écart ne paie plus un démon ni une
-autorisation d'accessibilité.
+Grouping therefore requires an agent on the host. At 900ms per notch it was amply
+justified; at 90ms, five notches cost 450ms against roughly 300ms for an agent
+that groups them, and the gap no longer pays for a daemon or an accessibility
+permission.
 
-## Ce qui reste non prouvé
+## What is still unproven
 
-- **La sémantique de `delay`.** Le comportement observé sur l'étape `Esc` indique
-  qu'elle s'applique avant son étape, puisque dans la lecture « après » ces 10 ms
-  seraient du temps mort en fin de macro et ne changeraient rien à l'affichage.
-  Ce n'est pas une preuve. Test décisif : porter `500 ms` sur l'étape `Esc`. Si le
-  sélecteur reste visiblement affiché une demi-seconde, c'est « avant » ; s'il se
-  referme aussitôt et que c'est la molette qui reste inerte, c'est « après ».
-- **Le sort des événements d'encodeur pendant l'exécution d'une macro** : mis en
-  file ou perdus. Le firmware n'est pas du QMK — c'est un ESP32-S3 sous FreeRTOS
-  avec un firmware maison — donc l'hypothèse d'une boucle de scan gelée pendant
-  l'attente est infondée.
-- **Le délai maximal accepté par le firmware.** L'interface d'Input plafonne la
-  saisie à 9999 ms, mais rien ne borne la valeur à l'import : un JSON écrit à la
-  main transmet ce qu'il veut.
+- **The semantics of `delay`.** The behaviour observed on the `Esc` step suggests
+  it applies before its step, since under the "after" reading these 10ms would be
+  dead time at the end of the macro and would change nothing on screen. That is
+  not a proof. Decisive test: put `500ms` on the `Esc` step. If the picker stays
+  visibly displayed for half a second, it is "before"; if it closes immediately
+  and it is the wheel that stays inert, it is "after".
+- **What happens to encoder events while a macro runs**: queued or lost. The
+  firmware is not QMK — it is an ESP32-S3 under FreeRTOS with in-house firmware —
+  so the hypothesis of a scan loop frozen during the wait is unfounded.
+- **The maximum delay the firmware accepts.** Input's interface caps the input at
+  9999ms, but nothing bounds the value on import: a hand-written JSON passes
+  whatever it likes.

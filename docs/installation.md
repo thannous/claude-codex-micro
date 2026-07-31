@@ -1,40 +1,42 @@
-# Générer et installer le profile Claude V1
+[English](installation.md) · [Français](fr/installation.md)
 
-Le parcours V1 transforme localement un export officiel d'Input `0.17.3`. Le
-profile source doit contenir exactement un layer `Claude`, hors index `0` et
-déjà lié à Claude Desktop avec AppSense. Le générateur modifie uniquement ce
-layer dans une copie et produit un nouveau `*-profile.json`.
+# Generating and installing the Claude V1 profile
 
-Il ne clique jamais à votre place, ne lance pas `Reset settings`, ne flashe
-aucun firmware et ne modifie aucun raccourci système.
+The V1 path transforms an official Input `0.17.3` export locally. The source
+profile must contain exactly one `Claude` layer, outside index `0` and already
+linked to Claude Desktop with AppSense. The generator only modifies that layer,
+in a copy, and produces a new `*-profile.json`.
 
-## Parcours GUI recommandé
+It never clicks on your behalf, never runs `Reset settings`, never flashes
+firmware, and never modifies a system shortcut.
 
-Depuis la racine du dépôt :
+## Recommended GUI path
+
+From the root of the repository:
 
 ```sh
 npm run configure
 ```
 
-La première ouverture peut préparer les dépendances verrouillées de
-`prototype/`. Le configurateur s'ouvre ensuite localement dans le navigateur.
+The first launch may prepare `prototype/`'s locked dependencies. The
+configurator then opens locally in the browser.
 
-1. exporter le profile actif depuis Work Louder Input ;
-2. déposer ce `*-profile.json` dans le configurateur ;
-3. vérifier l'unique layer `Claude`, son lien AppSense et l'index natif `0` ;
-4. personnaliser les 13 switches, la rotation du cadran et le joystick ; seul
-   le capteur tactile de changement de layer reste réservé ;
-5. télécharger `Claude-macOS-profile.json` ;
-6. l'importer avec **Add New**, sans remplacer le profile source.
+1. export the active profile from Work Louder Input;
+2. drop that `*-profile.json` into the configurator;
+3. check the single `Claude` layer, its AppSense link and the native index `0`;
+4. customise the 13 switches, the dial rotation and the joystick; only the
+   layer-switching touch sensor stays reserved;
+5. download `Claude-macOS-profile.json`;
+6. import it with **Add New**, without replacing the source profile.
 
-La génération refuse un mauvais appareil, un layer Claude absent ou dupliqué,
-une cible à l'index `0` et un lien AppSense manquant. Elle conserve le layer
-natif, les autres layers, les autres profils et les autres liens AppSense. Le
-reste de ce guide décrit le même parcours avec les contrôles CLI détaillés.
+Generation refuses a wrong device, a missing or duplicated Claude layer, a target
+at index `0`, and a missing AppSense link. It preserves the native layer, the
+other layers, the other profiles and the other AppSense links. The rest of this
+guide describes the same path with the detailed CLI checks.
 
-## 1. Vérifier le dépôt
+## 1. Check the repository
 
-Depuis la copie locale :
+From the local copy:
 
 ```sh
 cd claude-codex-micro
@@ -43,44 +45,44 @@ npm ci --no-audit --no-fund
 npm run check
 ```
 
-Ne mettez pas de côté et ne supprimez pas les modifications sans rapport. Les
-fichiers privés créés par les outils restent sous `.local/`, ignoré par Git.
+Do not stash or delete unrelated changes. Private files created by the tools stay
+under `.local/`, which Git ignores.
 
-## 2. Inspecter l'environnement sans écriture
+## 2. Inspect the environment without writing
 
 ```sh
 node scripts/input-layer.mjs doctor --json
 ```
 
-Vérifier notamment :
+Check in particular:
 
-- Input `0.17.3`, bundle `it.focusense.input-app` ;
-- Claude, bundle `com.anthropic.claudefordesktop` ;
-- le chemin de configuration Input détecté ;
-- le firmware `v0.4.1` dans l'écran Setup d'Input ;
-- le layer Codex natif à l'index `0`.
+- Input `0.17.3`, bundle `it.focusense.input-app`;
+- Claude, bundle `com.anthropic.claudefordesktop`;
+- the detected Input configuration path;
+- firmware `v0.4.1` in Input's Setup screen;
+- the native Codex layer at index `0`.
 
-`doctor` ne modifie rien. Si l'installation utilise un chemin personnalisé,
-définir d'abord `WORK_LOUDER_INPUT_USER_DATA` sur ce chemin. Un
-`--config-root` arbitraire est refusé.
+`doctor` modifies nothing. If the installation uses a custom path, set
+`WORK_LOUDER_INPUT_USER_DATA` to that path first. An arbitrary `--config-root`
+is refused.
 
-## 3. Exporter le profile original avec Input
+## 3. Export the original profile with Input
 
-Cette étape est la sauvegarde de référence pour le keymap du périphérique.
+This step is the reference backup for the device's keymap.
 
-1. ouvrir Input et sélectionner le profile actuellement actif ;
-2. vérifier qu'il existe exactement un layer `Claude`, hors index `0`, et qu'il
-   possède déjà le lien AppSense Claude ;
-3. inventorier visuellement les autres profils, layers et liens ;
-4. utiliser le menu du profile puis **Export Profile** ;
-5. conserver le fichier `*-profile.json` dans un emplacement local ;
-6. quitter complètement Input avant de copier sa configuration locale.
+1. open Input and select the currently active profile;
+2. check that exactly one `Claude` layer exists, outside index `0`, and that it
+   already has the Claude AppSense link;
+3. visually inventory the other profiles, layers and links;
+4. use the profile menu, then **Export Profile**;
+5. keep the `*-profile.json` file in a local location;
+6. quit Input completely before copying its local configuration.
 
-Le profil exporté peut contenir des informations privées. Ne jamais le committer.
+The exported profile can contain private information. Never commit it.
 
-## 4. Créer et vérifier la sauvegarde restaurable
+## 4. Create and verify the restorable backup
 
-Exemple :
+Example:
 
 ```sh
 node scripts/input-layer.mjs backup \
@@ -90,26 +92,26 @@ node scripts/input-layer.mjs backup \
   --json
 ```
 
-La commande :
+The command:
 
-- refuse de continuer si Input tourne ;
-- copie la configuration reconnue vers `.local/input-backups/<date>/` ;
-- copie l'export officiel du profile ;
-- exclut uniquement les caches jetables ;
-- calcule une somme SHA-256 pour chaque fichier ;
-- relit immédiatement la sauvegarde.
+- refuses to continue if Input is running;
+- copies the recognised configuration to `.local/input-backups/<date>/`;
+- copies the official profile export;
+- excludes only disposable caches;
+- computes a SHA-256 sum for every file;
+- reads the backup back immediately.
 
-Vérification indépendante :
+Independent verification:
 
 ```sh
 node scripts/input-layer.mjs verify-backup \
-  --backup .local/input-backups/<identifiant> \
+  --backup .local/input-backups/<id> \
   --json
 ```
 
-Le résultat doit contenir `"ok": true`.
+The result must contain `"ok": true`.
 
-## 5. Générer l'inventaire local
+## 5. Generate the local inventory
 
 ```sh
 node scripts/input-layer.mjs inventory \
@@ -118,17 +120,17 @@ node scripts/input-layer.mjs inventory \
   --json
 ```
 
-Contrôler dans le résultat :
+Check in the result:
 
-- `protectedLayerIndexes: [0]` ;
-- le nom du layer natif à l'index `0` ;
-- exactement un layer nommé `Claude`, avec un index supérieur à `0` ;
-- la présence d'un champ AppSense candidat sur ce layer.
+- `protectedLayerIndexes: [0]`;
+- the name of the native layer at index `0`;
+- exactly one layer named `Claude`, with an index above `0`;
+- the presence of a candidate AppSense field on that layer.
 
-L'outil ne publie pas les valeurs AppSense trouvées ; il signale uniquement les
-chemins de champs candidats. L'inventaire détaillé reste local.
+The tool does not publish the AppSense values it finds; it only reports the
+candidate field paths. The detailed inventory stays local.
 
-## 6. Simuler l'installation
+## 6. Simulate the installation
 
 ```sh
 node scripts/input-layer.mjs install \
@@ -138,16 +140,16 @@ node scripts/input-layer.mjs install \
   --json
 ```
 
-Le dry-run doit :
+The dry run must:
 
-- sélectionner l'unique layer `Claude` existant ;
-- protéger l'index `0` ;
-- refuser l'absence ou la duplication de `Claude` ;
-- annoncer `guided-ui` et la transformation locale du profile.
+- select the single existing `Claude` layer;
+- protect index `0`;
+- refuse a missing or duplicated `Claude`;
+- announce `guided-ui` and the local transformation of the profile.
 
-## 7. Préparer la session réelle
+## 7. Prepare the real session
 
-Quitter Input, puis :
+Quit Input, then:
 
 ```sh
 node scripts/input-layer.mjs install \
@@ -158,13 +160,13 @@ node scripts/input-layer.mjs install \
   --json
 ```
 
-Avant d'ouvrir Input, la commande crée et vérifie une nouvelle sauvegarde de
-sécurité. Elle écrit ensuite un état de session sous `.local/sessions/`. Un
-second lancement non restauré est refusé.
+Before opening Input, the command creates and verifies a new safety backup. It
+then writes a session state under `.local/sessions/`. A second, unrestored run is
+refused.
 
-## 8. Générer le profile local
+## 8. Generate the local profile
 
-Input fermé, exécuter :
+With Input closed, run:
 
 ```sh
 npm run build:profile -- \
@@ -172,129 +174,127 @@ npm run build:profile -- \
   "$HOME/Downloads/Claude-macOS-profile.json"
 ```
 
-Le fichier de sortie est créé sans écraser un fichier existant. Le générateur
-refuse un mauvais appareil, un layer Claude absent ou dupliqué, un layer cible
-à l'index `0` et un lien AppSense manquant.
+The output file is created without overwriting an existing one. The generator
+refuses a wrong device, a missing or duplicated Claude layer, a target layer at
+index `0`, and a missing AppSense link.
 
-Le mapping généré est :
+The generated mapping is:
 
-| Position physique | Action |
+| Physical position | Action |
 | --- | --- |
-| rangée des quatre touches carrées, gauche | `⌘N` |
-| même rangée, deuxième | `⌘D` |
-| même rangée, troisième | `⌘⇧D` |
-| même rangée, droite | `Esc` |
-| molette supérieure gauche, horaire / antihoraire | **Effort Claude** `+1` / `−1` |
-| clic de la molette supérieure gauche | configurable séparément |
-| joystick supérieur droit, sans clic | quatre flèches |
+| row of four square keys, left | `⌘N` |
+| same row, second | `⌘D` |
+| same row, third | `⌘⇧D` |
+| same row, right | `Esc` |
+| upper-left wheel, clockwise / counterclockwise | **Claude Effort** `+1` / `−1` |
+| upper-left wheel press | configurable separately |
+| upper-right joystick, no press | four arrows |
 
-La rotation de la molette est en mode **Effort Claude** par défaut. Chaque cran
-envoie `⌘⇧E`, attend l'ouverture du sélecteur, puis `←` ou `→` et `Esc`. Il passe
-donc au niveau d'effort disponible précédent ou suivant sans utiliser `Entrée`.
-Les niveaux réellement proposés dépendent du modèle et de la version de Claude
-Desktop.
+Wheel rotation is in **Claude Effort** mode by default. Each notch sends `⌘⇧E`,
+waits for the picker to open, then `←` or `→` and `Esc`. It therefore moves to
+the previous or next available effort level without using `Enter`. The levels
+actually offered depend on the model and on the Claude Desktop version.
 
-Le GUI permet de la remettre sur le défilement page par page, le défilement ligne
-par ligne, le volume, ou de la désassigner.
+The GUI lets you set it back to page-by-page scrolling, line-by-line scrolling,
+volume, or unassign it.
 
-`⌘⇧E` est une bascule : le `Esc` final est obligatoire, sans lui le cran suivant
-refermerait le sélecteur au lieu de l'ouvrir.
+`⌘⇧E` is a toggle: the final `Esc` is mandatory — without it the next notch would
+close the picker instead of opening it.
 
-La macro porte donc deux temporisations, pour un coût d'environ 90 ms par cran :
+The macro therefore carries two delays, for a cost of roughly 90ms per notch:
 
-- **80 ms** sur la libération de ⌘, le temps que le sélecteur apparaisse. En
-  dessous de 40 ms la flèche part avant que le sélecteur ait le focus et le
-  changement de niveau est perdu sans message d'erreur ;
-- **10 ms** sur `Esc`, le temps que le sélecteur peigne le niveau atteint avant
-  de se refermer. Sans elle le sélecteur ne fait que clignoter et le niveau
-  choisi n'est jamais affiché.
+- **80ms** on the ⌘ release, the time for the picker to appear. Below 40ms the
+  arrow leaves before the picker has focus and the level change is lost with no
+  error message;
+- **10ms** on `Esc`, the time for the picker to paint the level reached before
+  closing. Without it the picker only flickers and the chosen level is never
+  displayed.
 
-Ces temporisations sont exécutées par le firmware, et tourner vite pendant qu'une
-macro est en cours peut faire perdre des crans. Le mode convient à des
-ajustements de quelques niveaux, pas à un balayage continu.
+These delays are executed by the firmware, and turning fast while a macro is
+running can lose notches. The mode suits adjustments of a few levels, not a
+continuous sweep.
 
-Le calibrage et ce qui reste non prouvé sont détaillés dans
+The calibration and what remains unproven are detailed in
 [`docs/research/effort-wheel-calibration.md`](research/effort-wheel-calibration.md).
 
-Le schéma de référence est
+The reference diagram is
 [`profiles/claude-shortcuts/assets/layout.svg`](../profiles/claude-shortcuts/assets/layout.svg).
 
-## 9. Importer sans recréer AppSense
+## 9. Import without recreating AppSense
 
-1. dans Input, choisir **Add New** ;
-2. sélectionner `Claude-macOS-profile.json` ;
-3. activer le nouveau profile ;
-4. vérifier que le layer `Claude` conserve son lien AppSense ;
-5. ne toucher à aucun autre lien AppSense.
+1. in Input, choose **Add New**;
+2. select `Claude-macOS-profile.json`;
+3. activate the new profile;
+4. check that the `Claude` layer keeps its AppSense link;
+5. do not touch any other AppSense link.
 
-Le générateur conserve l'identifiant AppSense local sans le publier. Si le lien
-est absent, revenir au profile original et le créer manuellement avant un
-nouvel export.
+The generator preserves the local AppSense identifier without publishing it. If
+the link is missing, go back to the original profile and create it by hand before
+a new export.
 
-### Forcer un lien, ou en ajouter un second
+### Forcing a link, or adding a second one
 
-Deux options écrivent une référence AppSense au lieu de seulement reprendre celle
-de la sauvegarde :
+Two options write an AppSense reference instead of only carrying over the one
+from the backup:
 
 ```bash
-node scripts/build-input-profile.mjs sauvegarde.json sortie.json --app-sense-id=0 --base-layer-app-sense-id=2
+node scripts/build-input-profile.mjs backup.json output.json --app-sense-id=0 --base-layer-app-sense-id=2
 ```
 
-`--app-sense-id=<n>` force la référence du layer `Claude` et dispense d'en exiger
-une dans la sauvegarde : c'est le cas d'usage « réparer un lien perdu ».
+`--app-sense-id=<n>` forces the `Claude` layer's reference and removes the need
+to require one in the backup: this is the "repair a lost link" use case.
 
-`--base-layer-app-sense-id=<n>` lie le layer natif à une **seconde** application.
-C'est le seul moyen de quitter automatiquement le layer `Claude`, puisqu'AppSense
-n'a pas de retour : la sortie est elle-même une entrée dans un autre layer lié.
-Le keymap natif reste intact au keycode près, seul le lien est ajouté, et le
-générateur refuse que les deux layers pointent vers la même entrée.
+`--base-layer-app-sense-id=<n>` links the native layer to a **second**
+application. That is the only way to leave the `Claude` layer automatically,
+since AppSense has no return path: the exit is itself an entry into another
+linked layer. The native keymap stays intact down to the keycode, only the link
+is added, and the generator refuses to have both layers point at the same entry.
 
-**Ces options écrivent une référence, jamais une entrée.** Un fichier
-`*-profile.json` ne transporte pas la table `linkedApps` : l'entrée visée doit
-déjà exister sur la carte, créée une fois dans l'UI d'Input avec `Auto detect`.
-Une référence vers une entrée absente s'importe **sans erreur** et laisse
-AppSense mort sans le signaler. Relever les identifiants réels avant, dans
-`~/Library/Logs/input/main.log`, où `sending device config :` est suivi du JSON
-complet — et n'exécuter `Auto detect` qu'une seule fois par application, il ne
-dédoublonne pas.
+**These options write a reference, never an entry.** A `*-profile.json` does not
+carry the `linkedApps` table: the target entry must already exist on the board,
+created once in Input's UI with `Auto detect`. A reference to a missing entry
+imports **without error** and leaves AppSense dead without saying so. Read the
+real identifiers first, in `~/Library/Logs/input/main.log`, where
+`sending device config :` is followed by the full JSON — and run `Auto detect`
+only once per application, since it does not deduplicate.
 
-Le GUI expose les deux mêmes réglages dans l'étape **Vérifier et générer**, section
-« Liens AppSense ». Laisser les champs vides revient à ne pas passer les options :
-les liens de la sauvegarde sont alors repris tels quels.
+The GUI exposes the same two settings in the **Verify and generate** step, under
+"AppSense links". Leaving the fields empty is the same as not passing the
+options: the backup's links are then carried over as they are.
 
-Détail du comportement mesuré :
+Details of the measured behaviour:
 [`docs/research/appsense-behavior.md`](research/appsense-behavior.md).
 
-## 10. Validation matérielle
+## 10. Hardware validation
 
-Tester dans une conversation sans enjeu, une action à la fois :
+Test in a low-stakes conversation, one action at a time:
 
-- [ ] Claude au premier plan active le layer existant, pas l'index `0` ;
-- [ ] `⌘N` ouvre une nouvelle conversation ;
-- [ ] `⌘D` active le mode vocal ;
-- [ ] `⌘⇧D` affiche ou masque le diff ;
-- [ ] `Esc` annule ou ferme uniquement le contexte attendu ;
-- [ ] cadran horaire descend et antihoraire monte ;
-- [ ] en mode Effort Claude, chaque cran change d'un seul niveau et referme le
-      sélecteur sans envoyer de prompt ;
-- [ ] en mode Effort Claude, le niveau atteint est lisible avant la fermeture, et
-      un cran déclenché au retour d'une autre application le change bien : c'est
-      le cas défavorable, où l'échec est silencieux ;
-- [ ] joystick émet les quatre flèches ;
-- [ ] tous les contrôles non utilisés restent sans action dangereuse ;
-- [ ] revenir dans Claude réactive le layer ;
-- [ ] passer au Finder **laisse** le layer Claude actif — c'est le comportement
-      attendu, pas un défaut : AppSense n'a pas de retour, voir
+- [ ] Claude in the foreground activates the existing layer, not index `0`;
+- [ ] `⌘N` opens a new conversation;
+- [ ] `⌘D` activates voice mode;
+- [ ] `⌘⇧D` shows or hides the diff;
+- [ ] `Esc` cancels or closes only the expected context;
+- [ ] clockwise dial goes down and counterclockwise goes up;
+- [ ] in Claude Effort mode, each notch changes exactly one level and closes the
+      picker without sending a prompt;
+- [ ] in Claude Effort mode, the level reached is readable before the picker
+      closes, and a notch triggered when coming back from another application
+      does change it: that is the unfavourable case, where failure is silent;
+- [ ] the joystick emits the four arrows;
+- [ ] every unused control stays free of dangerous actions;
+- [ ] coming back into Claude re-activates the layer;
+- [ ] switching to the Finder **leaves** the Claude layer active — that is the
+      expected behaviour, not a defect: AppSense has no return path, see
       [`docs/research/appsense-behavior.md`](research/appsense-behavior.md).
-      Vérifier plutôt qu'aucune action du layer n'est dangereuse hors de Claude ;
-- [ ] quitter puis relancer Input conserve la configuration ;
-- [ ] aucun autre profile, layer ou lien AppSense n'a changé.
+      Check instead that no action on the layer is dangerous outside Claude;
+- [ ] quitting and relaunching Input preserves the configuration;
+- [ ] no other profile, layer or AppSense link has changed.
 
-Ne tester ni Entrée, ni permission, ni suppression, ni push, ni déploiement.
+Do not test Enter, permissions, deletion, push or deployment.
 
-## 11. Capturer un éventuel artefact layer partageable
+## 11. Capturing a shareable layer artefact, if any
 
-Après validation, utiliser **Export layer** dans Input, puis :
+After validation, use **Export layer** in Input, then:
 
 ```sh
 node scripts/input-layer.mjs sanitize-export \
@@ -302,60 +302,58 @@ node scripts/input-layer.mjs sanitize-export \
   --output profiles/claude-shortcuts/artifacts/claude-desktop-macos-layer.json
 ```
 
-Le sanitizer refuse les chemins absolus, ports, adresses matérielles, secrets,
-identifiants AppSense et appareils autres que `codex_micro`. Après sanitation,
-enregistrer le SHA-256 exact dans `manifest.json`. Le validateur compare aussi
-les actions, la molette et le joystick au mapping canonique.
+The sanitiser refuses absolute paths, ports, hardware addresses, secrets,
+AppSense identifiers and devices other than `codex_micro`. After sanitisation,
+record the exact SHA-256 in `manifest.json`. The validator also compares the
+actions, the wheel and the joystick against the canonical mapping.
 
-Avant de promouvoir le statut : importer cette copie dans une configuration
-isolée, vérifier le mapping, tenter un second import et restaurer le profile
-original.
+Before promoting the status: import that copy into an isolated configuration,
+verify the mapping, attempt a second import, and restore the original profile.
 
-## 12. Retour arrière
+## 12. Rollback
 
-Simulation :
+Simulation:
 
 ```sh
 node scripts/input-layer.mjs rollback \
-  --backup .local/input-backups/<identifiant> \
+  --backup .local/input-backups/<id> \
   --dry-run \
   --json
 ```
 
-Méthode principale :
+Primary method:
 
-1. ouvrir Input ;
-2. utiliser **Import Profile** ;
-3. sélectionner le `*-profile.json` dans le dossier
-   `official-profile-export` de la sauvegarde ;
-4. remettre ce profile comme profile courant ;
-5. vérifier le layer Codex, chaque autre layer et chaque lien AppSense ;
-6. relancer Input et refaire le contrôle.
+1. open Input;
+2. use **Import Profile**;
+3. select the `*-profile.json` in the backup's `official-profile-export` folder;
+4. set that profile back as the current one;
+5. check the Codex layer, every other layer and every AppSense link;
+6. relaunch Input and repeat the check.
 
-Après le réimport officiel et la vérification du périphérique, la session peut
-être marquée comme restaurée afin qu'une future installation ne soit plus
-bloquée par l'état précédent :
+After the official re-import and the device check, the session can be marked as
+restored, so that a future installation is no longer blocked by the previous
+state:
 
 ```sh
 node scripts/input-layer.mjs rollback \
-  --backup .local/input-backups/<identifiant> \
+  --backup .local/input-backups/<id> \
   --session .local/sessions/claude-desktop-macos-codex-micro-v1.json \
   --apply \
   --confirm-official-profile-import \
   --json
 ```
 
-Cette option enregistre une confirmation de l'utilisateur ; elle ne remplace
-pas la vérification matérielle.
+That option records a confirmation from the user; it does not replace the
+hardware check.
 
-La restauration brute du stockage applicatif reste un recours secondaire et
-non une preuve de restauration du périphérique. Elle exige volontairement les
-options explicites suivantes, Input fermé. `--config-root` doit correspondre
-exactement à un chemin Input détecté ou à `WORK_LOUDER_INPUT_USER_DATA` :
+Restoring the application storage raw remains a secondary fallback and not proof
+that the device was restored. It deliberately requires the following explicit
+options, with Input closed. `--config-root` must match exactly a detected Input
+path or `WORK_LOUDER_INPUT_USER_DATA`:
 
 ```sh
 node scripts/input-layer.mjs rollback \
-  --backup .local/input-backups/<identifiant> \
+  --backup .local/input-backups/<id> \
   --apply \
   --restore-storage \
   --acknowledge-unverified-storage-restore \
@@ -363,7 +361,7 @@ node scripts/input-layer.mjs rollback \
   --json
 ```
 
-Avant de recopier la sauvegarde, l'outil renomme atomiquement le dossier Input
-courant en copie de sécurité `*.before-codex-restore-*`. En cas d'échec de la
-copie, ce dossier est remis en place. Cette voie reste secondaire : ne jamais
-utiliser `Reset settings` pour le retour arrière.
+Before copying the backup back, the tool atomically renames the current Input
+folder to a safety copy named `*.before-codex-restore-*`. If the copy fails, that
+folder is put back. This path stays secondary: never use `Reset settings` to roll
+back.

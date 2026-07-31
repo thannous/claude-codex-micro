@@ -1,140 +1,141 @@
-# Configurer le Codex Micro pour Claude Desktop
+[English](configuration.md) · [Français](../fr/codex-micro/configuration.md)
 
-## Flux cible
+# Configuring the Codex Micro for Claude Desktop
 
-1. exporter le profile Input actif et créer une sauvegarde vérifiée ;
-2. inventorier les layers sans publier les données privées ;
-3. protéger intégralement le layer natif à l'index `0` ;
-4. exiger exactement un layer `Claude` existant, hors index `0` ;
-5. conserver son lien AppSense dans une copie locale du profile ;
-6. appliquer le mapping physique documenté à cette copie ;
-7. tester chaque contrôle, la perte de focus et le redémarrage ;
-8. exporter le layer, l'assainir et vérifier son round-trip ;
-9. restaurer le profile original en cas d'écart.
+## Target flow
 
-Cette intégration utilise les raccourcis HID et AppSense. Elle ne dépend pas du
-protocole expérimental Hardware Buddy.
+1. export the active Input profile and create a verified backup;
+2. inventory the layers without publishing private data;
+3. fully protect the native layer at index `0`;
+4. require exactly one existing `Claude` layer, outside index `0`;
+5. preserve its AppSense link in a local copy of the profile;
+6. apply the documented physical mapping to that copy;
+7. test every control, focus loss and a restart;
+8. export the layer, sanitise it and verify its round-trip;
+9. restore the original profile on any discrepancy.
 
-Le manifeste et le mapping V1 décrivent l'état observé du générateur. Le fichier
-logique `macos.example.json` reste `proposal-not-applied` et ne doit pas être
-importé tel quel. `npm run configure` fabrique uniquement un profile personnel
-à partir de l'export officiel de l'utilisateur.
+This integration uses HID shortcuts and AppSense. It does not depend on the
+experimental Hardware Buddy protocol.
 
-## Préservation obligatoire
+The V1 manifest and mapping describe the observed state of the generator. The
+logical file `macos.example.json` stays `proposal-not-applied` and must not be
+imported as is. `npm run configure` only builds a personal profile from the
+user's own official export.
 
-Le preset et l'outil imposent les règles suivantes :
+## Mandatory preservation
 
-- index `0` protégé, sans remplacement ni modification ;
-- politique `exactly-one-existing-named-layer` ;
-- six emplacements au maximum ;
-- aucun autre profile, layer ou lien AppSense modifié ;
-- absence ou doublon `Claude` refusé ;
-- structure d'export inconnue refusée au lieu d'être interprétée ;
-- sauvegarde et vérification SHA-256 avant la session réelle ;
-- aucune écriture directe dans le stockage Input ;
-- aucune écriture de configuration sur le périphérique — keymap, layers et
-  couleurs de layer passent exclusivement par le flux de profils Input.
+The preset and the tool enforce the following rules:
 
-La dernière règle portait jusqu'ici sur toute écriture vers le périphérique.
-Elle est restreinte aux écritures **persistantes** : l'envoi de rapports HID
-d'éclairage volatils est désormais dans le périmètre, sous six conditions
-cumulatives énoncées dans
-[`docs/scope-and-limitations.md`](../scope-and-limitations.md). Cette
-configuration-ci n'en dépend pas et reste réalisable sans écrire une seule fois
-sur le périphérique.
+- index `0` protected, with no replacement and no modification;
+- `exactly-one-existing-named-layer` policy;
+- six slots at most;
+- no other profile, layer or AppSense link modified;
+- a missing or duplicated `Claude` refused;
+- an unknown export structure refused rather than interpreted;
+- backup and SHA-256 verification before the real session;
+- no direct write into Input's storage;
+- no configuration write to the device — keymap, layers and layer colours go
+  exclusively through the Input profile flow.
 
-L'inventaire bloque la transformation si l'export officiel ne permet pas de
-prouver la présence du layer protégé à l'index `0` et d'un unique layer
-`Claude`.
+The last rule used to cover every write to the device. It is now restricted to
+**persistent** writes: sending volatile HID lighting reports is within scope, under
+six cumulative conditions set out in
+[`docs/scope-and-limitations.md`](../scope-and-limitations.md). This particular
+configuration does not depend on that, and remains achievable without writing to
+the device even once.
 
-## Mapping physique V1
+The inventory blocks the transformation if the official export does not make it
+possible to prove the presence of the protected layer at index `0` and of a
+single `Claude` layer.
 
-Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
+## V1 physical mapping
 
-| Contrôle | Position | Action |
+Orientation: seen from above, cable pointing away from the user.
+
+| Control | Position | Action |
 | --- | --- | --- |
-| Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
-| Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
-| Touche 3 | même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
-| Touche 4 | même rangée, tout à droite | `Esc` — annuler ou fermer selon le contexte |
-| Molette cliquable | coin supérieur gauche | Effort Claude, horaire : `+1` ; antihoraire : `−1` ; clic configurable |
-| Joystick sans clic | coin supérieur droit | flèches haut, droite, bas et gauche |
+| Key 1 | row of four square keys, far left | `⌘N` — new conversation |
+| Key 2 | same row, second | `⌘D` — voice mode |
+| Key 3 | same row, third | `⌘⇧D` — show or hide the diff |
+| Key 4 | same row, far right | `Esc` — cancel or close, depending on context |
+| Clickable wheel | upper left corner | Claude Effort, clockwise: `+1`; counterclockwise: `−1`; press configurable |
+| Non-clickable joystick | upper right corner | up, right, down and left arrows |
 
-![Schéma physique du mapping](../../profiles/claude-shortcuts/assets/layout.svg)
+![Physical mapping diagram](../../profiles/claude-shortcuts/assets/layout.svg)
 
-Les identifiants internes `inputControlId` restent `null` jusqu'à leur relevé
-dans Input sur le Codex Micro exact. Les positions ci-dessus sont donc une cible
-physique lisible, pas une affirmation sur le schéma interne de l'application.
+The internal `inputControlId` identifiers stay `null` until they are read in
+Input on the exact Codex Micro. The positions above are therefore a readable
+physical target, not a claim about the application's internal schema.
 
-## Apparence
+## Appearance
 
-- nom du layer : `Claude` ;
-- couleur proposée : `#D97757` ;
-- autres contrôles : `no-action` ;
-- capteur tactile : réservé au changement de layer ;
-- appui du cadran : aucune action.
+- layer name: `Claude`;
+- proposed colour: `#D97757`;
+- other controls: `no-action`;
+- touch sensor: reserved for layer switching;
+- dial press: no action.
 
 ## AppSense
 
-Le lien cible uniquement :
+The link targets only:
 
 ```text
 Claude
 com.anthropic.claudefordesktop
 ```
 
-Le lien doit exister avant l'export du profile. Le générateur conserve son
-`linkedAppId` dans la copie locale, refuse son absence et ne crée jamais un
-second lien. Les autres liens ne sont jamais modifiés.
+The link must exist before the profile is exported. The generator preserves its
+`linkedAppId` in the local copy, refuses its absence, and never creates a second
+link. Other links are never modified.
 
-**Il n'existe aucun retour automatique à un état sûr après perte de focus.**
-Mesuré sur matériel : AppSense n'est qu'un ensemble de règles application →
-layer, et chaque règle est une transition aller. Quitter Claude pour une
-application non liée laisse la carte sur le layer Claude, indéfiniment. Le layer
-Claude doit donc être conçu comme si ses raccourcis pouvaient rester actifs
-ailleurs. Voir [`docs/research/appsense-behavior.md`](../research/appsense-behavior.md).
+**There is no automatic return to a safe state after focus loss.** Measured on
+hardware: AppSense is only a set of application → layer rules, and every rule is
+a one-way transition. Leaving Claude for an unlinked application leaves the board
+on the Claude layer, indefinitely. The Claude layer must therefore be designed as
+if its shortcuts could stay active elsewhere. See
+[`docs/research/appsense-behavior.md`](../research/appsense-behavior.md).
 
-## Actions absentes par défaut
+## Actions absent by default
 
-- Retour/Entrée et envoi d'un message ;
-- approbation, refus ou rejet d'une permission ;
-- suppression ;
-- `git push` ;
-- déploiement ;
-- terminal, shell ou commande destructive ;
-- raccourcis globaux Saisie rapide et Dictée.
+- Return/Enter and sending a message;
+- approving, refusing or rejecting a permission;
+- deletion;
+- `git push`;
+- deployment;
+- terminal, shell or destructive commands;
+- the Quick Entry and Dictation global shortcuts.
 
-Les raccourcis globaux sont volontairement hors du layer AppSense : ils doivent
-rester utilisables quand une autre application est au premier plan. Sur la
-configuration documentée, il s'agit du double appui sur Option pour la saisie
-rapide et de Verr. Maj. pour la dictée globale.
+Global shortcuts are deliberately outside the AppSense layer: they have to stay
+usable when another application is in the foreground. On the documented setup,
+those are the double press on Option for quick entry, and Caps Lock for global
+dictation.
 
-## Partage officiel observé
+## Official sharing, as observed
 
-Input `0.17.2` contient les flux **Export layer**, **Import layer**, **Export
-Profile** et **Import Profile**. Un export de layer porte le suffixe
-`*-layer.json` et contient l'enveloppe décrite dans
+Input `0.17.2` contains the **Export layer**, **Import layer**, **Export
+Profile** and **Import Profile** flows. A layer export carries the
+`*-layer.json` suffix and contains the envelope described in
 [`docs/research/input-0.17.2-sharing.md`](../research/input-0.17.2-sharing.md).
 
-Le dépôt ne fabrique pas les objets internes `layer`, `actions` et groupes. Le
-futur artefact doit provenir d'un vrai export du Codex Micro, être assaini, puis
-réimporté sur une configuration isolée.
+The repository does not fabricate the internal `layer`, `actions` and group
+objects. The future artefact must come from a real Codex Micro export, be
+sanitised, then re-imported into an isolated configuration.
 
-## Validation restante
+## Validation still outstanding
 
-- [ ] export du profile réel et inventaire lisible ;
-- [ ] positions et identifiants physiques vérifiés dans Input ;
-- [x] transformation locale du layer existant sans modification de l'index `0` ;
-- [x] conservation du lien AppSense dans le profile généré ;
-- [ ] quatre touches, cadran et joystick testés ;
-- [ ] contrôles inutilisés confirmés sans action ;
-- [x] comportement après perte de focus : établi, il n'y a pas de retour ;
-- [ ] persistance après redémarrage ;
-- [ ] export/import du layer reproduit sur une copie isolée ;
-- [ ] doublon refusé ou traité idempotemment ;
-- [ ] profile original réimporté et périphérique vérifié.
+- [ ] real profile export and readable inventory;
+- [ ] positions and physical identifiers verified in Input;
+- [x] local transformation of the existing layer without modifying index `0`;
+- [x] AppSense link preserved in the generated profile;
+- [ ] four keys, dial and joystick tested;
+- [ ] unused controls confirmed as no-action;
+- [x] behaviour after focus loss: established, there is no return;
+- [ ] persistence after a restart;
+- [ ] layer export/import reproduced on an isolated copy;
+- [ ] duplicate refused or handled idempotently;
+- [ ] original profile re-imported and device verified.
 
 ## Sources
 
-- [Work Louder — Codex Micro, layers et AppSense](https://worklouder.cc/openai-micro-setup)
-- [Claude — saisie rapide sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
+- [Work Louder — Codex Micro, layers and AppSense](https://worklouder.cc/openai-micro-setup)
+- [Claude — quick entry on macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)

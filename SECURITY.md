@@ -1,77 +1,76 @@
-# Sécurité
+[English](SECURITY.md) · [Français](SECURITY.fr.md)
 
-## Statut
+# Security
 
-Le dépôt est public, mais le projet reste expérimental et ne possède pas encore
-de version supportée ni de canal privé de signalement. Ne publiez jamais de
-secret, de profil personnel ou de détail permettant d'exploiter une
-vulnérabilité. En l'absence de canal privé, ouvrez seulement un signalement
-minimal demandant un moyen de contact confidentiel.
+## Status
 
-## Modèle de risque
+The repository is public, but the project stays experimental and does not yet
+have a supported version or a private reporting channel. Never publish a secret,
+a personal profile, or any detail that would make a vulnerability exploitable.
+With no private channel available, open only a minimal report asking for a
+confidential contact method.
 
-### Raccourcis HID
+## Risk model
 
-Une touche peut envoyer, supprimer ou déclencher une action dans la mauvaise
-application. Le profil par défaut exclut `Entrée` et toute décision de
-permission. Les tests doivent utiliser un contexte sans enjeu et commencer par
-une seule action à faible risque.
+### HID shortcuts
 
-### AppSense et focus
+A key can send, delete or trigger an action in the wrong application. The default
+profile excludes `Enter` and every permission decision. Tests must use a
+low-stakes context and start with a single low-risk action.
 
-Une mauvaise détection peut activer le mauvais layer. Il faut vérifier :
+### AppSense and focus
 
-- l'application détectée ;
-- le layer actif avant chaque test ;
-- le comportement après perte de focus ;
-- les conflits avec les liens existants.
+Faulty detection can activate the wrong layer. You have to check:
 
-Ne jamais corriger un conflit en réinitialisant tous les réglages.
+- the detected application;
+- the active layer before each test;
+- the behaviour after focus loss;
+- conflicts with existing links.
+
+Never fix a conflict by resetting all settings.
 
 ### BLE Hardware Buddy
 
-Le protocole permet de recevoir des informations de session et de répondre à
-une demande de permission. Une implémentation défectueuse pourrait exposer des
-extraits de conversation ou approuver une action involontairement.
+The protocol makes it possible to receive session information and to answer a
+permission request. A faulty implementation could expose conversation excerpts or
+approve an action unintentionally.
 
-Tant que la piste n'est pas auditée :
+Until the track is audited:
 
-- aucune approbation ou décision automatique ;
-- aucun identifiant de prompt conservé ;
-- aucun journal contenant adresse, jeton ou code d'appairage ;
-- aucun firmware flashable distribué ;
-- aucun appairage présenté comme supporté ;
-- retour à un état neutre après perte de connexion.
+- no automatic approval or decision;
+- no prompt identifier retained;
+- no log containing an address, token or pairing code;
+- no flashable firmware distributed;
+- no pairing presented as supported;
+- return to a neutral state after a connection loss.
 
-## Données à ne pas collecter
+## Data not to collect
 
-- adresse Bluetooth ou identifiant matériel unique ;
-- numéro de série ;
-- code d'appairage ;
-- contenu des conversations Claude ;
-- jeton, clé API ou secret local ;
-- capture complète de réglages contenant des données personnelles.
+- Bluetooth address or unique hardware identifier;
+- serial number;
+- pairing code;
+- the content of Claude conversations;
+- token, API key or local secret;
+- a full settings capture containing personal data.
 
-## Dépendances et scripts
+## Dependencies and scripts
 
-Le projet ne transmet pas les profils ou exports Work Louder à un service
-distant. Le configurateur, le générateur et les validateurs les traitent
-localement, sans télémétrie applicative.
+The project does not transmit Work Louder profiles or exports to a remote
+service. The configurator, the generator and the validators process them locally,
+with no application telemetry.
 
-Une connexion réseau peut toutefois être utilisée par
-`npm ci --no-audit --no-fund` pour télécharger depuis le registre configuré les
-versions verrouillées dans `package-lock.json`. Lors de leur première
-exécution, `npm run configure` et `npm run check` peuvent de même lancer
-`npm ci --ignore-scripts` dans `prototype/` si les dépendances du GUI sont
-absentes. Une fois installées, le traitement des profils reste local. Toute
-nouvelle dépendance ou communication distante doit être justifiée, verrouillée,
-documentée et auditée avant publication.
+A network connection may however be used by `npm ci --no-audit --no-fund` to
+download, from the configured registry, the versions locked in
+`package-lock.json`. On their first run, `npm run configure` and `npm run check`
+may likewise run `npm ci --ignore-scripts` in `prototype/` if the GUI
+dependencies are missing. Once installed, profile processing stays local. Any new
+dependency or remote communication must be justified, locked, documented and
+audited before publication.
 
-## Sauvegarde et restauration
+## Backup and restore
 
-Le retour arrière principal reste l'import du profile officiel d'origine dans
-Input. La restauration brute du stockage est secondaire et exige plusieurs
-confirmations explicites. Sa destination doit correspondre exactement à un
-chemin Input détecté ou à `WORK_LOUDER_INPUT_USER_DATA`. L'outil refuse la
-racine du système, le dossier utilisateur, le dépôt, les liens symboliques et
-tout dossier non approuvé.
+The primary rollback remains importing the original official profile into Input.
+Restoring the storage raw is secondary and requires several explicit
+confirmations. Its destination must match exactly a detected Input path or
+`WORK_LOUDER_INPUT_USER_DATA`. The tool refuses the system root, the home folder,
+the repository, symbolic links, and any unapproved folder.

@@ -1,40 +1,43 @@
-# États des sessions Claude Code et touches Agent — mesures
+[English](thread-status-feasibility.md) · [Français](../fr/research/thread-status-feasibility.md)
+
+# Claude Code session states and Agent keys — measurements
 
 ## Verdict
 
-**Les états sont disponibles officiellement, les LED fonctionnent sur le layer
-`Claude`, et seule la navigation reste partiellement ouverte.** Trois conclusions,
-dans cet ordre de solidité :
+**The states are available officially, the LEDs work on the `Claude` layer, and
+navigation is solved on every surface.** Three conclusions, in decreasing order
+of solidity:
 
-1. Détecter « en cours / intervention / terminé / fermé » par session est un
-   problème résolu, avec deux mécanismes documentés et complémentaires.
-2. Aller à la session depuis une touche est résolu **si la session tourne dans un
-   terminal**, et sans route connue si elle est hébergée par Claude Desktop ou un
-   IDE.
-3. Piloter les six LED **fonctionne, y compris sur le layer `Claude`**, à une
-   condition découverte tardivement : les six positions Agent de ce layer doivent
-   porter les keycodes `KV_OAI_AG00` à `KV_OAI_AG05`. Le prédicat du firmware est
-   le keycode, pas l'index du layer.
+1. Detecting "running / needs you / done / closed" per session is a solved
+   problem, with two documented and complementary mechanisms.
+2. Going to a session from a key is solved on both surfaces: window focus over
+   AppleScript when the session runs in a terminal, and
+   `claude://resume?session=<uuid>` when Claude Desktop hosts it. The second
+   route is not documented.
+3. Driving the six LEDs **works, including on the `Claude` layer**, on one
+   condition discovered late: the six Agent positions of that layer must carry
+   the `KV_OAI_AG00` to `KV_OAI_AG05` keycodes. The firmware's predicate is the
+   keycode, not the layer index.
 
-Les trois briques sont réunies, et aucun raccourci Claude n'est sacrifié. Mais la
-fonction a une condition d'usage : **l'app ChatGPT doit être quittée.** Elle
-réécrit les six LED toutes les 35 à 40 secondes et intercepte les appuis sur les
-touches Agent pour changer de thread Codex. Les deux moitiés de la fonction lui
-sont donc disputées par la même application, et rien ne permet d'arbitrer.
+All three building blocks are in place, and no Claude shortcut is sacrificed. But
+the feature has a condition of use: **the ChatGPT app must be quit.** It rewrites
+the six LEDs every 35 to 40 seconds and intercepts Agent key presses to switch
+Codex thread. Both halves of the feature are therefore contended by the same
+application, and nothing can arbitrate.
 
-## Le modèle : deux sources, deux rôles
+## The model: two sources, two roles
 
-| Source | Autorité sur | Nature |
+| Source | Authority over | Nature |
 | --- | --- | --- |
-| `claude agents --json` | l'appartenance : qui occupe un emplacement | poll, officiel |
-| hooks du plugin | l'état de chaque session | push, officiel |
+| `claude agents --json` | membership: who occupies a slot | poll, official |
+| plugin hooks | the state of each session | push, official |
 
-Cette séparation n'est pas esthétique, elle est nécessaire. Un hook manqué —
-crash, `kill -9` — fige l'état à « en cours » indéfiniment, et seul le roster le
-rattrape. Inversement le roster ne publie aucun état. Aucune des deux sources ne
-suffit seule.
+This separation is not cosmetic, it is necessary. A missed hook — crash,
+`kill -9` — pins the state to "running" indefinitely, and only the roster catches
+it. Conversely the roster publishes no state at all. Neither source is sufficient
+on its own.
 
-Sortie réelle du roster, sur ce dépôt :
+Real roster output, on this repository:
 
 ```json
 [
@@ -44,139 +47,138 @@ Sortie réelle du roster, sur ce dépôt :
 ]
 ```
 
-`--json` est explicitement prévu pour le script : « does not require a TTY ».
-`--all` ajoute les sessions d'arrière-plan terminées, `--cwd` filtre par
-répertoire.
+`--json` is explicitly meant for scripting: "does not require a TTY". `--all`
+adds finished background sessions, `--cwd` filters by directory.
 
-### Table des états
+### State table
 
-| État | Événement | Champ décisif | Couleur |
+| State | Event | Deciding field | Colour |
 | --- | --- | --- | --- |
-| en cours | `UserPromptSubmit` | — | `#D97757` |
-| intervention | `Notification` | `notification_type` ∈ {`permission_prompt`, `agent_needs_input`, `elicitation_dialog`} | `#C2483D` |
-| au repos | `SessionStart`, `Notification` / `idle_prompt` | — | `#6D5A7D` |
-| terminé | `Stop` | — | `#5B8C6F` |
-| fermé | `SessionEnd`, ou absence du roster | `reason` | `#2F2927` |
+| running | `UserPromptSubmit` | — | `#D97757` |
+| needs you | `Notification` | `notification_type` ∈ {`permission_prompt`, `agent_needs_input`, `elicitation_dialog`} | `#C2483D` |
+| idle | `SessionStart`, `Notification` / `idle_prompt` | — | `#6D5A7D` |
+| done | `Stop` | — | `#5B8C6F` |
+| closed | `SessionEnd`, or absence from the roster | `reason` | `#2F2927` |
 
-`notification_type` est le seul champ qui distingue « on t'attend » de « ça
-travaille ». Les types `auth_success`, `elicitation_complete` et
-`agent_completed` ne changent pas l'état : un témoin rouge doit signifier une
-décision attendue, rien d'autre.
+`notification_type` is the only field that separates "you are being waited for"
+from "it is working". The `auth_success`, `elicitation_complete` and
+`agent_completed` types do not change the state: a red light must mean a decision
+is expected, and nothing else.
 
-## Matrice de preuve
+## Evidence matrix
 
-Mesuré sur macOS `26.5.2` arm64, Claude `1.24012.9`, Claude Code `2.1.219`.
+Measured on macOS `26.5.2` arm64, Claude `1.24012.9`, Claude Code `2.1.219`.
 
-| Affirmation | État | Preuve |
+| Claim | State | Proof |
 | --- | --- | --- |
-| `claude agents --json` liste les sessions vivantes avec `sessionId`, `pid`, `cwd`, `name` | confirmé | exécution, 3 sessions retournées |
-| Un hook de plugin reçoit l'événement en JSON sur stdin | confirmé | plugin sonde, 4 événements capturés |
-| Un hook hérite de `CLAUDE_PID`, `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CODE_ENTRYPOINT` | confirmé | environnement relevé dans le hook |
-| `CLAUDE_PID` est égal au `pid` du roster | confirmé | `47158` des deux côtés |
-| `$CLAUDE_PLUGIN_ROOT` s'étend dans une commande de hook | confirmé | plugin `thread-status` chargé par `--plugin-dir` |
-| `CLAUDE_PLUGIN_DATA` diffère selon le mode de chargement | confirmé | `…/data/<nom>-inline` avec `--plugin-dir` |
-| Une session `claude -p` émet des hooks sans entrer au roster | confirmé | session `439b9985` absente de `agents --json` |
-| `CLAUDE_CODE_HOST_SESSION_ID` **n'identifie pas** une session | confirmé | deux sessions distinctes partagent `local_f92b6e6a` |
-| Le `tty` distingue terminal et Desktop | confirmé | `tty = ??` pour les trois sessions Desktop |
-| Focus d'une fenêtre de terminal par `tty` en AppleScript | non testé de bout en bout | scripts compilés par `osacompile` ; aucune session en terminal disponible, iTerm2 absent de la machine |
-| Route pour ouvrir une session Claude Code locale dans Desktop **par identifiant** | **réfuté** | `claude://resume?session=<uuid>` ouvre la bonne session, vérifié sur machine ; la route est absente de la doc des deep links, qui ne cite que `claude://code/new` |
-| `claude://resume` valide sa cible par une regex UUID stricte | confirmé | lu dans le handler : l'`uuid` est vérifié avant `importCliSession`, puis la navigation |
-| `claude://resume` échoue quand le transcript est absent du disque | rapporté, non testé | chemin d'erreur `transcript_missing` du handler ; aucun compte rendu ne remonte à l'appelant, `open` sort en 0 dans tous les cas |
-| Raccourcis de **cycle** entre sessions dans Claude Desktop | documentés | `Ctrl Tab` / `Ctrl Shift Tab` et `Cmd Shift ]` / `Cmd Shift [` — table des raccourcis du Code tab |
-| Raccourci pour sélectionner une session par son rang | inexistant | `1`–`9` ne sélectionne que dans un menu ouvert, et il n'existe pas de menu de sessions |
-| Repli pour une session Desktop sans identifiant UUID : activer l'application | implémenté | `open -b com.anthropic.claudefordesktop`, sans consentement Automation ; la session précise reste non sélectionnable |
-| `claude --resume <id>` reprend une session fermée | documenté | doc de gestion des sessions |
-| Le Codex Micro est un périphérique Espressif | confirmé | `hidutil list` : VID `0x303a`, PID `0x8360` |
-| Le log d'Input ne peut pas livrer le protocole RGB | confirmé | 66 lignes `v.oai.*`, toutes des réponses, zéro requête |
-| `v.oai.thstatus` est l'éclairage **par thread** | confirmé | commentaire et énumération lus dans le bundle ChatGPT |
-| `v.oai.rgbcfg` ne couvre que deux zones globales | confirmé | même source, recoupé avec le modèle d'Input |
-| Le SDK est privé et sans licence | confirmé | `@worklouder/device-kit-oai`, `UNLICENSED`, registre privé |
-| Cadre HID 64 octets, `0x06` / canal `2` | **confirmé sur matériel** | requête envoyée, réponse `{"result":{"ok":1},"id":1,"method":"v.oai.thstatus"}` |
-| Fragmentation : longueur totale dans le premier rapport | **réfuté** | corrélées par `id`, les charges de 101 octets ne reçoivent aucune réponse |
-| Fragmentation : longueur du fragment dans chaque rapport | **confirmé sur matériel** | charges ~140 octets (3 rapports) acquittées avec `id` corrélé — `scripts/lib/hid-frame.mjs`, voir [`hid-lighting-protocol.md`](hid-lighting-protocol.md) |
-| Les réponses sont diffusées à tous les lecteurs | confirmé | des accusés de l'app ChatGPT ont été pris pour les nôtres tant que l'`id` n'était pas vérifié |
-| L'écriture par emplacement est acceptée | **confirmé sur matériel** | six poussées colorées acquittées avec `id` corrélé, touches allumées une par une — sonde `scripts/lighting.mjs` |
-| Une écriture peut échouer en répétition rapide | observé | un `SetReport` sur ~60 refusé en `0xE00002BC` pendant la réassertion |
-| Correspondance `id` → touche physique | **confirmé sur matériel** | sonde une-touche-à-la-fois : les `id` 0 à 5 suivent l'ordre de `SLOT_CONTROLS`, rangée du haut puis rangée suivante, de gauche à droite |
-| Le rendu exige les keycodes `KV_OAI_AG00..05` sur les six positions | **confirmé sur matériel** | layer `Claude` avec `KC_NONE` : aucun rendu ; les mêmes six positions passées aux keycodes Agent : rendu immédiat des six couleurs |
-| Le prédicat du firmware est l'index de layer 0 | **réfuté** | le rendu fonctionne sur le layer `Claude` d'index 1 dès que les keycodes y sont posés |
-| Les touches Agent notifient l'hôte de leur appui | **confirmé sur matériel** | `v.oai.hid` reçu pour `AG00` à `AG05`, `act` 1 à l'appui et 0 au relâchement — `npm run lighting -- listen` |
-| L'app ChatGPT intercepte aussi ces appuis | **confirmé sur matériel** | sur le layer `Claude`, appuyer sur une touche Agent fait basculer les threads Codex |
-| Un raccourci global natif est nécessaire pour la navigation | **réfuté** | le clavier désigne l'emplacement sur le canal HID déjà ouvert ; ni `RegisterEventHotKey`, ni autorisation macOS |
-| `device.status` renvoie un index de layer 1-based | rapporté, non revérifié | `layer_index: 1` = layer Codex, `2` = layer `Claude` ; Input applique `layer_index - 1` |
-| Les keycodes `KV_OAI_AG00..05` sont assignables depuis Input | **réfuté** | une seule occurrence chacun dans l'`app.asar`, dans la définition câblée du layer natif : absents du sélecteur de touches |
-| Un `{"ok":1}` garantit un rendu visible | **réfuté** | des accusés non corrélés provenaient de l'app ChatGPT |
-| Une écriture mono-rapport s'affiche réellement | **confirmé sur matériel** | emplacement 0 passé au bleu puis éteint par la sonde, observé |
-| Le rendu est reproductible | confirmé, après correction | l'intermittence initiale venait de la fragmentation fausse ; reproductible une fois les keycodes Agent posés |
-| Le périphérique expose une collection vendor `0xff00` | confirmé | `HID.devices()` : quatre collections, `0x0001/0x06`, `0x000c/0x01`, `0x000c/0x02`, `0xff00/0x01` |
-| `node-hid` **peut** ouvrir ce périphérique en non exclusif | **confirmé sur matériel** | `HIDAsync.open(path, { nonExclusive: true })` puis round-trip `sys.version` réussi ; l'échec antérieur venait d'une ouverture sans l'option (`new HID.HID(path)` ouvre en *seize*) |
-| L'ouverture non exclusive par IOKit réussit | confirmé | `IOHIDDeviceOpen(kIOHIDOptionsTypeNone)` accepté là où `hid_open_path` échoue |
-| « Surveillance des saisies » est requise | **indéterminé** | accordée dans le contexte où IOKit réussit : les deux causes ne sont pas séparables |
-| Socket IPC privé de l'app Codex | présent | `~/.codex/ipc/ipc.sock`, `srw-------` |
+| `claude agents --json` lists live sessions with `sessionId`, `pid`, `cwd`, `name` | confirmed | run, 3 sessions returned |
+| A plugin hook receives the event as JSON on stdin | confirmed | plugin probe, 4 events captured |
+| A hook inherits `CLAUDE_PID`, `CLAUDE_CODE_SESSION_ID`, `CLAUDE_CODE_ENTRYPOINT` | confirmed | environment read inside the hook |
+| `CLAUDE_PID` equals the roster's `pid` | confirmed | `47158` on both sides |
+| `$CLAUDE_PLUGIN_ROOT` expands inside a hook command | confirmed | `thread-status` plugin loaded with `--plugin-dir` |
+| `CLAUDE_PLUGIN_DATA` differs with the loading mode | confirmed | `…/data/<name>-inline` with `--plugin-dir` |
+| A `claude -p` session emits hooks without entering the roster | confirmed | session `439b9985` absent from `agents --json` |
+| `CLAUDE_CODE_HOST_SESSION_ID` **does not identify** a session | confirmed | two distinct sessions share `local_f92b6e6a` |
+| The `tty` separates terminal from Desktop | confirmed | `tty = ??` for the three Desktop sessions |
+| Focusing a terminal window by `tty` in AppleScript | not tested end to end | scripts compiled by `osacompile`; no terminal session available, iTerm2 absent from the machine |
+| A route to open a local Claude Code session in Desktop **by id** | **refuted** | `claude://resume?session=<uuid>` opens the right session, verified on this machine; the route is absent from the deep-link documentation, which only mentions `claude://code/new` |
+| `claude://resume` validates its target against a strict UUID regex | confirmed | read in the handler: the `uuid` is checked before `importCliSession`, then navigation |
+| `claude://resume` fails when the transcript is absent from disk | reported, not tested | the handler's `transcript_missing` error path; nothing is reported back to the caller, `open` exits 0 either way |
+| **Cycling** shortcuts between sessions in Claude Desktop | documented | `Ctrl Tab` / `Ctrl Shift Tab` and `Cmd Shift ]` / `Cmd Shift [` — Code tab shortcut table |
+| A shortcut to select a session by its rank | non-existent | `1`–`9` only selects inside an open menu, and there is no session menu |
+| Fallback for a Desktop session with no UUID id: activate the application | implemented | `open -b com.anthropic.claudefordesktop`, no Automation consent; the specific session stays unselectable |
+| `claude --resume <id>` resumes a closed session | documented | session management documentation |
+| The Codex Micro is an Espressif device | confirmed | `hidutil list`: VID `0x303a`, PID `0x8360` |
+| Input's log cannot deliver the RGB protocol | confirmed | 66 `v.oai.*` lines, all responses, zero requests |
+| `v.oai.thstatus` is the **per-thread** lighting | confirmed | comment and enumeration read in the ChatGPT bundle |
+| `v.oai.rgbcfg` only covers two global zones | confirmed | same source, cross-checked with Input's model |
+| The SDK is private and unlicensed | confirmed | `@worklouder/device-kit-oai`, `UNLICENSED`, private registry |
+| 64-byte HID frame, `0x06` / channel `2` | **confirmed on hardware** | request sent, response `{"result":{"ok":1},"id":1,"method":"v.oai.thstatus"}` |
+| Fragmentation: total length in the first report | **refuted** | correlated by `id`, the 101-byte payloads receive no response |
+| Fragmentation: chunk length in every report | **confirmed on hardware** | ~140-byte payloads (3 reports) acknowledged with a correlated `id` — `scripts/lib/hid-frame.mjs`, see [`hid-lighting-protocol.md`](hid-lighting-protocol.md) |
+| Responses are broadcast to every reader | confirmed | acknowledgements from the ChatGPT app were taken for ours until the `id` was checked |
+| Per-slot writing is accepted | **confirmed on hardware** | six coloured pushes acknowledged with a correlated `id`, keys lit one by one — `scripts/lighting.mjs` probe |
+| A write can fail on rapid repetition | observed | one `SetReport` in ~60 refused with `0xE00002BC` during reassertion |
+| `id` → physical key mapping | **confirmed on hardware** | one-key-at-a-time probe: ids 0 to 5 follow the order of `SLOT_CONTROLS`, top row then the next, left to right |
+| Rendering requires the `KV_OAI_AG00..05` keycodes on the six positions | **confirmed on hardware** | `Claude` layer with `KC_NONE`: no rendering; the same six positions given the Agent keycodes: all six colours render immediately |
+| The firmware's predicate is layer index 0 | **refuted** | rendering works on the `Claude` layer at index 1 as soon as the keycodes are set there |
+| Agent keys notify the host of their press | **confirmed on hardware** | `v.oai.hid` received for `AG00` to `AG05`, `act` 1 on press and 0 on release — `npm run lighting -- listen` |
+| The ChatGPT app also intercepts those presses | **confirmed on hardware** | on the `Claude` layer, pressing an Agent key switches Codex threads |
+| A native global shortcut is required for navigation | **refuted** | the keyboard names the slot on the HID channel already open; neither `RegisterEventHotKey` nor a macOS permission |
+| `device.status` returns a 1-based layer index | reported, not re-verified | `layer_index: 1` = Codex layer, `2` = `Claude` layer; Input applies `layer_index - 1` |
+| The `KV_OAI_AG00..05` keycodes are assignable from Input | **refuted** | a single occurrence each in the `app.asar`, inside the hard-wired definition of the native layer: absent from the key picker |
+| An `{"ok":1}` guarantees a visible render | **refuted** | uncorrelated acknowledgements came from the ChatGPT app |
+| A single-report write actually shows up | **confirmed on hardware** | slot 0 turned blue then off by the probe, observed |
+| Rendering is reproducible | confirmed, after correction | the initial flakiness came from the wrong fragmentation; reproducible once the Agent keycodes are set |
+| The device exposes a `0xff00` vendor collection | confirmed | `HID.devices()`: four collections, `0x0001/0x06`, `0x000c/0x01`, `0x000c/0x02`, `0xff00/0x01` |
+| `node-hid` **can** open this device non-exclusively | **confirmed on hardware** | `HIDAsync.open(path, { nonExclusive: true })` then a successful `sys.version` round-trip; the earlier failure came from opening without the option (`new HID.HID(path)` opens in *seize* mode) |
+| A non-exclusive IOKit open succeeds | confirmed | `IOHIDDeviceOpen(kIOHIDOptionsTypeNone)` accepted where `hid_open_path` fails |
+| "Input Monitoring" is required | **undetermined** | granted in the context where IOKit succeeds: the two causes cannot be separated |
+| Private IPC socket of the Codex app | present | `~/.codex/ipc/ipc.sock`, `srw-------` |
 
-## Le point qui décide de la navigation
+## The point that decides navigation
 
-`CLAUDE_CODE_HOST_SESSION_ID` ressemble à l'identifiant qui manquerait pour
-adresser une session dans Claude Desktop. Ce n'en est pas un. Trois sessions
-Desktop indépendantes, relevées par `ps eww` :
+`CLAUDE_CODE_HOST_SESSION_ID` looks like the identifier that would be missing to
+address a session in Claude Desktop. It is not one. Three independent Desktop
+sessions, read with `ps eww`:
 
 ```text
 pid 81796  local_f92b6e6a-2b3c-4cdf-8e43-c58a3e3681a2
-pid 32491  local_f92b6e6a-2b3c-4cdf-8e43-c58a3e3681a2   ← même identifiant
+pid 32491  local_f92b6e6a-2b3c-4cdf-8e43-c58a3e3681a2   ← same identifier
 pid 47158  local_0c92bab5-02f7-4d17-a748-d0717a6c526e
 ```
 
-Deux sessions Claude Code distinctes, ni parentes ni filles, partagent la même
-valeur. L'identifiant **regroupe** des sessions, il n'en désigne aucune. Il ne
-peut donc pas servir de cible de navigation, et le compagnon ne fabrique aucune
-URL à partir de lui.
+Two distinct Claude Code sessions, neither parent nor child of one another, share
+the same value. The identifier **groups** sessions, it designates none of them.
+It therefore cannot serve as a navigation target, and the companion builds no URL
+from it.
 
-Conséquence directe, et c'est la décision produit du projet :
+Direct consequence, and this is the product decision of the project:
 
-| Surface | `tty` | Aller à la session |
+| Surface | `tty` | Going to the session |
 | --- | --- | --- |
-| Terminal | réel | `pid` → `tty` → focus de la fenêtre en AppleScript |
+| Terminal | real | `pid` → `tty` → window focus in AppleScript |
 | Claude Desktop, IDE | `??` | `claude://resume?session=<sessionId>` |
-| Session fermée | — | `claude --resume <sessionId>` |
+| Closed session | — | `claude --resume <sessionId>` |
 
-Ce qui manquait n'était pas un identifiant, c'était la route. Le `sessionId` du
-roster est exactement la cible que `claude://resume` attend — le
-`hostSessionId`, lui, ne désigne toujours rien. **Les six emplacements sont donc
-navigables quelle que soit la surface**, et le repli « activer l'application »
-ne sert plus qu'aux sessions dont l'identifiant n'est pas un UUID.
+What was missing was not an identifier, it was the route. The roster's
+`sessionId` is exactly the target `claude://resume` expects — the
+`hostSessionId`, meanwhile, still designates nothing. **All six slots are
+therefore navigable whatever the surface**, and the "activate the application"
+fallback now only serves sessions whose id is not a UUID.
 
-Deux réserves, portées par le code plutôt que par ce texte : la route n'est pas
-documentée, et le handler ne rend pas compte de l'issue — `open` sort en 0 même
-quand la reprise échoue faute de transcript sur le disque. Le focus par
-AppleScript demande le consentement Automation de macOS, pas l'Accessibilité ;
-le passage par `claude://` n'exige ni l'un ni l'autre.
+Two reservations, carried by the code rather than by this text: the route is not
+documented, and the handler reports nothing back — `open` exits 0 even when the
+resume fails for a transcript missing from disk. Focusing over AppleScript
+requires macOS Automation consent, not Accessibility; going through `claude://`
+requires neither.
 
-## Pièges rencontrés
+## Traps encountered
 
-- **Une session `claude -p` ou un sous-agent émet des hooks sans jamais entrer au
-  roster.** Leur donner un emplacement remplirait les six touches de sessions
-  invisibles. Règle retenue : le roster arbitre l'appartenance, les hooks ne font
-  que poser un état sur un emplacement déjà ouvert. Les états orphelins sont mis
-  en attente dans une file bornée, et les abandons sont comptés.
-- **`CLAUDE_CODE_CHILD_SESSION=1` ne filtre pas les sessions imbriquées.** La
-  session principale d'une fenêtre Desktop le porte aussi.
-- **La sortie standard d'un hook `UserPromptSubmit` est injectée dans le contexte
-  de la conversation.** Un émetteur bavard finirait dans le prompt de
-  l'utilisateur. L'émetteur n'écrit rien sur stdout et sort toujours avec 0.
-- **`CLAUDE_PLUGIN_DATA` n'est pas un chemin d'état stable** : il vaut
-  `…/data/<nom>-inline` sous `--plugin-dir` et `…/data/<nom>` après installation.
-  L'état vit donc sous `~/.claude/thread-status/`, surchargeable par
+- **A `claude -p` session or a subagent emits hooks without ever entering the
+  roster.** Giving them a slot would fill all six keys with invisible sessions.
+  Rule retained: the roster arbitrates membership, the hooks only set a state on
+  a slot that is already open. Orphan states are held in a bounded pending queue,
+  and drops are counted.
+- **`CLAUDE_CODE_CHILD_SESSION=1` does not filter nested sessions.** The main
+  session of a Desktop window carries it too.
+- **The standard output of a `UserPromptSubmit` hook is injected into the
+  conversation context.** A chatty emitter would end up in the user's prompt. The
+  emitter writes nothing to stdout and always exits 0.
+- **`CLAUDE_PLUGIN_DATA` is not a stable state path**: it is
+  `…/data/<name>-inline` under `--plugin-dir` and `…/data/<name>` once installed.
+  The state therefore lives under `~/.claude/thread-status/`, overridable with
   `CLAUDE_THREAD_STATUS_DIR`.
-- **Le format des transcripts `.jsonl` est déclaré interne et change entre
-  versions.** Aucun composant ne les lit, y compris pour l'état.
+- **The `.jsonl` transcript format is declared internal and changes between
+  versions.** No component reads them, including for state.
 
-## Envoyer l'information au clavier : résultat négatif mesuré
+## Sending the information to the keyboard: measured negative result
 
-L'idée retenue jusqu'ici était de récupérer le protocole RGB en capturant
-`~/Library/Logs/input/main.log` pendant que l'app ChatGPT anime les touches
-Agent. **Cette voie est fermée**, et la mesure le montre sans ambiguïté.
+The idea retained until then was to recover the RGB protocol by capturing
+`~/Library/Logs/input/main.log` while the ChatGPT app animates the Agent keys.
+**That path is closed**, and the measurement shows it unambiguously.
 
-Le log contient bien 66 lignes `v.oai.*`, mais elles n'ont que deux formes :
+The log does contain 66 `v.oai.*` lines, but they have only two shapes:
 
 ```text
 |wl_device_comm| No resolver found for id: 475 response:
@@ -184,47 +186,46 @@ Le log contient bien 66 lignes `v.oai.*`, mais elles n'ont que deux formes :
   {"result":{"ok":1},"id":121,"method":"v.oai.rgbcfg"}
 ```
 
-Zéro ligne porte des `params`. Ce sont des **réponses orphelines** : le
-périphérique HID est ouvert en mode non exclusif, ses rapports d'entrée sont
-diffusés à tous les lecteurs, et Input journalise en avertissement les réponses à
-des appels qu'il n'a jamais émis. Le sens qui nous intéresse — hôte → clavier,
-celui qui porte les couleurs et les états — n'y passe jamais.
+Not one line carries `params`. These are **orphan responses**: the HID device is
+opened non-exclusively, its input reports are broadcast to every reader, and
+Input logs, as warnings, the responses to calls it never made. The direction we
+care about — host → keyboard, the one carrying colours and states — never appears
+there.
 
-Ce que la mesure donne quand même :
+What the measurement gives anyway:
 
-- les deux méthodes sont appelées **en couple**, `rgbcfg` puis `thstatus` environ
-  70 ms plus tard, et le couple se répète toutes les 35 à 40 secondes ;
-- le périphérique accuse par `{"ok":1}`, donc les appels aboutissent ;
-- les méthodes propres à Input dans le même log sont `device.status`,
-  `host.focused_app`, `fs.list`, `fs.readbin`, `sys.version` — le namespace
-  `v.oai.*` est bien distinct et n'appartient pas à Input.
+- both methods are called **as a pair**, `rgbcfg` then `thstatus` roughly 70ms
+  later, and the pair repeats every 35 to 40 seconds;
+- the device acknowledges with `{"ok":1}`, so the calls do land;
+- Input's own methods in the same log are `device.status`, `host.focused_app`,
+  `fs.list`, `fs.readbin`, `sys.version` — the `v.oai.*` namespace is clearly
+  distinct and does not belong to Input.
 
-Trois verrous subsistent, et ils sont indépendants :
+Three locks remained at that point, and they were independent:
 
-1. **Le format des requêtes est inconnu.** Le récupérer demande une capture du
-   bus USB (rapports de sortie de l'app ChatGPT vers le périphérique), pas une
-   lecture de log.
-2. **La contention reste entière.** Dernière écriture gagnante, et l'app ChatGPT
-   repousse sa configuration toutes les 35 à 40 secondes : des couleurs écrites
-   par un tiers seraient recouvertes à cette cadence tant qu'elle tourne.
-3. **Aucun canal sanctionné n'existe.** Pas de SDK Work Louder public, et
-   Hardware Buddy n'expose que des compteurs agrégés, sans identité de session.
+1. **The request format is unknown.** Recovering it requires a USB bus capture
+   (output reports from the ChatGPT app to the device), not reading a log.
+2. **Contention is untouched.** Last write wins, and the ChatGPT app pushes its
+   configuration again every 35 to 40 seconds: colours written by a third party
+   would be overwritten at that cadence while it runs.
+3. **No sanctioned channel exists.** No public Work Louder SDK, and Hardware
+   Buddy only exposes aggregate counters, with no session identity.
 
-Le VID Espressif rapproche le matériel de la famille de l'exemple ESP32 publié
-avec Hardware Buddy. Cela ne rend pas le firmware modifiable pour autant, et
-l'interdiction de flasher reste entière : voir l'avertissement dans
+The Espressif VID puts the hardware in the same family as the ESP32 example
+published with Hardware Buddy. That does not make the firmware modifiable, and
+the ban on flashing stands in full: see the warning in
 [`appsense-behavior.md`](appsense-behavior.md).
 
-### Le modèle d'éclairage d'Input ne peut pas exprimer six couleurs
+### Input's lighting model cannot express six colours
 
-Question suivante, plus intéressante : puisque l'app Work Louder pilote bien
-l'éclairage, son propre canal suffirait-il ? **Non, et pour une raison de
-structure, pas de documentation.**
+The next question, and a more interesting one: since the Work Louder app does
+drive the lighting, would its own channel be enough? **No, and for a structural
+reason, not a documentation one.**
 
-L'app ne modélise pas les méthodes `v.oai.*` : zéro occurrence de `v.oai`,
-`rgbcfg` ou `thstatus` dans ses 226 Mo d'`app.asar`. Son éclairage voyage dans la
-configuration du périphérique, sous la forme suivante — relevée dans
-`~/Library/Application Support/input/devices/<pid>/keymap.json` :
+The app does not model the `v.oai.*` methods: zero occurrences of `v.oai`,
+`rgbcfg` or `thstatus` in its 226 MB `app.asar`. Its lighting travels inside the
+device configuration, in the following shape — read from
+`~/Library/Application Support/input/devices/<pid>/keymap.json`:
 
 ```json
 "layers": [{
@@ -237,43 +238,41 @@ configuration du périphérique, sous la forme suivante — relevée dans
 }]
 ```
 
-`14251863` vaut `#D97757` : la couleur Claude du dépôt est déjà en place sur le
-matériel. Et c'est tout ce que le format permet :
+`14251863` is `#D97757`: the repository's Claude colour is already in place on
+the hardware. And that is all the format allows:
 
-- **deux zones par layer**, `backlight` et `underglow`, une seule couleur chacune ;
-- `layout.keymap` est un tableau plat de chaînes de keycodes — aucun objet par
-  touche, donc **aucun emplacement où mettre une couleur par touche**. Une
-  recherche exhaustive de tout entier de type couleur hors `lights` ne retourne
-  rien.
+- **two zones per layer**, `backlight` and `underglow`, one colour each;
+- `layout.keymap` is a flat array of keycode strings — no per-key object, and
+  therefore **nowhere to put a per-key colour**. An exhaustive search for any
+  colour-shaped integer outside `lights` returns nothing.
 
-Conséquence : même en connaissant parfaitement le format d'Input, on ne peut pas
-allumer six touches de six couleurs. Le canal par touche appartient exclusivement
-au namespace privé `v.oai.*` de l'app ChatGPT, qu'Input ignore complètement.
+Consequence: even with a perfect knowledge of Input's format, you cannot light
+six keys in six colours. The per-key channel belongs exclusively to the ChatGPT
+app's private `v.oai.*` namespace, which Input ignores completely.
 
-Ce que le canal d'Input **peut** faire, en revanche : un signal agrégé sur le
-`backlight`, précisément la zone que l'app ChatGPT laisse tranquille d'après
-[`appsense-behavior.md`](appsense-behavior.md). Une couleur pour « une session
-attend une décision », une autre pour « au moins une travaille », une troisième
-pour « tout est terminé ». Le format est connu, la couleur Claude y est déjà.
+What Input's channel **can** do, on the other hand: an aggregate signal on the
+`backlight`, precisely the zone the ChatGPT app leaves alone according to
+[`appsense-behavior.md`](appsense-behavior.md). One colour for "a session is
+waiting on a decision", another for "at least one is working", a third for
+"everything is done". The format is known, and the Claude colour is already
+there.
 
-Cette voie n'est pas ouverte pour autant : elle exige d'écrire la configuration du
-périphérique en cours de session, ce que le périmètre du dépôt exclut
-explicitement — « aucune écriture directe dans le stockage Input ou le
-périphérique » — et elle entrerait en concurrence avec les propres poussées
-d'Input. Elle demande donc une décision de périmètre, pas seulement du code.
+That path is not open for all that: it requires writing the device configuration
+during a session, which the repository's scope explicitly excludes — "no direct
+write into Input's storage or the device" — and it would compete with Input's own
+pushes. It therefore calls for a scope decision, not only code.
 
-Réserve de mesure : la copie locale de `keymap.json` peut être en retard sur ce qui
-a réellement été poussé au périphérique, et l'observation ci-dessus n'a pas été
-recoupée avec une ligne `sending device config` — le log courant n'en contient
-aucune.
+Measurement caveat: the local copy of `keymap.json` can lag behind what was
+actually pushed to the device, and the observation above was not cross-checked
+against a `sending device config` line — the current log contains none.
 
-### Le canal par touche existe, et il est lisible localement
+### The per-key channel exists, and it is readable locally
 
-L'app ChatGPT embarque le SDK privé qui parle au Codex Micro :
-`@worklouder/device-kit-oai` `0.1.11` et `@worklouder/wl-device-kit`, dans
-`/Applications/ChatGPT.app/Contents/Resources/app.asar`. Le fichier
+The ChatGPT app bundles the private SDK that talks to the Codex Micro:
+`@worklouder/device-kit-oai` `0.1.11` and `@worklouder/wl-device-kit`, inside
+`/Applications/ChatGPT.app/Contents/Resources/app.asar`. The file
 `node_modules/@worklouder/device-kit-oai/dist/rpc_api_oai/rpc_api_oai.js`
-contient l'énumération, en clair :
+contains the enumeration, in plain text:
 
 ```js
 // Vendor specific.
@@ -281,10 +280,9 @@ VendorJsonRpcMethods["ThreadsLighting"] = "v.oai.thstatus";  /** Per-thread acce
 VendorJsonRpcMethods["RgbConfig"]       = "v.oai.rgbcfg";    /** Keys and ambient zone lighting. */
 ```
 
-Le commentaire tranche la question : `thstatus` est **l'éclairage par thread**,
-`rgbcfg` ne couvre que les deux zones globales — ce qui recoupe exactement le
-modèle à deux zones d'Input mesuré plus haut. La méthode d'envoi est documentée
-dans le bundle :
+The comment settles the question: `thstatus` is the **per-thread** lighting,
+`rgbcfg` only covers the two global zones — which matches Input's two-zone model
+measured above exactly. The sending method is documented in the bundle:
 
 ```js
 // Only the thread id is required on each entry. […] optional color, brightness,
@@ -295,125 +293,117 @@ async sendThreadsLighting(threads) {
   let minimized = threads.map((thread) => { return { id: thread.id, c: thread.color, … } });
 ```
 
-Donc : un tableau d'entrées, une par emplacement, chacune adressée par `id`, avec
-`c` en entier `0xRRGGBB`, `b` et `s` normalisés de 0 à 1, et des drapeaux de
-synchronisation. Les mises à jour partielles sont prévues. L'énumération des
-effets est également en clair : `snake = 2`, `rainbow = 3`, `breath = 4`,
-`gradient = 5`, `shallowBreath = 6`.
+So: an array of entries, one per slot, each addressed by `id`, with `c` as a
+`0xRRGGBB` integer, `b` and `s` normalised from 0 to 1, and sync flags. Partial
+updates are provided for. The effect enumeration is in plain text too:
+`snake = 2`, `rainbow = 3`, `breath = 4`, `gradient = 5`, `shallowBreath = 6`.
 
-Deux méthodes supplémentaires existent dans le même namespace et ne sont pas
-étudiées ici : `v.oai.hid` et `v.oai.rad`.
+Two further methods exist in the same namespace and are not studied here:
+`v.oai.hid` and `v.oai.rad`.
 
-### Cadre HID confirmé sur matériel
+### HID frame confirmed on hardware
 
-Le cadre rapporté est exact. Une requête no-op — une entrée réduite à `{"id":0}`,
-qui d'après le SDK ne change aucune couleur — a été envoyée au périphérique et
-acquittée :
+The reported frame is correct. A no-op request — an entry reduced to `{"id":0}`,
+which according to the SDK changes no colour — was sent to the device and
+acknowledged:
 
 ```text
-envoi    0602367b226d6574686f64223a22762e…   {"method":"v.oai.thstatus","params":[{"id":0}],"id":1}
-réponse  0602367b22726573756c74223a7b226f…   {"result":{"ok":1},"id":1,"method":"v.oai.thstatus"}
+sent      0602367b226d6574686f64223a22762e…   {"method":"v.oai.thstatus","params":[{"id":0}],"id":1}
+response  0602367b22726573756c74223a7b226f…   {"result":{"ok":1},"id":1,"method":"v.oai.thstatus"}
 ```
 
-Rapports de 64 octets, octet 0 = report ID `0x06`, octet 1 = canal `0x02`,
-octet 2 = longueur, charge utile UTF-8 à partir de l'octet 3, soit 61 octets par
-rapport. **Le même cadre sert dans les deux sens.**
+64-byte reports, byte 0 = report ID `0x06`, byte 1 = channel `0x02`, byte 2 =
+length, UTF-8 payload from byte 3, so 61 bytes per report. **The same frame
+serves in both directions.**
 
-**La fragmentation est confirmée, dans le schéma du SDK.** L'hypothèse
-initiale — octet 2 du premier rapport portant la longueur totale — est réfutée
-par la mesure. Le schéma qui fonctionne est celui lu dans le bundle : **l'octet
-2 porte la longueur du fragment, sur chaque rapport**, la charge utile étant
-découpée en fragments de 61 octets réassemblés par le périphérique. Preuve :
-des poussées `thstatus` de ~140 octets (six entrées, trois rapports) ont été
-acquittées avec l'`id` corrélé, et les touches se sont allumées une par une —
-sonde `scripts/lighting.mjs`, cadrage `scripts/lib/hid-frame.mjs`.
+**Fragmentation is confirmed, in the SDK's scheme.** The initial hypothesis —
+byte 2 of the first report carrying the total length — is refuted by measurement.
+The scheme that works is the one read in the bundle: **byte 2 carries the chunk
+length, on every report**, the payload being split into 61-byte chunks
+reassembled by the device. Proof: `thstatus` pushes of ~140 bytes (six entries,
+three reports) were acknowledged with a correlated `id`, and the keys lit one by
+one — `scripts/lighting.mjs` probe, framing in `scripts/lib/hid-frame.mjs`.
 
-Le piège mérite d'être retenu, car il invalide silencieusement toute mesure :
-**les réponses du périphérique sont diffusées à tous les lecteurs du HID**, et
-l'app ChatGPT en provoque toutes les 35 à 40 secondes. Une sonde qui prend la
-première réponse venue prend donc les accusés de ChatGPT pour les siens. Six
-écritures avaient ainsi été déclarées réussies alors qu'aucune n'avait abouti —
-ce qui explique l'absence de tout changement visible. Corrélées par le champ
-`id`, les mêmes charges de 101 octets (schéma « longueur totale ») ne reçoivent
-aucune réponse.
+The trap is worth remembering, because it silently invalidates any measurement:
+**the device's responses are broadcast to every HID reader**, and the ChatGPT app
+provokes some every 35 to 40 seconds. A probe that takes the first response it
+sees therefore takes ChatGPT's acknowledgements for its own. Six writes had been
+declared successful that way while none had landed — which explains the absence
+of any visible change. Correlated by the `id` field, the same 101-byte payloads
+("total length" scheme) receive no response at all.
 
-Toute sonde sur ce périphérique doit donc vérifier l'`id` de la réponse. C'est la
-leçon la plus coûteuse de cette campagne de mesure.
+Any probe on this device must therefore check the response's `id`. That is the
+most expensive lesson of this measurement campaign.
 
-Le routage se fait par le report ID, pas par la collection : IOKit énumère un
-seul périphérique là où hidapi voit quatre collections, et `SetReport` avec
-l'identifiant `0x06` atteint le bon canal.
+Routing is done by report ID, not by collection: IOKit enumerates a single device
+where hidapi sees four collections, and `SetReport` with identifier `0x06`
+reaches the right channel.
 
-**`node-hid` fait ce travail sur macOS, à condition de demander le non exclusif.**
-L'échec mesuré lors de la première campagne venait d'une ouverture
-`new HID.HID(path)` **sans option** : hidapi ouvre alors en mode *seize*, refusé
-tant qu'une autre application tient le périphérique. `node-hid` 3.4.0 expose
-pourtant `hid_darwin_set_open_exclusive` — `src/HIDAsync.cc:137` —
-via `HIDAsync.open(path, { nonExclusive: true })`, et le round-trip
-`sys.version` réussit ainsi pendant que ChatGPT tient le même périphérique
-(transport livré : `scripts/lib/hid-device.mjs`). L'ouverture non exclusive
-IOKit (`kIOHIDOptionsTypeNone`), validée par la sonde Swift, revient au même ;
-les deux voies fonctionnent.
+**`node-hid` does this job on macOS, provided you ask for non-exclusive.** The
+failure measured during the first campaign came from a `new HID.HID(path)` open
+**without options**: hidapi then opens in *seize* mode, refused while another
+application holds the device. `node-hid` 3.4.0 does expose
+`hid_darwin_set_open_exclusive` — `src/HIDAsync.cc:137` — through
+`HIDAsync.open(path, { nonExclusive: true })`, and the `sys.version` round-trip
+succeeds that way while ChatGPT holds the same device (shipped transport:
+`scripts/lib/hid-device.mjs`). The IOKit non-exclusive open
+(`kIOHIDOptionsTypeNone`), validated by the Swift probe, amounts to the same;
+both routes work.
 
-Reste rapporté et non revérifié : le garde-fou Electron, selon lequel
-`codexMicro.updateLighting` n'accepterait les mises à jour que depuis le
-`webContents` de la fenêtre principale de ChatGPT.
+Still reported and not re-verified: the Electron guard, according to which
+`codexMicro.updateLighting` would only accept updates from the `webContents` of
+ChatGPT's main window.
 
-### Acquitté n'est pas affiché
+### Acknowledged is not displayed
 
-Le périphérique acquitte `{"ok":1}` sur les six emplacements, avec l'entrée
-canonique complète — `c`, `b`, `e`, `s`, `sk`, `sa` — et **rien ne change à
-l'écran du clavier**. L'accusé porte donc sur la réception de l'appel, pas sur
-son rendu.
+The device acknowledged `{"ok":1}` on all six slots, with the full canonical
+entry — `c`, `b`, `e`, `s`, `sk`, `sa` — and **nothing changed on the keyboard**.
+The acknowledgement therefore covers receiving the call, not rendering it.
 
-Trois hypothèses, non départagées, par ordre de conséquence pour le produit :
+Three hypotheses were on the table at that point, in order of consequence for the
+product:
 
-1. **Dépendance au layer.** L'observation a été faite sur le layer `Claude`, dont
-   la configuration Input impose déjà un `backlight` solide `#D97757`. Si
-   l'éclairage par thread n'est rendu que sur le layer Codex natif, où les touches
-   Agent sont effectivement des touches Agent, alors la fonction est inatteignable
-   là où ce projet en a besoin. C'est l'hypothèse à écarter en premier.
-2. **`sk` inversé.** `syncKeysLighting` peut signifier « propage cette couleur à
-   la zone des touches » aussi bien que « cet emplacement suit la zone des
-   touches » — la seconde lecture écraserait la couleur demandée.
-3. **`rgbcfg` conditionne `thstatus`.** L'app ChatGPT envoie toujours les deux en
-   couple, `rgbcfg` puis `thstatus` 70 ms après. La zone des touches doit
-   peut-être être placée dans un mode qui autorise les accents.
+1. **Layer dependency.** The observation was made on the `Claude` layer, whose
+   Input configuration already forces a solid `#D97757` `backlight`. If
+   per-thread lighting only renders on the native Codex layer, where the Agent
+   keys really are Agent keys, then the feature is unreachable where this project
+   needs it. That was the hypothesis to rule out first.
+2. **`sk` inverted.** `syncKeysLighting` could mean "propagate this colour to the
+   key zone" just as well as "this slot follows the key zone" — the second
+   reading would overwrite the requested colour.
+3. **`rgbcfg` gates `thstatus`.** The ChatGPT app always sends the two as a pair,
+   `rgbcfg` then `thstatus` 70ms later. The key zone may need to be put into a
+   mode that allows accents.
 
-Ces hypothèses ne se départagent pas par la lecture : elles demandent une
-observation du clavier par une personne, un essai à la fois.
+Hypothesis 1 turned out to be the right track, but not for the reason stated: see
+below. Hypotheses 2 and 3 were never needed.
 
-### Le rendu marche, mais une fois
+### Rendering works, but once
 
-Une charge mono-rapport — `{"method":"v.oai.thstatus","params":[{"id":0,"c":255,"e":1}]}`,
-61 octets — a **réellement allumé la première touche en bleu**, puis l'a éteinte
-à la restauration. La chaîne complète est donc démontrée : cadre, adressage par
-emplacement, encodage de couleur, effet solide, extinction.
+A single-report payload —
+`{"method":"v.oai.thstatus","params":[{"id":0,"c":255,"e":1}]}`, 61 bytes —
+**actually lit the first key blue**, then turned it off on restore. The complete
+chain was therefore demonstrated: frame, addressing by slot, colour encoding,
+solid effect, turn-off.
 
-Aux relances suivantes, le même appel ne produit plus rien. Et pendant
-l'observation, les autres touches ont repris une teinte orange **une par une** :
-l'app ChatGPT réassère son propre état.
+On subsequent runs, the same call produced nothing. And during the observation,
+the other keys took on an orange tint **one by one**: the ChatGPT app reasserting
+its own state.
 
-Un succès non reproductible, sur un périphérique où un second écrivain repeint
-périodiquement, ne se lit pas comme un protocole défaillant. Il se lit comme une
-**course perdue**. Le protocole est acquis ; ce qui manque est le contrôle
-exclusif de la surface d'affichage.
+A non-reproducible success, on a device where a second writer periodically
+repaints, does not read as a failing protocol. It reads as a **lost race**. The
+protocol was acquired; what was missing was exclusive control of the display
+surface.
 
-Le test qui tranche est le plus simple possible : quitter l'app ChatGPT et
-relancer. S'il devient reproductible, le diagnostic est clos et la contention est
-le seul obstacle restant — celui-là même que ce document annonçait comme non
-résoluble de façon déterministe.
+### The layer constraint, and its resolution
 
-### La contrainte de layer, et sa résolution
+**Resolved.** The firmware only renders per-thread lighting on keys whose keycode
+is `KV_OAI_AG00` to `KV_OAI_AG05`. It is not the layer index that matters: the
+firmware has to know which physical key is slot N, and the keycode is what tells
+it. On a layer where those positions are `KC_NONE`, there is no slot to paint.
 
-**Résolu.** Le firmware ne rend l'éclairage par thread que sur les touches dont le
-keycode est `KV_OAI_AG00` à `KV_OAI_AG05`. Ce n'est pas l'index du layer qui
-compte : c'est que le firmware doit savoir quelle touche physique est
-l'emplacement N, et le keycode est ce qui le lui dit. Sur un layer où ces
-positions valent `KC_NONE`, il n'y a aucun emplacement à peindre.
-
-L'indice décisif se lisait dans le bundle d'Input, où le layer Codex natif est
-défini exactement ainsi :
+The decisive clue was in Input's bundle, where the native Codex layer is defined
+exactly like this:
 
 ```js
 base: [
@@ -423,139 +413,140 @@ base: [
 ]
 ```
 
-Deux touches puis quatre — la géométrie exacte des six touches Agent, dans
-l'ordre confirmé à l'œil.
+Two keys then four — the exact geometry of the six Agent keys, in the order
+confirmed by eye.
 
-Ces keycodes n'apparaissent qu'**une seule fois** chacun dans les 226 Mo de
-l'`app.asar` d'Input : ils sont absents de son sélecteur de touches, donc
-inassignables depuis l'interface. D'où
-[`scripts/enable-agent-keys.mjs`](../../scripts/enable-agent-keys.mjs), qui les
-écrit dans un export de profile à réimporter par le flux officiel **Import
-Profile**, sans jamais toucher au layer d'index 0.
+These keycodes appear **only once** each in Input's 226 MB `app.asar`: they are
+absent from its key picker, and therefore unassignable from the interface. Hence
+[`scripts/enable-agent-keys.mjs`](../../scripts/enable-agent-keys.mjs), which
+writes them into a profile export to be re-imported through the official **Import
+Profile** flow, without ever touching the layer at index 0.
 
-Aucun raccourci Claude n'est perdu : ces six positions étaient `no-action`, et les
-raccourcis vivent sur la rangée suivante.
+No Claude shortcut is lost: those six positions were `no-action`, and the
+shortcuts live on the next row.
 
-**Mais le coût n'est pas nul, et il n'est pas seulement théorique.** Ces keycodes
-ne sont pas de simples marqueurs d'affichage : le firmware émet une notification
-`v.oai.hid`, et **l'app ChatGPT y réagit en changeant de thread Codex**. Mesuré :
-sur le layer `Claude`, appuyer sur une touche Agent fait basculer les threads
-Codex.
+**But the cost is not zero, and it is not merely theoretical.** These keycodes
+are not simple display markers: the firmware emits a `v.oai.hid` notification,
+and **the ChatGPT app reacts to it by switching Codex thread**. Measured: on the
+`Claude` layer, pressing an Agent key switches Codex threads.
 
-La même application contend donc les deux moitiés de la fonction :
+The same application therefore contends for both halves of the feature:
 
-| Ressource | Ce que fait l'app ChatGPT |
+| Resource | What the ChatGPT app does |
 | --- | --- |
-| les six LED | réécrit sa configuration toutes les 35 à 40 s |
-| les six appuis | intercepte et change de thread Codex |
+| the six LEDs | rewrites its configuration every 35 to 40s |
+| the six presses | intercepts them and switches Codex thread |
 
-Il n'y a pas d'arbitrage possible : les notifications sont diffusées à tous les
-lecteurs, et rien ne permet de demander à ChatGPT de se taire. **Quitter l'app
-ChatGPT résout les deux d'un coup** — les écritures d'éclairage ne sont plus
-recouvertes, et les appuis n'ont plus qu'un seul destinataire.
+There is no arbitration possible: notifications are broadcast to every reader,
+and nothing can ask ChatGPT to be quiet. **Quitting the ChatGPT app solves both
+at once** — lighting writes are no longer overwritten, and presses have a single
+recipient.
 
-C'est donc la condition d'usage réelle de la fonction, et elle doit être annoncée
-comme telle : les six témoins Claude et l'app ChatGPT ne cohabitent pas.
+That is therefore the real condition of use of the feature, and it has to be
+announced as such: the six Claude lights and the ChatGPT app do not coexist.
 
-**Vérifié sur matériel** : après import, layer `Claude` actif,
-`lighting set all #00FF00` allume bien les six touches en vert.
+**Verified on hardware**: after import, with the `Claude` layer active,
+`lighting set all #00FF00` does light all six keys green.
 
-### Les deux contournements qui avaient échoué
+### The two workarounds that had failed
 
-Le protocole fonctionne, mais **l'éclairage par thread ne rend que sur le layer
-Codex natif**. Sur le layer `Claude`, les écritures sont acquittées et rien ne
-s'affiche.
+Before the keycode explanation was found, the working theory was that per-thread
+lighting only rendered on the native Codex layer, because on the `Claude` layer
+the writes were acknowledged and nothing appeared.
 
-C'est la contrainte la plus lourde du projet, car les deux besoins s'excluent :
-le layer `Claude` existe pour porter les raccourcis Claude, et c'est précisément
-là que les couleurs d'état seraient utiles.
+The probable explanation seemed to lie in Input's lighting model measured above:
+each layer carries its own `lights.backlight`, and the `Claude` layer's is a
+`solid` at `#D97757`. The layer's rendering would then cover the per-thread
+accents, which the firmware might only compose on the layer that carries the
+"Agent keys" role.
 
-L'explication probable tient au modèle d'éclairage d'Input mesuré plus haut :
-chaque layer porte son propre `lights.backlight`, et celui du layer `Claude` est
-un `solid` à `#D97757`. Le rendu du layer recouvrirait alors les accents par
-thread, que le firmware ne compose peut-être que sur le layer qui porte le rôle
-« touches Agent ».
+Two workarounds were tried, from least to most costly:
 
-Deux contournements, du moins coûteux au plus coûteux :
+1. **Neutralising the key zone at runtime**, with `v.oai.rgbcfg` and an `off`
+   effect on `keys`, then pushing the accents. **Tried, no effect**: on the
+   `Claude` layer nothing appears, and the same write renders normally as soon as
+   the Codex layer becomes active again. `rgbcfg` sets a global zone, not the
+   layer's own `backlight`, which wins while that layer is active.
+2. **Neutralising the `Claude` layer's `backlight`**, to `off` or brightness 0,
+   through the Input app. **Tried, no effect**: the `Claude` layer stays black,
+   and the same write applies the colour to all six keys as soon as the Codex
+   layer becomes active again.
 
-1. **Neutraliser la zone des touches à l'exécution**, par `v.oai.rgbcfg` avec un
-   effet `off` sur `keys`, puis pousser les accents. **Éprouvé, sans effet** : sur
-   le layer `Claude` rien ne s'affiche, et la même écriture rend normalement dès
-   que le layer Codex redevient actif. `rgbcfg` règle une zone globale, pas le
-   `backlight` propre au layer, qui l'emporte tant que ce layer est actif.
-2. **Neutraliser le `backlight` du layer `Claude`**, à `off` ou en luminosité 0,
-   par l'app Input. **Éprouvé, sans effet** : le layer `Claude` reste noir, et la
-   même écriture applique la couleur sur les six touches dès que le layer Codex
-   redevient actif.
+Both failures pointed in the wrong direction: they looked for what was *covering*
+the accents, whereas the firmware was composing none, for lack of a keycode to
+identify the slots.
 
-Ces deux échecs pointaient dans la mauvaise direction : ils cherchaient ce qui
-*recouvrait* les accents, alors que le firmware n'en composait aucun, faute de
-keycode pour identifier les emplacements.
+### What blocks now is no longer technical
 
-### Ce qui bloque désormais n'est plus technique
-
-| Verrou | État |
+| Lock | State |
 | --- | --- |
-| Connaître le protocole par touche | **levé**, lisible localement |
-| Licence | `UNLICENSED`, paquet privé, registre GitHub Packages fermé |
-| Concurrence d'écriture | entière : ChatGPT repousse toutes les 35 à 40 s |
-| Canal sanctionné | inexistant, ni OpenAI ni Work Louder |
+| Knowing the per-key protocol | **lifted**, readable locally |
+| Licence | `UNLICENSED`, private package, closed GitHub Packages registry |
+| Write contention | untouched: ChatGPT pushes again every 35 to 40s |
+| Sanctioned channel | non-existent, neither OpenAI nor Work Louder |
 
-La distinction utile pour un dépôt public : **documenter un format observé** est
-ce que ce dépôt fait déjà pour Input ; **redistribuer le SDK ou son code** est
-exclu par sa licence. Réimplémenter le format observé pour interopérer avec un
-périphérique que l'on possède est la voie habituelle, et reste une décision à
-prendre en connaissance de cause, pas un acquis.
+The useful distinction for a public repository: **documenting an observed format**
+is what this repository already does for Input; **redistributing the SDK or its
+code** is excluded by its licence. Reimplementing the observed format to
+interoperate with a device you own is the usual route, and remains a decision to
+take knowingly, not a given.
 
-Reste que le verrou de concurrence n'est pas résolu par la connaissance du
-format : deux écrivains sur un HID non exclusif, dernière écriture gagnante, et
-l'app ChatGPT réémet périodiquement. Aucune stratégie de coexistence déterministe
-n'a été identifiée — seulement des hypothèses non testées, dont retirer à ChatGPT
-l'autorisation macOS de surveillance des saisies, ce qui désactiverait aussi ses
-propres touches.
+The contention lock is not solved by knowing the format: two writers on a
+non-exclusive HID, last write wins, and the ChatGPT app re-emits periodically. No
+deterministic coexistence strategy has been identified — only untested
+hypotheses, among them removing ChatGPT's macOS input-monitoring permission,
+which would also disable its own keys.
 
-## Ce qui est implémenté
+## What is implemented
 
-| Composant | Chemin |
+| Component | Path |
 | --- | --- |
-| Plugin de hooks | [`thread-status/`](../../thread-status/README.md) |
-| Réducteur pur, six emplacements | `scripts/lib/thread-slots.mjs` |
-| Compagnon `watch` / `status` / `focus` / `doctor` | `scripts/thread-status.mjs` |
-| Tests | `tests/thread-slots.test.mjs` |
+| Hooks plugin | [`thread-status/`](../../thread-status/README.md) |
+| Pure reducer, six slots | `scripts/lib/thread-slots.mjs` |
+| `watch` / `status` / `focus` / `doctor` companion | `scripts/thread-status.mjs` |
+| HID framing and lighting model | `scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs` |
+| `node-hid` transport | `scripts/lib/hid-device.mjs` |
+| Lighting CLI, `DeviceAdapter` | `scripts/lighting.mjs` |
+| Agent keycodes on the `Claude` layer | `scripts/enable-agent-keys.mjs` |
+| Tests | `tests/thread-slots.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
 
-La sortie du compagnon est `~/.claude/thread-status/slots.json`. C'est la couture
-prévue pour un futur `DeviceAdapter` : tant que le protocole RGB n'est pas mesuré,
-la chaîne s'arrête à ce fichier.
+The companion's output is `~/.claude/thread-status/slots.json`. It is the seam
+the `DeviceAdapter` consumes: `node scripts/lighting.mjs watch` follows that file
+and pushes the six state colours to the keyboard.
 
-Les touches physiques ne sont pas encore reliées. Les six touches Agent sont
-`key-9`, `key-10`, `key-5`, `key-6`, `key-7`, `key-8` — voir
-`KEY_CONTROL_LOCATIONS` dans `shared/input-profile.mjs`. Le raccourci global qui
-appellerait `focus <n>` demande une API native (`RegisterEventHotKey`), qui
-n'exige pas l'Accessibilité mais sort du périmètre d'un script Node.
+The physical keys are wired: the six Agent keys are `key-9`, `key-10`, `key-5`,
+`key-6`, `key-7`, `key-8` — see `KEY_CONTROL_LOCATIONS` in
+`shared/input-profile.mjs` — and they emit `v.oai.hid` on the HID channel already
+open, so `npm run lighting -- watch --focus` routes a press to `focus <n>` with
+no native global shortcut and no macOS permission.
 
-## Ce qui reste non établi
+## What is still unestablished
 
-- Le focus AppleScript par `tty` n'a pas été exercé de bout en bout : aucune
-  session Claude Code en terminal n'était disponible, et iTerm2 n'est pas installé
-  sur la machine de mesure. Seule Terminal.app pourrait être testée.
-- La liste complète des valeurs de `CLAUDE_CODE_ENTRYPOINT`. Une seule est
-  observée : `claude-desktop`.
-- Si `claude agents --json` inclut les sessions lancées par une extension d'IDE.
-- Le cadre HID exact, non revérifié ici. Une capture passive du bus USB n'est plus
-  nécessaire pour obtenir le format, seulement pour le confirmer à l'exécution.
-- Toute stratégie de coexistence avec l'app ChatGPT sur le même périphérique HID.
-  Aucune n'a été testée, et aucune ne paraît déterministe.
-- `v.oai.hid` et `v.oai.rad`, présents dans le même namespace, non étudiés.
-- Si Work Louder ou OpenAI accepteraient d'ouvrir le canal. C'est la seule voie
-  qui lèverait à la fois la licence, la concurrence et la pérennité.
-- Le comportement du roster lorsque plus de six sessions vivent en parallèle du
-  point de vue de l'utilisateur : le débordement est compté et signalé, mais
-  l'ergonomie retenue n'est pas validée.
+- AppleScript focus by `tty` has not been exercised end to end: no terminal
+  Claude Code session was available, and iTerm2 is not installed on the
+  measurement machine. Only Terminal.app could be tested.
+- The complete list of `CLAUDE_CODE_ENTRYPOINT` values. Only one is observed:
+  `claude-desktop`.
+- Whether `claude agents --json` includes sessions started by an IDE extension.
+- Whether `claude://resume` fails, and how, when the transcript is missing from
+  disk. The handler has a `transcript_missing` error path, but `open` exits 0
+  regardless, so nothing surfaces to the caller.
+- How long the undocumented `claude://resume` route will last. It is verified on
+  Claude `1.24012.9` and can change with an application update.
+- Any coexistence strategy with the ChatGPT app on the same HID device. None has
+  been tested, and none looks deterministic.
+- `v.oai.hid` and `v.oai.rad`, present in the same namespace, not studied.
+- Whether Work Louder or OpenAI would agree to open the channel. That is the only
+  route that would lift the licence, the contention and the longevity questions
+  at once.
+- The roster's behaviour, from the user's point of view, when more than six
+  sessions are alive: overflow is counted and reported, but the ergonomics
+  retained are not validated.
 
 ## Sources
 
 - [Claude Code — hooks](https://code.claude.com/docs/en/hooks)
-- [Claude Code — gestion des sessions](https://code.claude.com/docs/en/sessions)
-- [Claude Code — création de plugins](https://code.claude.com/docs/en/plugins)
-- [Claude Desktop — ouvrir avec un lien](https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link)
+- [Claude Code — session management](https://code.claude.com/docs/en/sessions)
+- [Claude Code — plugin creation](https://code.claude.com/docs/en/plugins)
+- [Claude Desktop — open with a link](https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link)
 - [Anthropic — Hardware Buddy BLE Protocol](https://github.com/anthropics/claude-desktop-buddy/blob/main/REFERENCE.md)

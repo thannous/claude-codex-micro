@@ -1,54 +1,56 @@
-# Licence du projet
+[English](LICENSING.md) · [Français](LICENSING.fr.md)
 
-## Décision
+# Project licence
 
-La licence **MIT** a été choisie par le propriétaire du projet.
+## Decision
 
-Le texte standard complet se trouve dans [`LICENSE`](LICENSE) et couvre le code
-ainsi que la documentation du dépôt, sauf mention explicite contraire.
+The **MIT** licence was chosen by the project owner.
 
-## Titulaire du copyright
+The complete standard text is in [`LICENSE`](LICENSE) and covers the code as well
+as the repository's documentation, unless explicitly stated otherwise.
 
-Le propriétaire du projet a confirmé le titulaire suivant :
+## Copyright holder
+
+The project owner confirmed the following holder:
 
 ```text
 Thanh Chau
 ```
 
-La notice installée est :
+The installed notice is:
 
 ```text
 Copyright (c) 2026 Thanh Chau
 ```
 
-## Effet de la licence MIT
+## Effect of the MIT licence
 
-La licence MIT permet notamment l'utilisation, la copie, la modification, la
-fusion, la publication, la distribution, la sous-licence et la vente de copies,
-sous réserve de conserver la notice de copyright et la notice de permission.
-Elle inclut une exclusion de garantie.
+The MIT licence permits, among other things, use, copying, modification, merging,
+publication, distribution, sublicensing and the sale of copies, provided the
+copyright notice and the permission notice are kept. It includes a disclaimer of
+warranty.
 
-Le texte de `LICENSE` fait foi ; ce résumé n'ajoute ni ne retire de condition.
+The text of `LICENSE` governs; this summary adds no condition and removes none.
 
-## Marques et contenus tiers
+## Trademarks and third-party content
 
-La licence du projet ne donne aucun droit sur les marques Work Louder,
-Codex Micro, Claude ou Anthropic. Le dépôt reste un projet indépendant et ne
-doit pas inclure :
+The project's licence grants no right over the Work Louder, Codex Micro, Claude
+or Anthropic trademarks. The repository remains an independent project and must
+not include:
 
-- logos ou assets tiers sans autorisation ;
-- firmware ou exports propriétaires ;
-- captures contenant des identifiants privés ;
-- texte tiers incompatible avec la licence ou la loi.
+- third-party logos or assets without permission;
+- proprietary firmware or exports;
+- screenshots containing private identifiers;
+- third-party text incompatible with the licence or the law.
 
-## État de la décision
+## State of the decision
 
-- Licence : MIT.
-- Titulaire : Thanh Chau.
-- Année : 2026.
-- Périmètre : code et documentation, sauf mention explicite contraire.
+- Licence: MIT.
+- Holder: Thanh Chau.
+- Year: 2026.
+- Scope: code and documentation, unless explicitly stated otherwise.
 
-Les portes de licence sont résolues. Les étapes Git et de publication restent
-soumises à une autorisation séparée.
+The licensing gates are resolved. The Git and publication steps remain subject to
+separate authorisation.
 
-Ce document ne constitue pas un avis juridique.
+This document does not constitute legal advice.
