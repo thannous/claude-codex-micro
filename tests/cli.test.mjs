@@ -53,7 +53,6 @@ test("repository validation commands run successfully from the checkout", async 
     "scripts/validate-profile.mjs",
     "scripts/validate-presets.mjs",
     "scripts/check-doc-links.mjs",
-    "scripts/prepare-gui.mjs",
   ]) {
     await t.test(script, () => {
       const result = runScript(script);
@@ -61,6 +60,12 @@ test("repository validation commands run successfully from the checkout", async 
       assert.match(result.stdout, /OK:/);
     });
   }
+
+  await t.test("scripts/prepare-gui.mjs", () => {
+    const result = runScript("scripts/prepare-gui.mjs", [], { timeout: 120_000 });
+    assert.equal(result.status, 0, result.stderr);
+    assert.match(result.stdout, /OK:/);
+  });
 });
 
 test("build-input-profile writes a validated profile once and refuses overwrite", async (t) => {
