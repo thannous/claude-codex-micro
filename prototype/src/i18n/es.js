@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Colores de las teclas Agent",
+    experimental: "experimental",
     off: "apagada",
     states: {
       blocked: "Se espera una decisión",
@@ -38,7 +39,7 @@ export default {
       free: "Ninguna sesión en esta tecla",
     },
     note:
-      "Enviados por «npm run lighting -- watch» según el estado real de las sesiones de Claude Code. Cierra la app ChatGPT: reescribe estos LED cada 35 a 40 segundos e intercepta las pulsaciones.",
+      "Enviados por «npm run lighting -- watch» según el estado real de las sesiones de Claude Code. Cierra la app ChatGPT: reescribe estos LED cada 35 a 40 segundos e intercepta las pulsaciones. Nada más depende de esto: si la iluminación falla, tus teclas siguen enviando sus atajos.",
   },
   controls: {
     joystick: "Joystick direccional — sin clic",
@@ -172,6 +173,7 @@ export default {
     replace: "Reemplazar",
     chooseJson: "Elegir el JSON",
     goExport: "Verificar y exportar",
+    retry: "Reintentar",
   },
   wizard: {
     step1Title: "Cargar la exportación de Input",
@@ -274,6 +276,8 @@ export default {
       "Este archivo no es un JSON válido. Exporta el perfil desde Work Louder Input y vuelve a intentarlo.",
     invalidFile: "Archivo de Input no válido.",
     buildFailed: "No se pudo generar.",
+    exportPanelLoad:
+      "No se pudo cargar el panel de exportación. Comprueba tu conexión y vuelve a intentarlo.",
     previousKept: "La copia de seguridad válida anterior sigue cargada.",
     EMPTY_FILE: "El archivo JSON está vacío.",
     WRONG_DEVICE: "Esta copia de seguridad no proviene de un Codex Micro.",

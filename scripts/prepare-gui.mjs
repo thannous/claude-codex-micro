@@ -9,7 +9,7 @@ const guiDirectory = resolve(repositoryRoot, "prototype");
 
 try {
   const result = ensureGuiDependencies(guiDirectory);
-  console.log(result.installed ? "OK: dépendances GUI installées" : "OK: dépendances GUI déjà disponibles");
+  console.log(result.installed ? "OK: GUI dependencies installed" : "OK: GUI dependencies already available");
 } catch (error) {
   console.error(error.message);
   process.exitCode = error.exitCode ?? 1;

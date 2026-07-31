@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Farben der Agent-Tasten",
+    experimental: "experimentell",
     off: "aus",
     states: {
       blocked: "Eine Entscheidung wird erwartet",
@@ -38,7 +39,7 @@ export default {
       free: "Keine Sitzung auf dieser Taste",
     },
     note:
-      "Von „npm run lighting -- watch“ aus dem echten Zustand der Claude-Code-Sitzungen gesendet. Die ChatGPT-App muss beendet sein: sie überschreibt diese LEDs alle 35 bis 40 Sekunden und fängt die Tastendrücke ab.",
+      "Von „npm run lighting -- watch“ aus dem echten Zustand der Claude-Code-Sitzungen gesendet. Die ChatGPT-App muss beendet sein: sie überschreibt diese LEDs alle 35 bis 40 Sekunden und fängt die Tastendrücke ab. Nichts anderes hängt davon ab: Schlägt die Beleuchtung fehl, senden die Tasten weiterhin ihre Kürzel.",
   },
   controls: {
     joystick: "Richtungs-Joystick – ohne Druckfunktion",
@@ -181,6 +182,7 @@ export default {
     replace: "Ersetzen",
     chooseJson: "JSON auswählen",
     goExport: "Prüfen und exportieren",
+    retry: "Erneut versuchen",
   },
   wizard: {
     step1Title: "Input-Export laden",
@@ -283,6 +285,8 @@ export default {
       "Diese Datei ist kein gültiges JSON. Exportiere das Profil aus Work Louder Input und versuche es erneut.",
     invalidFile: "Ungültige Input-Datei.",
     buildFailed: "Erzeugung nicht möglich.",
+    exportPanelLoad:
+      "Der Exportbereich konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.",
     previousKept: "Die vorherige gültige Sicherung bleibt geladen.",
     EMPTY_FILE: "Die JSON-Datei ist leer.",
     WRONG_DEVICE: "Diese Sicherung stammt nicht von einem Codex Micro.",

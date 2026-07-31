@@ -1,34 +1,34 @@
 #!/usr/bin/env node
 
-// Assigne les keycodes Agent natifs aux six positions vides du layer `Claude`,
-// ce qui **débloque l'éclairage par thread sur ce layer**.
+// Assigns the native Agent keycodes to the six empty positions of the `Claude`
+// layer, which **unlocks per-thread lighting on that layer**.
 //
-// Le fait, confirmé sur matériel : l'éclairage par thread (`v.oai.thstatus`) ne
-// rend que sur les touches dont le keycode est `KV_OAI_AG00` à `KV_OAI_AG05`. Le
-// prédicat du firmware est le keycode, pas l'index du layer : c'est le keycode qui
-// dit au firmware quelle touche physique est l'emplacement N. Sur un layer où ces
-// positions valent `KC_NONE`, il n'y a aucun emplacement à peindre, et les
-// écritures sont acquittées sans effet visible.
+// The fact, confirmed on hardware: per-thread lighting (`v.oai.thstatus`) only
+// renders on keys whose keycode is `KV_OAI_AG00` through `KV_OAI_AG05`. The
+// firmware's predicate is the keycode, not the layer index: the keycode is what
+// tells the firmware which physical key is slot N. On a layer where those
+// positions are `KC_NONE`, there is no slot to paint, and the writes are
+// acknowledged with no visible effect.
 //
-// L'indice se lisait dans le bundle d'Input, où le layer natif définit exactement
-// `base[0] = [AG00, AG01]` et `base[1] = [AG02..AG05]`, soit deux puis quatre
-// touches — la géométrie confirmée à l'œil sur ce matériel. Ces keycodes
-// n'apparaissent qu'une fois chacun dans l'`app.asar` : Input ne les propose pas
-// dans son sélecteur, d'où ce script.
+// The clue was in Input's bundle, where the native layer defines exactly
+// `base[0] = [AG00, AG01]` and `base[1] = [AG02..AG05]`, so two keys then four —
+// the geometry confirmed by eye on this hardware. These keycodes appear only
+// once each in the `app.asar`: Input does not offer them in its picker, hence
+// this script.
 //
-// Aucun raccourci Claude n'est perdu : les six positions sont `no-action` dans le
-// preset Claude, et les raccourcis vivent sur la rangée suivante.
+// No Claude shortcut is lost: the six positions are `no-action` in the Claude
+// preset, and the shortcuts live on the next row.
 //
-// Le coût est ailleurs, et il faut le savoir avant d'importer : ces keycodes font
-// émettre au firmware une notification `v.oai.hid`, à laquelle **l'app ChatGPT
-// réagit en changeant de thread Codex**. Elle contend donc les deux moitiés de la
-// fonction — elle réécrit les LED toutes les 35 à 40 s et elle intercepte les
-// appuis. Quitter l'app ChatGPT résout les deux d'un coup, et c'est la condition
-// d'usage réelle.
+// The cost is elsewhere, and it is worth knowing before importing: these
+// keycodes make the firmware emit a `v.oai.hid` notification, which **the
+// ChatGPT app reacts to by switching Codex thread**. It therefore contends for
+// both halves of the feature — it rewrites the LEDs every 35 to 40s and it
+// intercepts the presses. Quitting the ChatGPT app solves both at once, and
+// that is the real condition of use.
 //
-// Ce script ne touche jamais le layer d'index 0, n'écrit pas dans le stockage
-// d'Input et n'écrit pas sur le périphérique. Il produit un fichier à importer
-// par le flux officiel **Import Profile**, et `--revert` défait l'opération.
+// This script never touches the layer at index 0, does not write into Input's
+// storage and does not write to the device. It produces a file to import through
+// the official **Import Profile** flow, and `--revert` undoes the operation.
 
 import { createHash } from "node:crypto";
 import { promises as fs } from "node:fs";
@@ -36,9 +36,9 @@ import os from "node:os";
 import path from "node:path";
 import { redactHome } from "./lib/input-export.mjs";
 
-// Relevés dans /Applications/Input.app/Contents/Resources/app.asar, définition
-// câblée du layer Codex natif. Ils n'apparaissent qu'une seule fois dans le
-// bundle : Input ne les propose pas dans son sélecteur de touches, d'où ce script.
+// Read from /Applications/Input.app/Contents/Resources/app.asar, in the
+// hard-wired definition of the native Codex layer. They appear only once in the
+// bundle: Input does not offer them in its key picker, hence this script.
 const AGENT_KEYCODES = Object.freeze([
   ["KV_OAI_AG00", "KV_OAI_AG01"],
   ["KV_OAI_AG02", "KV_OAI_AG03", "KV_OAI_AG04", "KV_OAI_AG05"],
@@ -47,24 +47,22 @@ const AGENT_KEYCODES = Object.freeze([
 const CLAUDE_LAYER_NAME = "Claude";
 
 function usage() {
-  return `Usage: node scripts/enable-agent-keys.mjs <export-profile.json> [sortie.json] [--revert]
+  return `Usage: node scripts/enable-agent-keys.mjs <export-profile.json> [output.json] [--revert]
 
-Assigne les keycodes Agent natifs aux six positions vides du layer Claude, pour
-éprouver le rendu de l'éclairage par thread hors du layer Codex.
+Assigns the native Agent keycodes to the six empty positions of the Claude
+layer, so per-thread lighting can be exercised outside the Codex layer.
 
-  --revert    remet KC_NONE sur les six positions
+  --revert    put KC_NONE back on the six positions
 
-Sans destination, le fichier est écrit dans ~/Downloads, là où Input ouvre sa
-boîte de dialogue Import Profile, en conservant le suffixe « -profile.json »
-qu'Input attend.
+With no destination, the file is written to ~/Downloads, where Input opens its
+Import Profile dialog, keeping the "-profile.json" suffix Input expects.
 
-Le layer d'index 0 n'est jamais modifié.
+The layer at index 0 is never modified.
 `;
 }
 
-// Input ouvre Import Profile sur ~/Downloads et reconnaît le suffixe
-// « -profile.json » de ses propres exports : la destination par défaut respecte
-// les deux.
+// Input opens Import Profile on ~/Downloads and recognises the "-profile.json"
+// suffix of its own exports: the default destination honours both.
 function defaultDestination(source, { revert }) {
   const suffix = revert ? "Revert" : "AgentKeys";
   const base = path.basename(source).replace(/(-profile)?\.json$/i, "");
@@ -78,22 +76,22 @@ function assert(condition, message) {
   }
 }
 
-// Les six cellules visées, et rien d'autre : deux rangées, aux longueurs
-// attendues. Une disposition inattendue est refusée plutôt qu'interprétée.
+// The six targeted cells, and nothing else: two rows, at the expected lengths.
+// An unexpected layout is refused rather than interpreted.
 function patchAgentRows(layer, { revert }) {
   const changes = [];
   AGENT_KEYCODES.forEach((row, rowIndex) => {
     const cells = layer.layout?.base?.[rowIndex];
     assert(
       Array.isArray(cells) && cells.length === row.length,
-      `Disposition inattendue pour la rangée ${rowIndex} : ${row.length} cellules attendues.`,
+      `Unexpected layout for row ${rowIndex}: ${row.length} cells expected.`,
     );
     row.forEach((keycode, columnIndex) => {
       const target = revert ? "KC_NONE" : keycode;
       const cell = cells[columnIndex];
       assert(
         cell && typeof cell === "object",
-        `Cellule ${rowIndex}/${columnIndex} illisible dans le layer Claude.`,
+        `Cell ${rowIndex}/${columnIndex} is unreadable in the Claude layer.`,
       );
       if (cell.keycode !== target) {
         changes.push(`  base[${rowIndex}][${columnIndex}] : ${cell.keycode} → ${target}`);
@@ -115,35 +113,35 @@ async function main(argv) {
 
   const raw = JSON.parse(await fs.readFile(source, "utf8"));
   const layers = raw.profile?.layers;
-  assert(Array.isArray(layers) && layers.length > 1, "Cet export ne contient pas de liste de layers exploitable.");
+  assert(Array.isArray(layers) && layers.length > 1, "This export has no usable list of layers.");
 
   const matching = layers.filter((layer) => layer?.name === CLAUDE_LAYER_NAME);
   assert(
     matching.length === 1,
     matching.length === 0
-      ? `Aucun layer « ${CLAUDE_LAYER_NAME} » dans cet export.`
-      : `Plusieurs layers « ${CLAUDE_LAYER_NAME} » : n'en garder qu'un avant l'expérience.`,
+      ? `No "${CLAUDE_LAYER_NAME}" layer in this export.`
+      : `Several "${CLAUDE_LAYER_NAME}" layers: keep only one before running this.`,
   );
 
   const index = layers.indexOf(matching[0]);
-  assert(index > 0, "Le layer Claude est à l'index 0 : refus, ce layer est protégé.");
+  assert(index > 0, "The Claude layer sits at index 0: refused, that layer is protected.");
 
   const before = JSON.stringify(layers[0]);
   const changes = patchAgentRows(matching[0], { revert });
-  assert(JSON.stringify(layers[0]) === before, "Le layer d'index 0 a été modifié : abandon.");
+  assert(JSON.stringify(layers[0]) === before, "The layer at index 0 was modified: aborting.");
 
   await fs.mkdir(path.dirname(path.resolve(destination)), { recursive: true });
   const output = `${JSON.stringify(raw, null, 2)}\n`;
   await fs.writeFile(destination, output);
 
   process.stdout.write(
-    `Layer « ${CLAUDE_LAYER_NAME} » à l'index ${index}, lien AppSense ${matching[0].linkedAppId ?? "absent"} conservé.\n`,
+    `"${CLAUDE_LAYER_NAME}" layer at index ${index}, AppSense link ${matching[0].linkedAppId ?? "absent"} preserved.\n`,
   );
-  process.stdout.write(changes.length ? `${changes.join("\n")}\n` : "  aucune modification nécessaire\n");
+  process.stdout.write(changes.length ? `${changes.join("\n")}\n` : "  no change needed\n");
   process.stdout.write(
     `\n${redactHome(path.resolve(destination))}\n` +
       `SHA-256 ${createHash("sha256").update(output).digest("hex")}\n\n` +
-      "Importer par Input > Import Profile, puis vérifier sur le layer Claude :\n" +
+      "Import through Input > Import Profile, then check on the Claude layer:\n" +
       "  npm run lighting -- set all #00FF00 --effect=solid\n",
   );
 }

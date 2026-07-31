@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Couleurs des touches Agent",
+    experimental: "expérimental",
     off: "éteinte",
     states: {
       blocked: "Une décision est attendue",
@@ -38,7 +39,7 @@ export default {
       free: "Aucune session sur cette touche",
     },
     note:
-      "Poussées par « npm run lighting -- watch » d'après l'état réel des sessions Claude Code. L'app ChatGPT doit être quittée : elle réécrit ces LED toutes les 35 à 40 secondes et intercepte les appuis.",
+      "Poussées par « npm run lighting -- watch » d'après l'état réel des sessions Claude Code. L'app ChatGPT doit être quittée : elle réécrit ces LED toutes les 35 à 40 secondes et intercepte les appuis. Rien d'autre n'en dépend : si l'éclairage échoue, vos touches continuent d'envoyer leurs raccourcis.",
   },
   controls: {
     joystick: "Joystick directionnel — sans clic",
@@ -190,6 +191,7 @@ export default {
     replace: "Remplacer",
     chooseJson: "Choisir le JSON",
     goExport: "Vérifier et exporter",
+    retry: "Réessayer",
   },
   wizard: {
     step1Title: "Charger l’export Input",
@@ -291,6 +293,8 @@ export default {
       "Ce fichier n’est pas un JSON valide. Exportez le profil depuis Work Louder Input, puis réessayez.",
     invalidFile: "Fichier Input invalide.",
     buildFailed: "Génération impossible.",
+    exportPanelLoad:
+      "Le panneau d’export n’a pas pu être chargé. Vérifiez votre connexion, puis réessayez.",
     previousKept: "La sauvegarde valide précédente reste chargée.",
     EMPTY_FILE: "Le fichier JSON est vide.",
     WRONG_DEVICE: "Cette sauvegarde ne provient pas d’un Codex Micro.",

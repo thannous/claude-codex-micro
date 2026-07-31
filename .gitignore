@@ -2,6 +2,7 @@
 /.local/
 /outputs/
 /work/
+/coverage/
 node_modules/
 *.log
 

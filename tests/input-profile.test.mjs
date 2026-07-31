@@ -9,89 +9,10 @@ import {
   deriveMappingFromProfile,
   FORBIDDEN_KEYS,
   inspectInputProfile,
+  JOYSTICK_DIRECTION_COUNTS,
+  radialSectorGeometry,
 } from "../shared/input-profile.mjs";
-
-function sourceProfile() {
-  return {
-    keyboard: "codex_micro",
-    language: "us",
-    profile: {
-      id: 0,
-      name: "Default",
-      layers: [
-        {
-          id: 0,
-          name: "Layer 1",
-          layout: {
-            encoders: [[
-              { keycode: "KV_OAI_ENC_CC" },
-              { keycode: "KV_OAI_ENC_CW" },
-              { keycode: "KV_OAI_ENC_CLK" },
-            ]],
-            joystick: { type: "VENDOR", sectors: [] },
-            base: [[{ keycode: "KV_0" }]],
-          },
-        },
-        {
-          id: 1,
-          name: "Claude",
-          linkedAppId: 7,
-          layout: {
-            encoders: [[
-              { keycode: "KC_NONE" },
-              { keycode: "KC_NONE" },
-              { keycode: "KC_NONE" },
-            ]],
-            joystick: {
-              type: "RADIAL",
-              sectors: [
-                { k: "KI_X", a1: 0.1875, a2: 0.3125 },
-                { k: "KC_NONE", a1: 0.3125, a2: 0.1875 },
-              ],
-            },
-            base: [
-              [{ keycode: "KC_NONE" }, { keycode: "KC_NONE" }],
-              [
-                { keycode: "KC_NONE" },
-                { keycode: "KC_NONE" },
-                { keycode: "KC_NONE" },
-                { keycode: "KC_NONE" },
-              ],
-              [
-                { keycode: "KA_0" },
-                { keycode: "KA_1" },
-                { keycode: "KA_2" },
-                { keycode: "KC_ESC" },
-              ],
-              [
-                { keycode: "KC_NONE" },
-                { keycode: "KC_NONE" },
-                { keycode: "KC_NONE" },
-              ],
-            ],
-          },
-        },
-      ],
-    },
-    actions: [
-      {
-        id: 0,
-        name: "Claude New",
-        color: null,
-        keyInputs: [
-          { keycode: "KC_LGUI", delay: 0, actionType: 1 },
-          { keycode: "KC_N", delay: 0, actionType: 2 },
-          { keycode: "KC_LGUI", delay: 0, actionType: 0 },
-        ],
-      },
-    ],
-    multiactions: [],
-    smartActions: [],
-    actionGroups: [{ id: 0, name: "Default", actionIds: [0] }],
-    multiactionGroups: [],
-    smartActionGroups: [],
-  };
-}
+import { sourceProfile } from "./helpers/input-profile-fixture.mjs";
 
 test("recognizes exactly one non-native Claude layer with AppSense", () => {
   const report = inspectInputProfile(sourceProfile());
@@ -114,8 +35,8 @@ test("builds the canonical mapping without touching the source or native layer",
     claude.layout.base[2].map((entry) => entry.keycode),
     ["KA_0", "KA_1", "KA_2", "KC_ESC"],
   );
-  // La molette est en mode Effort par défaut : les deux sens référencent donc
-  // une action générée, pas un keycode direct.
+  // The wheel is in Effort mode by default, so both directions reference a
+  // generated action rather than a direct keycode.
   const defaultEncoder = claude.layout.encoders[0].map((entry) => entry.keycode);
   assert.match(defaultEncoder[0], /^KA_\d+$/);
   assert.match(defaultEncoder[1], /^KA_\d+$/);
@@ -172,8 +93,8 @@ test("forces the Claude AppSense link even when the source has lost it", () => {
   assert.equal(report.appSenseId, 4);
   assert.equal(report.appSenseForced, true);
   assert.equal(report.baseLayerAppSenseId, null);
-  // Forcer le lien dispense de l'exiger dans la source, sans avoir à passer
-  // requireAppSense: false.
+  // Forcing the link removes the need to require it in the source, without
+  // having to pass requireAppSense: false.
   assert.equal(report.appSenseLinked, false);
 });
 
@@ -209,7 +130,7 @@ test("rejects invalid or colliding AppSense ids", () => {
     () => buildInputProfile(sourceProfile(), DEFAULT_MAPPING, { baseLayerAppSenseId: "1" }),
     /baseLayerAppSenseId/,
   );
-  // Deux layers liés à la même application rendraient la bascule ambiguë.
+  // Two layers linked to the same application would make the switch ambiguous.
   assert.throws(
     () =>
       buildInputProfile(sourceProfile(), DEFAULT_MAPPING, {
@@ -388,6 +309,11 @@ test("supports the additional wheel modes", () => {
   );
   assert.equal(effortUp.keyInputs[5].keycode, "KC_RGHT");
   assert.equal(deriveMappingFromProfile(effort.profile).mapping.wheel, "effort");
+
+  assert.throws(
+    () => buildInputProfile(sourceProfile(), { ...DEFAULT_MAPPING, wheel: "toString" }),
+    { code: "UNKNOWN_ASSIGNMENT" },
+  );
 });
 
 test("maps all 13 switches while preserving the layer sensor", () => {
@@ -587,8 +513,8 @@ test("assigns Claude actions to four joystick directions", () => {
   });
   const { sectors } = profile.profile.layers[1].layout.joystick;
 
-  // Le premier secteur reste la zone de fermeture, les quatre suivants portent
-  // des références d'action et non des keycodes nus.
+  // The first sector stays the close zone; the next four carry action
+  // references rather than bare keycodes.
   assert.equal(sectors.length, 5);
   assert.equal(sectors[0].k, "KI_X");
   for (const sector of sectors.slice(1)) {
@@ -605,6 +531,16 @@ test("assigns Claude actions to four joystick directions", () => {
     "Claude Diff",
     "Claude Settings",
   ]);
+});
+
+test("shares the exact joystick geometry with every consumer", () => {
+  assert.deepEqual([...JOYSTICK_DIRECTION_COUNTS], [4, 8]);
+  const geometry = radialSectorGeometry(4);
+  assert.deepEqual(geometry.close, { a1: 0.1875, a2: 0.3125 });
+  assert.equal(geometry.sectors.length, 4);
+  assert.equal(geometry.sectors[0].a1, geometry.close.a2);
+  assert.equal(geometry.sectors.at(-1).a2, geometry.close.a1);
+  assert.throws(() => radialSectorGeometry(0), { code: "JOYSTICK_SECTOR_COUNT" });
 });
 
 test("supports eight joystick directions and round-trips them", () => {

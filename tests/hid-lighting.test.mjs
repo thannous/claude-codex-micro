@@ -13,12 +13,12 @@ import {
 } from "../scripts/lib/hid-lighting.mjs";
 import { SLOT_CONTROLS, STATE_COLORS, STATES } from "../scripts/lib/thread-slots.mjs";
 
-test("la table thread provisoire suit l'ordre physique des six touches Agent", () => {
+test("the thread id table follows the physical order of the six Agent keys", () => {
   assert.deepEqual([...SLOT_THREAD_IDS], [0, 1, 2, 3, 4, 5]);
   assert.equal(SLOT_THREAD_IDS.length, SLOT_CONTROLS.length);
 });
 
-test("les couleurs #RRGGBB deviennent des entiers RGB compactés", () => {
+test("#RRGGBB colours become packed RGB integers", () => {
   assert.equal(colorToInt("#D97757"), 0xd97757);
   assert.equal(colorToInt("d97757"), 0xd97757);
   assert.equal(colorToInt(0x123456), 0x123456);
@@ -27,7 +27,7 @@ test("les couleurs #RRGGBB deviennent des entiers RGB compactés", () => {
   assert.throws(() => colorToInt(0x1000000), /#RRGGBB/);
 });
 
-test("une entrée thread est minimisée et n'exige que l'identifiant", () => {
+test("a thread entry is minified and requires only the id", () => {
   assert.deepEqual(threadEntry({ id: 3 }), { id: 3 });
   assert.deepEqual(
     threadEntry({ id: 3, color: "#C2483D", brightness: 0.5, effect: EFFECTS.breath, speed: 1 }),
@@ -39,15 +39,15 @@ test("une entrée thread est minimisée et n'exige que l'identifiant", () => {
   );
 });
 
-test("les entrées thread valident leurs bornes", () => {
-  assert.throws(() => threadEntry({}), /Identifiant/);
-  assert.throws(() => threadEntry({ id: -1 }), /Identifiant/);
+test("thread entries validate their bounds", () => {
+  assert.throws(() => threadEntry({}), /thread id/);
+  assert.throws(() => threadEntry({ id: -1 }), /thread id/);
   assert.throws(() => threadEntry({ id: 0, brightness: 1.5 }), /brightness/);
   assert.throws(() => threadEntry({ id: 0, speed: -0.1 }), /speed/);
-  assert.throws(() => threadEntry({ id: 0, effect: 99 }), /Effet/);
+  assert.throws(() => threadEntry({ id: 0, effect: 99 }), /Unknown effect/);
 });
 
-test("threadsLightingParams compose un tableau d'entrées", () => {
+test("threadsLightingParams composes an array of entries", () => {
   const params = threadsLightingParams([
     { id: 0, color: "#D97757" },
     { id: 1, brightness: 0 },
@@ -55,7 +55,7 @@ test("threadsLightingParams compose un tableau d'entrées", () => {
   assert.deepEqual(params, [{ id: 0, c: 0xd97757 }, { id: 1, b: 0 }]);
 });
 
-test("une zone rgbcfg porte les cinq champs minimisés", () => {
+test("an rgbcfg zone carries all five minified fields", () => {
   assert.deepEqual(
     zoneSide({ effect: EFFECTS.solid, brightness: 1, speed: 0.5, magic: 1, color: "#D97757" }),
     { e: 1, b: 1, s: 0.5, m: 1, c: 0xd97757 },
@@ -68,7 +68,7 @@ test("une zone rgbcfg porte les cinq champs minimisés", () => {
   assert.equal(config.keys.c, 0xd97757);
 });
 
-test("les six emplacements deviennent des entrées d'éclairage d'état", () => {
+test("the six slots become state lighting entries", () => {
   const rows = [
     { state: STATES.running },
     { state: STATES.blocked },
@@ -82,17 +82,17 @@ test("les six emplacements deviennent des entrées d'éclairage d'état", () => 
   assert.deepEqual(entries[0], { id: 0, c: 0xd97757, b: 1, e: EFFECTS.solid });
   assert.deepEqual(entries[1], { id: 1, c: 0xc2483d, b: 1, e: EFFECTS.solid });
   assert.deepEqual(entries[4], { id: 4, c: 0x2f2927, b: 1, e: EFFECTS.solid });
-  // Un emplacement libre est éteint, sans toucher à la couleur.
+  // A free slot is unlit, without touching the colour.
   assert.deepEqual(entries[5], { id: 5, b: 0 });
-  // La couleur d'état utilisée est bien celle de la palette thread-status.
+  // The state colour used is the one from the thread-status palette.
   assert.equal(entries[2].c, colorToInt(STATE_COLORS.idle));
 });
 
-test("slotsToThreadEntries exige exactement six lignes", () => {
-  assert.throws(() => slotsToThreadEntries([{ state: STATES.free }]), /6 emplacements/);
-  assert.throws(() => slotsToThreadEntries(null), /6 emplacements/);
+test("slotsToThreadEntries requires exactly six rows", () => {
+  assert.throws(() => slotsToThreadEntries([{ state: STATES.free }]), /Expected 6 slots/);
+  assert.throws(() => slotsToThreadEntries(null), /Expected 6 slots/);
 });
 
-test("allOffParams éteint les six emplacements sans autre champ", () => {
+test("allOffParams turns the six slots off with no other field", () => {
   assert.deepEqual(allOffParams(), [0, 1, 2, 3, 4, 5].map((id) => ({ id, b: 0 })));
 });

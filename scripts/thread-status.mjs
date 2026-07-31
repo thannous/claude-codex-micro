@@ -1,16 +1,16 @@
 #!/usr/bin/env node
 
-// Compagnon local des six touches Agent. Réconcilie deux sources officielles :
+// Local companion for the six Agent keys. Reconciles two official sources:
 //
-//   - `claude agents --json` pour le roster des sessions vivantes ;
-//   - le journal NDJSON écrit par le plugin thread-status pour leurs états.
+//   - `claude agents --json` for the roster of live sessions;
+//   - the NDJSON journal written by the thread-status plugin for their states.
 //
-// Il n'écrit rien sur le périphérique. Sa sortie est `slots.json`, qui sert de
-// couture pour un futur DeviceAdapter : tant que le protocole RGB du Codex Micro
-// n'est pas mesuré, le compagnon s'arrête à ce fichier et à l'affichage.
+// It writes nothing to the device. Its output is `slots.json`, the seam the
+// DeviceAdapter consumes: this companion stops at that file and at the display,
+// and scripts/lighting.mjs is what pushes colours to the keyboard.
 //
-// Voir docs/research/thread-status-feasibility.md pour ce qui est mesuré et ce
-// qui reste ouvert.
+// See docs/research/thread-status-feasibility.md for what is measured and what
+// is still open.
 
 import { spawnSync } from "node:child_process";
 import { existsSync, promises as fs, readdirSync, watch } from "node:fs";
@@ -29,8 +29,8 @@ import {
   ttyDevice,
 } from "./lib/thread-slots.mjs";
 
-// Contrat de chemin partagé avec thread-status/bin/emit.mjs, qui reste
-// volontairement sans dépendance.
+// Path contract shared with thread-status/bin/emit.mjs, which deliberately
+// stays dependency-free.
 const stateDir =
   process.env.CLAUDE_THREAD_STATUS_DIR || path.join(os.homedir(), ".claude", "thread-status");
 const journalPath = path.join(stateDir, "events.ndjson");
@@ -38,9 +38,9 @@ const snapshotPath = path.join(stateDir, "slots.json");
 
 const DEFAULT_INTERVAL_MS = 2000;
 
-// Détection du terminal hôte par le nom de l'exécutable remonté par `ps`. Seuls
-// iTerm2 et Terminal sont pilotables ici ; les autres sont nommés pour que le
-// message d'erreur soit exploitable au lieu d'être générique.
+// Host terminal detected from the executable name reported by `ps`. Only iTerm2
+// and Terminal are scriptable here; the others are named so the error message is
+// actionable instead of generic.
 const TERMINAL_APPS = [
   { basename: "iTerm2", name: "iTerm2", driver: "iterm" },
   { basename: "Terminal", name: "Terminal", driver: "terminal" },
@@ -54,16 +54,16 @@ const TERMINAL_APPS = [
 ];
 
 function usage() {
-  return `Usage: node scripts/thread-status.mjs <commande>
+  return `Usage: node scripts/thread-status.mjs <command>
 
-Commandes
-  watch [--interval=ms]   réconcilie en continu et écrit slots.json
-  status [--json]         affiche l'état courant des six emplacements
-  focus <1-${SLOT_COUNT}>            va à la session de cet emplacement
-  doctor                  vérifie les prérequis et les sources
+Commands
+  watch [--interval=ms]   reconcile continuously and write slots.json
+  status [--json]         show the current state of the six slots
+  focus <1-${SLOT_COUNT}>            go to the session on that slot
+  doctor                  check prerequisites and sources
 
-Environnement
-  CLAUDE_THREAD_STATUS_DIR  répertoire d'état (défaut ~/.claude/thread-status)
+Environment
+  CLAUDE_THREAD_STATUS_DIR  state directory (default ~/.claude/thread-status)
 `;
 }
 
@@ -90,7 +90,7 @@ function resolveClaudeBinary() {
       candidates.push(path.join(bundled, version, "claude.app", "Contents", "MacOS", "claude"));
     }
   } catch {
-    // Installation non groupée avec Claude Desktop : les autres candidats suffisent.
+    // Not bundled with Claude Desktop: the other candidates are enough.
   }
 
   return candidates.find((candidate) => candidate && existsSync(candidate)) ?? null;
@@ -99,15 +99,15 @@ function resolveClaudeBinary() {
 function readRoster(binary) {
   const result = spawnSync(binary, ["agents", "--json"], { encoding: "utf8", timeout: 15000 });
   if (result.status !== 0) {
-    throw new Error(`\`claude agents --json\` a échoué : ${(result.stderr || result.stdout || "").trim()}`);
+    throw new Error(`\`claude agents --json\` failed: ${(result.stderr || result.stdout || "").trim()}`);
   }
   const parsed = JSON.parse(result.stdout);
-  if (!Array.isArray(parsed)) throw new Error("`claude agents --json` n'a pas renvoyé un tableau.");
+  if (!Array.isArray(parsed)) throw new Error("`claude agents --json` did not return an array.");
   return parsed;
 }
 
-// Une seule lecture de la table des processus : le tty de la session et, en
-// remontant les parents, le terminal qui l'héberge.
+// One single read of the process table: the session's tty and, by walking up
+// the parents, the terminal hosting it.
 function processTable() {
   const result = spawnSync("ps", ["-Ao", "pid=,ppid=,tty=,comm="], { encoding: "utf8" });
   const table = new Map();
@@ -144,18 +144,18 @@ function enrichRoster(roster) {
   });
 }
 
-// --- état persistant ---------------------------------------------------------
+// --- persistent state --------------------------------------------------------
 
-// Empreinte de ce qu'un consommateur observe. `slots.json` est la couture du
-// futur DeviceAdapter : s'il est réécrit à chaque tick, un `watch` qui le suit
-// pousserait des rapports HID en continu alors que rien n'a bougé. On compare
-// donc les six entrées avant d'écrire.
+// Fingerprint of what a consumer actually observes. `slots.json` is the
+// DeviceAdapter's seam: rewritten on every tick, a `watch` following it would
+// push HID reports continuously while nothing moved. So the six entries are
+// compared before writing.
 //
-// `pending`, `dropped`, `overflow`, `journalOffset` et l'horodatage sont exclus
-// de l'empreinte : ils bougent sans que l'affichage change. Le curseur de
-// journal n'est donc persisté qu'à l'occasion d'un vrai changement, et un
-// redémarrage rejoue au pire la queue d'événements depuis ce point — des
-// événements qui, par construction, n'avaient rien changé.
+// `pending`, `dropped`, `overflow`, `journalOffset` and the timestamp are left
+// out of the fingerprint: they move without the display changing. The journal
+// cursor is therefore only persisted on a real change, and a restart replays at
+// worst the tail of events from that point — events which, by construction, had
+// changed nothing.
 function publishedFingerprint(snapshot) {
   return JSON.stringify(snapshot.slots);
 }
@@ -200,9 +200,9 @@ async function saveState(snapshot, journalOffset) {
   return true;
 }
 
-// Lit les lignes ajoutées depuis le dernier passage. Une taille inférieure à
-// l'offset signale une rotation du journal : on repart de zéro plutôt que de
-// lire au milieu d'un enregistrement.
+// Reads the lines appended since the last pass. A size below the offset signals
+// a journal rotation: start over from zero rather than read from the middle of
+// a record.
 async function readJournalSince(offset) {
   let size = 0;
   try {
@@ -219,7 +219,7 @@ async function readJournalSince(offset) {
     const buffer = Buffer.alloc(length);
     await handle.read(buffer, 0, length, offset);
     const text = buffer.toString("utf8");
-    // Une dernière ligne incomplète est laissée pour le prochain passage.
+    // A trailing incomplete line is left for the next pass.
     const complete = text.endsWith("\n") ? text : text.slice(0, text.lastIndexOf("\n") + 1);
     const events = [];
     for (const line of complete.split("\n")) {
@@ -227,7 +227,7 @@ async function readJournalSince(offset) {
       try {
         events.push(JSON.parse(line));
       } catch {
-        // Ligne tronquée par une rotation concurrente : ignorée.
+        // Line truncated by a concurrent rotation: ignored.
       }
     }
     return { events, offset: offset + Buffer.byteLength(complete, "utf8") };
@@ -245,8 +245,8 @@ async function reconcile(binary, state) {
   snapshot = roster.snapshot;
   let changed = roster.changed;
 
-  // Les hooks après le roster : le roster ouvre l'emplacement, les hooks y
-  // posent l'état, y compris celui mis en attente avant l'apparition.
+  // Hooks after the roster: the roster opens the slot, the hooks set the state
+  // on it, including the one held pending before the session appeared.
   for (const event of journal.events) {
     const applied = applyHookEvent(snapshot, event, event.ts ?? now);
     snapshot = applied.snapshot;
@@ -256,15 +256,15 @@ async function reconcile(binary, state) {
   return { snapshot, journalOffset: journal.offset, changed, notes: roster.notes };
 }
 
-// --- affichage ---------------------------------------------------------------
+// --- display -----------------------------------------------------------------
 
 const STATE_LABELS = {
-  [STATES.free]: "libre",
-  [STATES.idle]: "au repos",
-  [STATES.running]: "en cours",
-  [STATES.blocked]: "intervention",
-  [STATES.done]: "terminé",
-  [STATES.ended]: "fermé",
+  [STATES.free]: "free",
+  [STATES.idle]: "idle",
+  [STATES.running]: "running",
+  [STATES.blocked]: "needs you",
+  [STATES.done]: "done",
+  [STATES.ended]: "closed",
 };
 
 function dot(color) {
@@ -299,37 +299,37 @@ function renderTable(snapshot) {
 function runAppleScript(script) {
   const result = spawnSync("osascript", ["-e", script], { encoding: "utf8", timeout: 15000 });
   const output = (result.stdout || result.stderr || "").trim();
-  // Un AppleEvent qui expire — `-1712`, ou `osascript` tué par le timeout —
-  // signifie presque toujours que le consentement Automation n'a pas été accordé
-  // au shell appelant : macOS n'affiche pas toujours l'invite et laisse
-  // simplement l'événement expirer. Le confondre avec « fenêtre introuvable »
-  // envoie chercher le problème du côté du terminal, où il n'est pas.
+  // An AppleEvent that times out — `-1712`, or `osascript` killed by the
+  // timeout — almost always means Automation consent was not granted to the
+  // calling shell: macOS does not always show the prompt and simply lets the
+  // event expire. Confusing it with "window not found" sends you looking at the
+  // terminal, which is not where the problem is.
   if (result.error?.code === "ETIMEDOUT" || result.signal || output.includes("-1712")) {
     return { ok: false, reason: "automation-consent", output };
   }
   return { ok: result.status === 0, output };
 }
 
-// Le tty vient de `ps` : on le revalide avant interpolation plutôt que de faire
-// confiance à sa provenance.
+// The tty comes from `ps`: revalidate it before interpolation rather than trust
+// where it came from.
 function focusTerminal(target) {
   if (!/^\/dev\/tty[a-z0-9.]+$/i.test(target.tty)) {
-    return { ok: false, output: `Chemin de terminal inattendu : ${target.tty}` };
+    return { ok: false, output: `unexpected terminal path: ${target.tty}` };
   }
   const app = TERMINAL_APPS.find((candidate) => candidate.name === target.app);
   if (!app?.driver) {
     return {
       ok: false,
-      output: `Terminal non piloté${target.app ? ` : ${target.app}` : ""}. Emplacement sur ${target.tty}.`,
+      output: `terminal not scriptable${target.app ? `: ${target.app}` : ""}. Slot is on ${target.tty}.`,
     };
   }
 
-  // L'ordre des opérations décide du résultat quand les fenêtres se recouvrent.
-  // `activate` d'abord remonte la fenêtre déjà frontale, et réordonner ensuite ne
-  // tient pas : la cible reste sous la pile. On sélectionne donc l'onglet, on
-  // remonte sa fenêtre en tête de l'ordre de profondeur, et on n'active l'app
-  // qu'en dernier. Bénéfice secondaire : un `tty` introuvable ne vole plus le
-  // focus pour rien, puisqu'on sort sans jamais activer.
+  // The order of operations decides the outcome when windows overlap.
+  // `activate` first raises the window that is already frontmost, and
+  // reordering afterwards does not hold: the target stays under the stack. So
+  // select the tab, bring its window to the front of the z-order, and only
+  // activate the app last. Side benefit: a `tty` that cannot be found no longer
+  // steals focus for nothing, since we return without ever activating.
   if (app.driver === "iterm") {
     return runAppleScript(`tell application "iTerm2"
   repeat with w in windows
@@ -372,79 +372,79 @@ async function focus(slotNumber) {
 
   switch (target.kind) {
     case "empty":
-      return fail(`Emplacement ${slotNumber} : libre.`);
+      return fail(`Slot ${slotNumber}: free.`);
     case "terminal": {
       const result = focusTerminal(target);
       if (result.reason === "automation-consent") {
         return fail(
-          `Emplacement ${slotNumber} : ${target.app} n'a pas répondu à l'AppleEvent.\n` +
-            "  C'est le consentement Automation, pas le terminal. Accorder\n" +
-            `  Réglages Système > Confidentialité et sécurité > Automatisation > ${target.app},\n` +
-            "  pour le terminal depuis lequel cette commande est lancée.",
+          `Slot ${slotNumber}: ${target.app} did not answer the AppleEvent.\n` +
+            "  This is Automation consent, not the terminal. Grant\n" +
+            `  System Settings > Privacy & Security > Automation > ${target.app},\n` +
+            "  for the terminal this command runs from.",
         );
       }
       if (!result.ok || result.output === "not-found") {
-        return fail(`Emplacement ${slotNumber} : ${result.output || "fenêtre introuvable"}.`);
+        return fail(`Slot ${slotNumber}: ${result.output || "window not found"}.`);
       }
-      process.stdout.write(`Emplacement ${slotNumber} : ${target.app} activé sur ${target.tty}.\n`);
+      process.stdout.write(`Slot ${slotNumber}: ${target.app} focused on ${target.tty}.\n`);
       return undefined;
     }
     case "resume": {
-      // La session est fermée : on n'en lance pas la reprise à la place de
-      // l'utilisateur, on lui donne la commande exacte. Reprendre une session
-      // vivante depuis un second terminal entrelacerait les deux transcripts.
+      // The session is closed: we do not resume it on the user's behalf, we hand
+      // them the exact command. Resuming a live session from a second terminal
+      // would interleave the two transcripts.
       const where = target.cwd ? redactHome(target.cwd) : ".";
       process.stdout.write(
-        `Emplacement ${slotNumber} : session fermée. Reprise :\n  cd ${where} && claude --resume ${target.sessionId}\n`,
+        `Slot ${slotNumber}: session closed. Resume it with:\n  cd ${where} && claude --resume ${target.sessionId}\n`,
       );
       return undefined;
     }
     case "desktop": {
-      // `claude://resume?session=<uuid>` ouvre la session par son identifiant.
-      // Comme `open -b`, le passage par le handler d'URL évite AppleScript et
-      // n'exige donc aucun consentement Automation.
+      // `claude://resume?session=<uuid>` opens the session by its id. Like
+      // `open -b`, going through the URL handler avoids AppleScript and
+      // therefore needs no Automation consent.
       //
-      // Le handler ne rend pas compte de l'issue : `open` sort en 0 dès que
-      // l'URL est remise. Une session dont le transcript a disparu du disque
-      // échoue côté application, sans que rien ne remonte ici.
+      // The handler reports nothing back: `open` exits 0 as soon as the URL is
+      // delivered. A session whose transcript has left the disk fails on the
+      // application side, with nothing surfacing here.
       const opened = spawnSync("open", [target.url], { encoding: "utf8", timeout: 10000 });
       if (opened.status !== 0) {
         return fail(
-          `Emplacement ${slotNumber} : ${target.url} n'a pas pu être ouvert : ${(opened.stderr || "").trim()}`,
+          `Slot ${slotNumber}: could not open ${target.url}: ${(opened.stderr || "").trim()}`,
         );
       }
       process.stdout.write(
-        `Emplacement ${slotNumber} : session ${target.sessionId.slice(0, 8)} demandée à Claude Desktop.\n`,
+        `Slot ${slotNumber}: session ${target.sessionId.slice(0, 8)} requested from Claude Desktop.\n`,
       );
       return undefined;
     }
     default: {
-      // Session hébergée dont l'identifiant n'est pas un UUID : `claude://resume`
-      // le refuserait. Faute de pouvoir sélectionner la bonne session, on met au
-      // moins l'application au premier plan.
+      // Hosted session whose id is not a UUID: `claude://resume` would reject
+      // it. Unable to select the right session, at least bring the application
+      // to the front.
       //
-      // `open -b` évite AppleScript, donc n'exige aucun consentement Automation.
+      // `open -b` avoids AppleScript, so it needs no Automation consent.
       const activated = spawnSync("open", ["-b", "com.anthropic.claudefordesktop"], {
         encoding: "utf8",
         timeout: 10000,
       });
       if (activated.status !== 0) {
         return fail(
-          `Emplacement ${slotNumber} : ${target.reason}\n` +
+          `Slot ${slotNumber}: ${target.reason}\n` +
             `  session ${target.sessionId}\n` +
-            `  Claude Desktop n'a pas pu être activé : ${(activated.stderr || "").trim()}`,
+            `  Claude Desktop could not be activated: ${(activated.stderr || "").trim()}`,
         );
       }
       process.stdout.write(
-        `Emplacement ${slotNumber} : Claude Desktop activé. La session ${target.sessionId.slice(0, 8)} ` +
-          "ne peut pas être sélectionnée : aucune route ne l'adresse.\n",
+        `Slot ${slotNumber}: Claude Desktop activated. Session ${target.sessionId.slice(0, 8)} ` +
+          "cannot be selected: no route addresses it.\n",
       );
       return undefined;
     }
   }
 }
 
-// --- commandes ---------------------------------------------------------------
+// --- commands ----------------------------------------------------------------
 
 async function commandStatus(binary, asJson) {
   const state = await loadState();
@@ -459,7 +459,7 @@ async function commandStatus(binary, asJson) {
   for (const note of result.notes) process.stdout.write(`  ! ${note}\n`);
   if (result.snapshot.overflow > 0) {
     process.stdout.write(
-      `  ! ${result.snapshot.overflow} session(s) sans emplacement depuis le démarrage : ${SLOT_COUNT} touches Agent, pas plus.\n`,
+      `  ! ${result.snapshot.overflow} session(s) left without a slot since startup: ${SLOT_COUNT} Agent keys, no more.\n`,
     );
   }
 }
@@ -474,8 +474,8 @@ async function commandWatch(binary, intervalMs) {
     try {
       const result = await reconcile(binary, state);
       state = { snapshot: result.snapshot, journalOffset: result.journalOffset };
-      // Le rendu suit l'écriture, pas `result.changed` : seul un changement
-      // réellement publié mérite une ligne à l'écran comme une poussée HID.
+      // The render follows the write, not `result.changed`: only a change that
+      // was actually published deserves a line on screen, or an HID push.
       if (await saveState(result.snapshot, result.journalOffset)) {
         process.stdout.write(`\n${new Date().toISOString()}\n${renderTable(result.snapshot)}\n`);
         for (const note of result.notes) process.stdout.write(`  ! ${note}\n`);
@@ -489,7 +489,7 @@ async function commandWatch(binary, intervalMs) {
 
   await fs.mkdir(stateDir, { recursive: true });
   await fs.appendFile(journalPath, "");
-  // Le poll rattrape les hooks manqués, le watch donne la latence.
+  // The poll catches missed hooks, the watch gives the latency.
   const timer = setInterval(tick, intervalMs);
   const watcher = watch(journalPath, () => void tick());
   process.on("SIGINT", () => {
@@ -498,30 +498,30 @@ async function commandWatch(binary, intervalMs) {
     process.exit(0);
   });
 
-  process.stdout.write(`Journal : ${redactHome(journalPath)}\nSortie  : ${redactHome(snapshotPath)}\n`);
+  process.stdout.write(`Journal: ${redactHome(journalPath)}\nOutput:  ${redactHome(snapshotPath)}\n`);
   await tick();
 }
 
 async function commandDoctor(binary) {
   const checks = [];
-  checks.push([Boolean(binary), `binaire claude : ${binary ? redactHome(binary) : "introuvable"}`]);
+  checks.push([Boolean(binary), `claude binary: ${binary ? redactHome(binary) : "not found"}`]);
 
   let roster = [];
   if (binary) {
     try {
       roster = readRoster(binary);
-      checks.push([true, `claude agents --json : ${roster.length} session(s) vivante(s)`]);
+      checks.push([true, `claude agents --json: ${roster.length} live session(s)`]);
     } catch (error) {
-      checks.push([false, `claude agents --json : ${error.message}`]);
+      checks.push([false, `claude agents --json: ${error.message}`]);
     }
   }
 
   try {
     await fs.mkdir(stateDir, { recursive: true });
     await fs.access(stateDir);
-    checks.push([true, `répertoire d'état accessible : ${redactHome(stateDir)}`]);
+    checks.push([true, `state directory reachable: ${redactHome(stateDir)}`]);
   } catch (error) {
-    checks.push([false, `répertoire d'état : ${error.message}`]);
+    checks.push([false, `state directory: ${error.message}`]);
   }
 
   const journal = await readJournalSince(0);
@@ -529,16 +529,16 @@ async function commandDoctor(binary) {
   checks.push([
     journal.events.length > 0,
     journal.events.length > 0
-      ? `journal : ${journal.events.length} événement(s), dernier ${last.event} il y a ${Math.round((Date.now() - last.ts) / 1000)} s`
-      : "journal vide : le plugin n'a jamais émis. Charger thread-status/ puis lancer un tour.",
+      ? `journal: ${journal.events.length} event(s), last ${last.event} ${Math.round((Date.now() - last.ts) / 1000)}s ago`
+      : "journal empty: the plugin has never emitted. Load thread-status/ then run a turn.",
   ]);
 
   const withTty = enrichRoster(roster).filter((row) => row.tty);
   checks.push([
     true,
-    `navigation : ${withTty.length}/${roster.length} session(s) dans un terminal identifiable` +
+    `navigation: ${withTty.length}/${roster.length} session(s) in an identifiable terminal` +
       (withTty.length < roster.length
-        ? " — les autres sont hébergées par Claude Desktop ou un IDE, sans route documentée"
+        ? " — the others are hosted by Claude Desktop or an IDE, reached through claude://resume"
         : ""),
   ]);
 
@@ -546,7 +546,7 @@ async function commandDoctor(binary) {
   if (checks.some(([ok]) => !ok)) process.exitCode = 1;
 }
 
-// --- entrée ------------------------------------------------------------------
+// --- entry point --------------------------------------------------------------
 
 async function main(argv) {
   const [command, ...rest] = argv;
@@ -558,14 +558,14 @@ async function main(argv) {
   if (command === "focus") {
     const slotNumber = Number.parseInt(rest[0] ?? "", 10);
     if (!Number.isInteger(slotNumber) || slotNumber < 1 || slotNumber > SLOT_COUNT) {
-      return fail(`Emplacement attendu entre 1 et ${SLOT_COUNT}.`);
+      return fail(`Expected a slot between 1 and ${SLOT_COUNT}.`);
     }
     return focus(slotNumber);
   }
 
   const binary = resolveClaudeBinary();
   if (command === "doctor") return commandDoctor(binary);
-  if (!binary) return fail("Binaire `claude` introuvable. Voir `doctor`.");
+  if (!binary) return fail("`claude` binary not found. See `doctor`.");
 
   if (command === "status") return commandStatus(binary, rest.includes("--json"));
   if (command === "watch") {
@@ -574,7 +574,7 @@ async function main(argv) {
     return commandWatch(binary, Number.isInteger(parsed) && parsed >= 250 ? parsed : DEFAULT_INTERVAL_MS);
   }
 
-  return fail(`Commande inconnue : ${command}\n\n${usage()}`);
+  return fail(`Unknown command: ${command}\n\n${usage()}`);
 }
 
 main(process.argv.slice(2)).catch((error) => {

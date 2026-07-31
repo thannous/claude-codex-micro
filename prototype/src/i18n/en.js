@@ -28,6 +28,7 @@ export default {
   },
   stateLegend: {
     title: "Agent key colours",
+    experimental: "experimental",
     off: "unlit",
     states: {
       blocked: "A decision is waiting for you",
@@ -38,7 +39,7 @@ export default {
       free: "No session on this key",
     },
     note:
-      "Pushed by \"npm run lighting -- watch\" from live Claude Code session state. Quit the ChatGPT app first: it rewrites these LEDs every 35 to 40 seconds and intercepts the key presses.",
+      "Pushed by \"npm run lighting -- watch\" from live Claude Code session state. Quit the ChatGPT app first: it rewrites these LEDs every 35 to 40 seconds and intercepts the key presses. Nothing else depends on this: if the lighting fails, your keys keep sending their shortcuts.",
   },
   controls: {
     joystick: "Directional joystick — no press",
@@ -190,6 +191,7 @@ export default {
     replace: "Replace",
     chooseJson: "Choose JSON",
     goExport: "Review and export",
+    retry: "Try again",
   },
   wizard: {
     step1Title: "Load the Input export",
@@ -291,6 +293,8 @@ export default {
       "This file is not valid JSON. Export the profile from Work Louder Input, then try again.",
     invalidFile: "Invalid Input file.",
     buildFailed: "Generation failed.",
+    exportPanelLoad:
+      "The export panel could not be loaded. Check your connection, then try again.",
     previousKept: "The previous valid backup is still loaded.",
     EMPTY_FILE: "The JSON file is empty.",
     WRONG_DEVICE: "This backup does not come from a Codex Micro.",
