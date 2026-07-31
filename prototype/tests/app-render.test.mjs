@@ -3,6 +3,7 @@ import { after, before, test } from "node:test";
 import React from "react";
 import { renderToString } from "react-dom/server";
 import { createServer } from "vite";
+import { entryFingerprint } from "../src/configurator-state.js";
 import { LOCALES } from "../src/i18n/index.js";
 import { createProfileSession } from "../src/profile-session.js";
 
@@ -21,6 +22,8 @@ let App;
 let createJoystickDialGeometry;
 let presenter;
 let ProfileExportPanel;
+let KeyAssignmentEditor;
+let keyActions;
 
 before(async () => {
   globalThis.window = { localStorage: storage };
@@ -37,6 +40,12 @@ before(async () => {
   presenter = await server.ssrLoadModule("/src/configurator-presenter.js");
   ({ ProfileExportPanel } = await server.ssrLoadModule(
     "/src/components/ProfileExportPanel.jsx",
+  ));
+  ({ KeyAssignmentEditor } = await server.ssrLoadModule(
+    "/src/components/KeyAssignmentEditor.jsx",
+  ));
+  ({ ACTIONS_BY_CONTROL_TYPE: { key: keyActions } } = await server.ssrLoadModule(
+    "/src/configurator-catalog.jsx",
   ));
 });
 
@@ -99,6 +108,35 @@ test("presents catalogue, custom, joystick, and fallback entries consistently", 
   assert.equal(presenter.controlLabel(control, t), "controls.key-1");
   assert.equal(presenter.controlBadgeLabel(control, "none"), "C1");
   assert.equal(presenter.controlBadgeLabel(control, "voice"), "VOICE");
+});
+
+test("shows duplicate custom shortcuts while editing a joystick sector", () => {
+  const custom = { type: "custom", keys: ["Command", "D"] };
+  const html = renderToString(
+    React.createElement(KeyAssignmentEditor, {
+      t: (key) => key,
+      selectedControl: { id: "joystick", type: "joystick" },
+      selectedEntry: {
+        directions: 4,
+        sectors: [custom, "none", "none", "none"],
+      },
+      activeEntry: custom,
+      editingJoystickSlot: true,
+      joystickSlot: 0,
+      pickerActions: keyActions,
+      duplicateKeyControls: new Map([
+        [entryFingerprint(custom), { id: "key-1" }],
+      ]),
+      customNeedsModifier: false,
+      onSetJoystickMode() {},
+      onSelectJoystickSlot() {},
+      onAssignEntry() {},
+      onToggleModifier() {},
+      onChangeFinalKey() {},
+    }),
+  );
+
+  assert.match(html, /picker\.alreadyOn/);
 });
 
 test("renders the deferred export workflow independently", () => {

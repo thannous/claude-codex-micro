@@ -43,6 +43,9 @@ export function KeyAssignmentEditor({
     }
     return duplicateKeyControls.get(entryFingerprint(entry)) ?? null;
   };
+  const customDuplicateControl = isCustom(activeEntry)
+    ? duplicateControlFor(activeEntry)
+    : null;
 
   return (
     <>
@@ -148,10 +151,10 @@ export function KeyAssignmentEditor({
                 <span className="action-copy">
                   <strong>{t("actions.custom.label")}</strong>
                   <small>{t("actions.custom.description")}</small>
-                  {isCustom(selectedEntry) && duplicateControlFor(selectedEntry) && (
+                  {customDuplicateControl && (
                     <small className="action-duplicate">
                       {t("picker.alreadyOn", {
-                        control: controlLabel(duplicateControlFor(selectedEntry), t),
+                        control: controlLabel(customDuplicateControl, t),
                       })}
                     </small>
                   )}
