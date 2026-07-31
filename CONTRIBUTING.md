@@ -1,47 +1,49 @@
-# Contribuer
+[English](CONTRIBUTING.md) · [Français](CONTRIBUTING.fr.md)
 
-## Statut du projet
+# Contributing
 
-Le dépôt est public et expérimental. La licence MIT et le titulaire
-`Thanh Chau` sont confirmés. Aucun preset ne devient installable ou stable sans
-preuve reproductible.
+## Project status
 
-Une contribution peut améliorer une proposition, fournir une preuve matérielle,
-ajouter un outil de sécurité ou introduire un vrai export officiel assaini. Son
-niveau de preuve doit rester explicite pendant toute la revue.
+The repository is public and experimental. The MIT licence and the holder
+`Thanh Chau` are confirmed. No preset becomes installable or stable without
+reproducible proof.
 
-## Proposer un nouveau preset
+A contribution can improve a proposal, provide hardware evidence, add a safety
+tool, or introduce a real sanitised official export. Its level of proof must stay
+explicit throughout the review.
 
-Commencer par le modèle GitHub « Proposition de preset » avec :
+## Proposing a new preset
 
-- l'application ou le workflow cible ;
-- le matériel, le système, la version d'Input et le firmware ;
-- le mapping touche par touche ;
-- le mode d'activation, notamment AppSense ;
-- la méthode d'installation envisagée ;
-- la sauvegarde et le retour arrière ;
-- les actions sensibles volontairement exclues.
+Start with the GitHub "Preset proposal" template, including:
 
-Placer ensuite le preset dans `profiles/<application-ou-workflow>/` selon
+- the target application or workflow;
+- the hardware, the operating system, the Input version and the firmware;
+- the key-by-key mapping;
+- the activation method, AppSense in particular;
+- the intended installation method;
+- the backup and the rollback;
+- the sensitive actions deliberately excluded.
+
+Then place the preset in `profiles/<application-or-workflow>/` following
 [`profiles/README.md`](profiles/README.md).
 
 ## Architecture
 
-Chaque preset stable sépare :
+Every stable preset separates:
 
-- `manifest.json` : identité, compatibilité, preuve et politique d'installation ;
-- `mapping.json` : positions physiques, actions, couleur et activation ;
-- `assets/` : visuels originaux ou redistribuables ;
-- `artifacts/` : uniquement un export officiel assaini et vérifié ;
-- `README.md` : installation, tests, limites et rollback.
+- `manifest.json`: identity, compatibility, proof and installation policy;
+- `mapping.json`: physical positions, actions, colour and activation;
+- `assets/`: original or redistributable visuals;
+- `artifacts/`: only a sanitised, verified official export;
+- `README.md`: installation, tests, limits and rollback.
 
-Les schémas communs se trouvent dans `profiles/schema/v1/`. La piste BLE reste
-séparée sous `ble/`.
+The common schemas live in `profiles/schema/v1/`. The BLE track stays separate
+under `ble/`.
 
-## Préparer l'environnement
+## Preparing the environment
 
-Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
-sont épinglées par `package-lock.json`.
+Prerequisite: Node.js 18 or newer. The validation dependencies are pinned by
+`package-lock.json`.
 
 ```sh
 npm ci --no-audit --no-fund
@@ -49,92 +51,91 @@ npm run check
 git diff --check
 ```
 
-Les contrôles exécutent :
+The checks run:
 
-- le validateur du contrat Claude historique ;
-- le validateur des manifestes et mappings ;
-- la vérification des liens locaux ;
-- les tests de sauvegarde, rollback, sanitation et idempotence sur fixtures.
+- the historical Claude contract validator;
+- the manifest and mapping validator;
+- local link verification;
+- the backup, rollback, sanitisation and idempotence tests on fixtures.
 
-Ils ne modifient ni Input, ni le clavier, ni macOS.
+They modify neither Input, nor the keyboard, nor macOS.
 
-## Modifier ou ajouter un preset
+## Modifying or adding a preset
 
-1. conserver `proposal-not-applied` sans preuve matérielle ;
-2. protéger l'index `0` et ne jamais supposer qu'un identifiant local est
-   universel ;
-3. exiger exactement un layer cible existant, hors index `0` ;
-4. conserver son lien AppSense dans la copie locale sans le publier ;
-5. laisser les contrôles non utilisés sans action ou réservés ;
-6. exclure envoi, permissions, suppression, push, déploiement et commandes
-   destructrices ;
-7. documenter versions, date, preuve et résultat négatif éventuel ;
-8. exécuter `npm run check` et `git diff --check`.
+1. keep `proposal-not-applied` without hardware evidence;
+2. protect index `0` and never assume a local identifier is universal;
+3. require exactly one existing target layer, outside index `0`;
+4. preserve its AppSense link in the local copy without publishing it;
+5. leave unused controls without an action, or reserved;
+6. exclude sending, permissions, deletion, push, deployment and destructive
+   commands;
+7. document versions, date, proof and any negative result;
+8. run `npm run check` and `git diff --check`.
 
-## Ajouter un export officiel
+## Adding an official export
 
-Un fichier `*-layer.json` doit provenir de **Export layer** dans Work Louder
-Input. Ne jamais fabriquer les objets internes à partir du manifeste.
+A `*-layer.json` file must come from **Export layer** in Work Louder Input. Never
+fabricate the internal objects from the manifest.
 
-Avant commit :
+Before committing:
 
 ```sh
 node scripts/input-layer.mjs inspect-export \
-  --input "$HOME/Downloads/Mon-layer.json" \
+  --input "$HOME/Downloads/My-layer.json" \
   --json
 
 node scripts/input-layer.mjs sanitize-export \
-  --input "$HOME/Downloads/Mon-layer.json" \
-  --output profiles/<preset>/artifacts/mon-layer.json
+  --input "$HOME/Downloads/My-layer.json" \
+  --output profiles/<preset>/artifacts/my-layer.json
 ```
 
-Le fichier public doit ensuite subir :
+The public file must then go through:
 
-1. import dans une configuration isolée ;
-2. comparaison contrôle par contrôle au mapping ;
-3. liaison du fichier au SHA-256 déclaré dans le manifeste ;
-4. validation sémantique contre le mapping canonique ;
-5. second import prouvant l'idempotence ou un refus propre ;
-6. rollback par le profile d'origine ;
-7. nouvelle exportation et comparaison des sommes/structures.
+1. import into an isolated configuration;
+2. control-by-control comparison against the mapping;
+3. binding the file to the SHA-256 declared in the manifest;
+4. semantic validation against the canonical mapping;
+5. a second import proving idempotence, or a clean refusal;
+6. rollback through the original profile;
+7. a fresh export and comparison of sums and structures.
 
-La copie brute, le profile original, les captures privées, les chemins locaux,
-ports, adresses Bluetooth, numéros de série, identifiants matériels et secrets
-restent sous `.local/` et hors de Git.
+The raw copy, the original profile, private screenshots, local paths, ports,
+Bluetooth addresses, serial numbers, hardware identifiers and secrets stay under
+`.local/` and out of Git.
 
-## Fournir une preuve matérielle
+## Providing hardware evidence
 
-Pour AppSense, documenter au minimum :
+For AppSense, document at minimum:
 
-- versions d'Input, firmware, macOS et application ;
-- nom affiché et application détectée ;
-- index de l'unique layer Claude et preuve que l'index `0` est intact ;
-- résultat de chaque touche, du cadran et du joystick ;
-- layer actif avec et sans focus Claude ;
-- persistance après redémarrage ;
-- autres liens AppSense préservés, sans publier leurs données privées ;
-- restauration du profile original.
+- the Input, firmware, macOS and application versions;
+- the displayed name and the detected application;
+- the index of the single Claude layer, and proof that index `0` is intact;
+- the result for every key, the dial and the joystick;
+- the active layer with and without Claude focused;
+- persistence after a restart;
+- other AppSense links preserved, without publishing their private data;
+- restoration of the original profile.
 
-Un résultat non concluant doit rester indiqué comme tel.
+An inconclusive result must stay marked as such.
 
-## Piste BLE
+## BLE track
 
-Une contribution BLE ne doit pas présenter Hardware Buddy comme compatible
-sans preuve du service Nordic UART, de la coexistence HID + NUS, d'un firmware
-restaurable et d'une stratégie de permissions sûre. Aucun firmware ou outil de
-flash propriétaire ne doit être ajouté.
+A BLE contribution must not present Hardware Buddy as compatible without evidence
+of the Nordic UART service, of HID + NUS coexistence, of restorable firmware and
+of a safe permission strategy. No proprietary firmware or flashing tool may be
+added.
 
-## Checklist de revue
+## Review checklist
 
-- [ ] Modification limitée au besoin annoncé.
-- [ ] Layer `0`, autres layers, profiles et liens AppSense préservés.
-- [ ] Niveau de preuve exact.
-- [ ] Sources officielles reliées à l'affirmation correspondante.
-- [ ] Aucun secret, chemin privé ou identifiant matériel unique.
-- [ ] `npm run check` réussi.
-- [ ] `git diff --check` réussi.
-- [ ] Sauvegarde et retour arrière documentés.
-- [ ] Statut d'import confirmé par une preuve ou indiqué comme non vérifié.
-- [ ] Aucun asset ou firmware propriétaire.
+- [ ] Change limited to the stated need.
+- [ ] Layer `0`, other layers, profiles and AppSense links preserved.
+- [ ] Exact level of proof.
+- [ ] Official sources tied to the corresponding claim.
+- [ ] No secret, private path or unique hardware identifier.
+- [ ] `npm run check` passes.
+- [ ] `git diff --check` passes.
+- [ ] Backup and rollback documented.
+- [ ] Import status confirmed by evidence, or marked as unverified.
+- [ ] No proprietary asset or firmware.
 
-Lire [SECURITY.md](SECURITY.md) avant de publier un rapport sensible.
+Read [SECURITY.md](SECURITY.md) before publishing a sensitive report.

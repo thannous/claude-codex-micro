@@ -1,47 +1,49 @@
-# Observation locale — 27 juillet 2026
+[English](local-observation-2026-07-27.md) · [Français](../fr/codex-micro/local-observation-2026-07-27.md)
 
-Reconnaissance effectuée en lecture seule lors de l'initialisation précédente,
-sans ouvrir les réglages système ni modifier Claude ou le périphérique.
+# Local observation — 27 July 2026
 
-## Environnement observé
+Read-only reconnaissance carried out during the previous initialisation, without
+opening system settings and without modifying Claude or the device.
 
-- macOS `26.5.2` (`25F84`), Apple Silicon `arm64` ;
-- Claude Desktop présent dans `/Applications/Claude.app` ;
-- bundle `com.anthropic.claudefordesktop` ;
-- version Claude `1.24012.9` ;
-- Work Louder Input `0.17.2` ;
-- firmware Codex Micro `v0.4.1`, observé dans l'écran Setup d'Input.
+## Environment observed
 
-## Codex Micro observé
+- macOS `26.5.2` (`25F84`), Apple Silicon `arm64`;
+- Claude Desktop present in `/Applications/Claude.app`;
+- bundle `com.anthropic.claudefordesktop`;
+- Claude version `1.24012.9`;
+- Work Louder Input `0.17.2`;
+- Codex Micro firmware `v0.4.1`, seen in Input's Setup screen.
 
-Le registre I/O macOS exposait un périphérique HID actif avec :
+## Codex Micro observed
 
-- produit `Codex Micro #1` ;
-- fabricant `Work Louder` ;
-- transport `Bluetooth Low Energy` ;
-- Vendor ID `12346` ;
-- Product ID `33632` ;
+The macOS I/O registry exposed an active HID device with:
+
+- product `Codex Micro #1`;
+- manufacturer `Work Louder`;
+- transport `Bluetooth Low Energy`;
+- Vendor ID `12346`;
+- Product ID `33632`;
 - VersionNumber `24193`.
 
-Les identifiants uniques, l'adresse Bluetooth et le numéro de série sont
-volontairement exclus.
+Unique identifiers, the Bluetooth address and the serial number are deliberately
+excluded.
 
-## Ce que cette observation prouve
+## What this observation proves
 
-- le Codex Micro est visible par macOS ;
-- une connexion BLE HID est disponible ;
-- le clavier peut en principe émettre des raccourcis standards ;
-- la combinaison Input/firmware observée est `0.17.2` / `v0.4.1`.
+- the Codex Micro is visible to macOS;
+- a BLE HID connection is available;
+- the keyboard can in principle emit standard shortcuts;
+- the Input/firmware combination observed is `0.17.2` / `v0.4.1`.
 
-## Ce qu'elle ne prouve pas
+## What it does not prove
 
-- la révision commerciale exacte du matériel ;
-- le caractère modifiable ou publiquement redistribuable du firmware ;
-- la présence du Nordic UART Service attendu par Claude ;
-- la possibilité d'annoncer un nom commençant par `Claude` ;
-- la coexistence HID + Hardware Buddy ;
-- l'activation du mode développeur Claude ;
-- un échange réel de messages Hardware Buddy.
+- the exact commercial revision of the hardware;
+- whether the firmware is modifiable or publicly redistributable;
+- the presence of the Nordic UART Service that Claude expects;
+- the ability to advertise a name starting with `Claude`;
+- HID + Hardware Buddy coexistence;
+- enabling Claude's developer mode;
+- an actual exchange of Hardware Buddy messages.
 
-`system_profiler` ne listait pas le périphérique pendant la reconnaissance. La
-preuve provenait du registre HID I/O. Aucun scan GATT actif n'a été lancé.
+`system_profiler` did not list the device during the reconnaissance. The evidence
+came from the HID I/O registry. No active GATT scan was run.

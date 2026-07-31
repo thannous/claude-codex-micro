@@ -1,133 +1,134 @@
-# AppSense — comportement réel mesuré sur Codex Micro
+[English](appsense-behavior.md) · [Français](../fr/research/appsense-behavior.md)
+
+# AppSense — real behaviour measured on the Codex Micro
 
 ## Verdict
 
-**AppSense n'a pas de retour.** C'est un ensemble de règles application → layer,
-et chaque règle est une transition **aller**. Il n'existe ni layer par défaut, ni
-repli, ni désactivation quand l'application liée perd le focus.
+**AppSense has no return path.** It is a set of application → layer rules, and
+every rule is a **one-way** transition. There is no default layer, no fallback,
+and no deactivation when the linked application loses focus.
 
-Conséquence à retenir avant de concevoir un layer : quitter Claude pour une
-application non liée laisse la carte sur le layer Claude, indéfiniment. Le layer
-doit donc être sûr en dehors de Claude, puisqu'il y restera actif.
+The consequence to keep in mind before designing a layer: leaving Claude for an
+unlinked application leaves the board on the Claude layer, indefinitely. The
+layer therefore has to be safe outside Claude, since that is where it will stay
+active.
 
-## Le modèle, et ce qu'il explique
+## The model, and what it explains
 
-| application au premier plan | règle | effet |
+| foreground application | rule | effect |
 | --- | --- | --- |
-| liée à un layer | trouvée | bascule vers ce layer |
-| non liée | aucune | **rien ne se passe, la carte reste où elle est** |
+| linked to a layer | found | switches to that layer |
+| not linked | none | **nothing happens, the board stays where it is** |
 
-Un « aller-retour » entre deux applications n'est donc pas un aller suivi d'un
-retour : c'est **deux allers**, qui exigent que les deux applications soient
-liées chacune à son layer. Le layer d'indice `0` peut parfaitement être une
-cible, contrairement à ce qu'on pourrait croire — mais seulement si une
-application lui est explicitement liée.
+A "round trip" between two applications is therefore not one trip out and one
+back: it is **two trips out**, which requires both applications to be linked,
+each to its own layer. The layer at index `0` can perfectly well be a target,
+contrary to what one might assume — but only if an application is explicitly
+linked to it.
 
-Mesures qui établissent le modèle, sur firmware `v0.4.1` et Input `0.17.3` :
+Measurements that establish the model, on firmware `v0.4.1` and Input `0.17.3`:
 
-- depuis le layer de base, mettre Claude au premier plan bascule bien vers le
-  layer `Claude` — l'aller fonctionne ;
-- avec `com.openai.codex` lié au layer de base, alterner Claude et ChatGPT fait
-  bien alterner les deux layers ;
-- avec la même configuration, quitter Claude pour le Finder ne change **rien** :
-  le layer `Claude` reste actif.
+- from the base layer, bringing Claude to the foreground does switch to the
+  `Claude` layer — the trip out works;
+- with `com.openai.codex` linked to the base layer, alternating between Claude
+  and ChatGPT does alternate the two layers;
+- with the same configuration, leaving Claude for the Finder changes **nothing**:
+  the `Claude` layer stays active.
 
-## Limite pratique
+## Practical limit
 
-Six layers au maximum, et un seul `linkedAppId` par layer : au plus **six
-applications** peuvent déclencher une bascule. Toute autre application laisse la
-carte sur le dernier layer activé.
+Six layers at most, and a single `linkedAppId` per layer: at most **six
+applications** can trigger a switch. Any other application leaves the board on
+the last activated layer.
 
-Pour un poste où l'on navigue entre plus d'applications que ça, il n'y a que le
-capteur tactile, qui fait défiler les layers à la main.
+For a machine where you move between more applications than that, there is only
+the touch sensor, which cycles the layers by hand.
 
-## Statut chez le fabricant
+## Status at the vendor
 
-Le repli attendu est une **fonctionnalité absente, pas un bug**. Elle est
-demandée sur le board de feedback Work Louder en statut `Planned`, sans ETA, et
-un administrateur l'a confirmé :
+The expected fallback is a **missing feature, not a bug**. It is requested on the
+Work Louder feedback board with status `Planned`, no ETA, and an administrator
+confirmed it:
 
-> nous prévoyons de l'implémenter mais nous n'avons pas encore d'ETA
+> we plan to implement it but we don't have an ETA yet
 
-Aucune note de version d'Input, de `0.11.0` à `0.18.0-rc.8`, ne mentionne
-AppSense, le focus applicatif ou le changement de layer. Mettre Input à jour ne
-change donc rien à ce comportement.
+No Input release note, from `0.11.0` to `0.18.0-rc.8`, mentions AppSense,
+application focus or layer switching. Updating Input therefore changes nothing
+about this behaviour.
 
-Sources : <https://feedback.worklouder.cc/p/switch-to-standard-when-linked-software-isnt-in-focus>
-et <https://feedback.worklouder.cc/p/feedback-first-hour-of-use>.
+Sources: <https://feedback.worklouder.cc/p/switch-to-standard-when-linked-software-isnt-in-focus>
+and <https://feedback.worklouder.cc/p/feedback-first-hour-of-use>.
 
-## Mécanique côté hôte, utile au diagnostic
+## Host-side mechanics, useful for diagnosis
 
-**AppSense est piloté par l'hôte.** Input observe l'application au premier plan
-et pousse un appel JSON-RPC `host.focused_app` vers la carte ; le firmware
-consulte alors sa table de liens et bascule. Deux conséquences :
+**AppSense is driven by the host.** Input watches the foreground application and
+pushes a `host.focused_app` JSON-RPC call to the board; the firmware then
+consults its link table and switches. Two consequences:
 
-- **AppSense s'arrête net si Input n'est pas lancé.** Aucune bascule n'a plus
-  lieu, et la carte se figera sur son dernier layer. « Fermer Input » est donc le
-  pire contournement possible.
-- La détection se fait par **sondage à 1000 ms**, via `osascript`, pas par
-  abonnement système. Une bascule peut donc prendre jusqu'à une seconde : ne pas
-  conclure trop vite lors d'un test.
+- **AppSense stops dead if Input is not running.** No switch happens any more,
+  and the board freezes on its last layer. "Close Input" is therefore the worst
+  possible workaround.
+- Detection is done by **polling at 1000ms**, through `osascript`, not by a
+  system subscription. A switch can therefore take up to a second: do not
+  conclude too quickly during a test.
 
-L'envoi est **inconditionnel** — Input ne consulte pas la table des liens avant
-d'émettre, tout le filtrage est côté firmware — et il n'existe aucun message
-signifiant « aucune application liée ». Le firmware ne renvoie jamais sur quel
-layer il a basculé : la réponse à `host.focused_app` est toujours `null`.
+The send is **unconditional** — Input does not consult the link table before
+emitting, all the filtering is on the firmware side — and there is no message
+meaning "no linked application". The firmware never reports which layer it
+switched to: the response to `host.focused_app` is always `null`.
 
-## Pièges rencontrés pendant l'investigation
+## Traps hit during the investigation
 
-- **`Auto detect` ne dédoublonne pas par processus.** Chaque exécution crée une
-  nouvelle entrée `linkedApps`. Deux entrées pour la même application, et deux
-  layers les revendiquant dans deux profils différents, rendent le diagnostic
-  illisible. N'exécuter `Auto detect` qu'une fois par application.
-- **Un fichier `*-profile.json` exporté ne transporte pas la table
-  `linkedApps`**, seulement les références `linkedAppId` posées sur les layers.
-  Un profil importé ne peut donc pas créer un lien : l'entrée cible doit déjà
-  exister, sinon la référence pend et le lien est silencieusement mort.
-- **La copie locale `~/Library/Application Support/input/devices/<pid>/keymap.json`
-  peut être en retard** sur ce qui a réellement été poussé. La source fiable est
-  `~/Library/Logs/input/main.log`, où `|device_keymap_service| sending device
-  config :` est suivi du JSON complet.
-- **`device.status.layer_index` est 1-based**, Input le convertit par `r - 1`.
-  Un `layer_index: 2` désigne le layer d'indice `1`.
-- Les erreurs `cannot send, no device connected` accompagnant chaque changement
-  de focus sont présentes dès le démarrage : Input instancie un client par
-  transport et seul celui du transport réel répond. Ce n'est pas la panne.
+- **`Auto detect` does not deduplicate by process.** Each run creates a new
+  `linkedApps` entry. Two entries for the same application, and two layers
+  claiming them across two different profiles, make diagnosis unreadable. Run
+  `Auto detect` only once per application.
+- **An exported `*-profile.json` does not carry the `linkedApps` table**, only
+  the `linkedAppId` references set on the layers. An imported profile therefore
+  cannot create a link: the target entry must already exist, otherwise the
+  reference dangles and the link is silently dead.
+- **The local copy
+  `~/Library/Application Support/input/devices/<pid>/keymap.json` can lag**
+  behind what was actually pushed. The reliable source is
+  `~/Library/Logs/input/main.log`, where `|device_keymap_service| sending device
+  config :` is followed by the full JSON.
+- **`device.status.layer_index` is 1-based**, and Input converts it with `r - 1`.
+  A `layer_index: 2` designates the layer at index `1`.
+- The `cannot send, no device connected` errors accompanying every focus change
+  are present from startup: Input instantiates one client per transport and only
+  the one on the real transport answers. That is not the failure.
 
-## Contention avec l'application ChatGPT
+## Contention with the ChatGPT application
 
-Les deux applications tiennent le même périphérique HID, ouvert en mode non
-exclusif : les lectures sont diffusées aux deux, seules les écritures se
-disputent, et **la dernière écriture gagne**. On le voit directement dans le log
-d'Input, qui reçoit les réponses à des appels `v.oai.rgbcfg` et `v.oai.thstatus`
-qu'il n'a jamais émis.
+Both applications hold the same HID device, opened non-exclusively: reads are
+broadcast to both, only writes compete, and **the last write wins**. You can see
+it directly in Input's log, which receives responses to `v.oai.rgbcfg` and
+`v.oai.thstatus` calls it never made.
 
-Conséquence à connaître pour tout témoin visuel : **ChatGPT écrase l'underglow
-des layers non-Codex** quel que soit le layer actif — bug confirmé, non corrigé
-sur ce modèle. Le **backlight** est la zone qu'il laisse tranquille, donc le seul
-indicateur de layer fiable tant que ChatGPT tourne.
+A consequence to know about for any visual indicator: **ChatGPT overwrites the
+underglow of non-Codex layers** whatever the active layer — a confirmed bug, not
+fixed on this model. The **backlight** is the zone it leaves alone, and therefore
+the only reliable layer indicator while ChatGPT is running.
 
-Ce que ChatGPT ne fait pas : il ne repositionne jamais le layer. Il n'est donc
-pas la cause du layer collé.
+What ChatGPT does not do: it never repositions the layer. It is therefore not the
+cause of the stuck layer.
 
-## Avertissement
+## Warning
 
-**Ne flasher aucun firmware depuis l'écran de récupération d'Input.** Il propose
-Nomad, Knob, KnobF1, Creator Micro V2 et XYZ R2, n'offre **pas** de firmware
-Codex Micro et **n'avertit pas** de l'incompatibilité. Un Codex Micro a été
-briqué exactement comme ça, et aucun firmware de récupération officiel n'est
-publié.
+**Do not flash any firmware from Input's recovery screen.** It offers Nomad,
+Knob, KnobF1, Creator Micro V2 and XYZ R2, does **not** offer Codex Micro
+firmware, and does **not** warn about the incompatibility. A Codex Micro was
+bricked exactly that way, and no official recovery firmware is published.
 
-Source : <https://feedback.worklouder.cc/p/input-can-flash-incompatible-firmware-onto-codex-micro-without-warning>
+Source: <https://feedback.worklouder.cc/p/input-can-flash-incompatible-firmware-onto-codex-micro-without-warning>
 
-## Ce qui reste non établi
+## What is still unestablished
 
-- L'ordre dans lequel le firmware parcourt sa table de liens, et s'il cherche
-  dans le profil actif seulement ou dans tous les profils. Pendant
-  l'investigation, une configuration dont le layer de base référençait un
-  `linkedAppId` inexistant a semblé fonctionner là où une référence valide
-  échouait. L'écart n'a pas été reproduit et est vraisemblablement un artefact de
-  séquence de test, mais il n'est pas expliqué.
-- La raison du refus d'import d'un profil à trois layers : rien n'est journalisé
-  côté processus principal, le motif est dans le log du renderer, accessible par
+- The order in which the firmware walks its link table, and whether it searches
+  the active profile only or every profile. During the investigation, a
+  configuration whose base layer referenced a non-existent `linkedAppId` seemed
+  to work where a valid reference failed. The discrepancy was not reproduced and
+  is most likely an artefact of the test sequence, but it is not explained.
+- The reason a three-layer profile is refused on import: nothing is logged on the
+  main process side, the cause is in the renderer log, reachable through
   `Help > Download Logs`.

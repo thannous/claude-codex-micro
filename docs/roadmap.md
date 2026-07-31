@@ -1,115 +1,118 @@
-# Feuille de route
+[English](roadmap.md) · [Français](fr/roadmap.md)
 
-## État actuel
+# Roadmap
 
-Le dépôt public contient désormais :
+## Current state
 
-- un manifeste communautaire et un mapping physique Claude ;
-- des schémas réutilisables pour les futurs presets ;
-- une représentation SVG originale ;
-- un outil d'inventaire, sauvegarde, dry-run, sanitation et rollback ;
-- un générateur local de profile Input `0.17.3` qui conserve AppSense ;
-- des tests transactionnels sur copies isolées ;
-- une analyse reproductible du format de partage d'Input `0.17.2` ;
-- une piste BLE séparée, explicitement non fonctionnelle.
+The public repository now contains:
 
-Le vrai export officiel Claude `*-layer.json` et la validation matérielle
-complète restent manquants. Le preset conserve donc le statut
-`hardware-observed`.
+- a community manifest and a Claude physical mapping;
+- reusable schemas for future presets;
+- an original SVG representation;
+- an inventory, backup, dry-run, sanitisation and rollback tool;
+- a local Input `0.17.3` profile generator that preserves AppSense;
+- transactional tests on isolated copies;
+- a reproducible analysis of the Input `0.17.2` sharing format;
+- a separate BLE track, explicitly not working.
 
-## V1 — preset Claude vérifié
+The real official Claude `*-layer.json` export and full hardware validation are
+still missing. The preset therefore keeps the `hardware-observed` status.
 
-Objectif : obtenir un premier layer reproductible sans modifier le layer Codex
-natif.
+## V1 — verified Claude preset
 
-- [ ] exécuter `git status --short` dans la copie locale et préserver les
-  modifications sans rapport ;
-- [x] exporter le profile Input réel et inventorier profils, layers, actions et
-  liens AppSense ;
-- [x] fournir une sauvegarde locale vérifiée et un rollback transactionnel ;
-- [x] identifier les flux officiels Import/Export layer et profile d'Input
-  `0.17.2` ;
-- [x] définir le manifeste, le mapping physique, la couleur et les exclusions ;
-- [x] protéger l'index `0`, exiger un unique layer Claude existant et conserver
-  son AppSense ;
-- [x] générer localement un nouveau profile Input `0.17.3` ;
-- [ ] vérifier les positions, les touches, le cadran et le joystick ;
-- [ ] vérifier AppSense, la perte de focus et les liens concurrents ;
-- [ ] vérifier la persistance après redémarrage d'Input ;
-- [ ] exporter et assainir le vrai `*-layer.json` ;
-- [ ] tester l'import sur une configuration isolée et le second import ;
-- [ ] restaurer le profile d'origine et vérifier le périphérique ;
-- [ ] promouvoir le niveau de preuve et sortir la PR du mode brouillon.
+Goal: obtain a first reproducible layer without modifying the native Codex
+layer.
 
-La V1 est terminée uniquement si une autre personne peut reproduire le résultat
-sans identifiant local ni remplacement implicite d'un layer.
+- [ ] run `git status --short` in the local copy and preserve unrelated changes;
+- [x] export the real Input profile and inventory profiles, layers, actions and
+  AppSense links;
+- [x] provide a verified local backup and a transactional rollback;
+- [x] identify the official layer and profile Import/Export flows of Input
+  `0.17.2`;
+- [x] define the manifest, the physical mapping, the colour and the exclusions;
+- [x] protect index `0`, require a single existing Claude layer and preserve its
+  AppSense;
+- [x] generate a new Input `0.17.3` profile locally;
+- [ ] verify the positions, the keys, the dial and the joystick;
+- [ ] verify AppSense, focus loss and competing links;
+- [ ] verify persistence after an Input restart;
+- [ ] export and sanitise the real `*-layer.json`;
+- [ ] test the import on an isolated configuration, and the second import;
+- [ ] restore the original profile and verify the device;
+- [ ] promote the level of proof and take the PR out of draft.
 
-## V2 — portabilité généralisée
+V1 is finished only if another person can reproduce the result without a local
+identifier and without implicitly replacing a layer.
 
-Les fondations minimales sont déjà présentes, mais ne sont pas déclarées
-stables :
+## V2 — general portability
 
-- [x] manifeste commun et schémas V1 ;
-- [x] simulation, sauvegarde, sanitation et tests de rollback sur fixtures ;
-- [x] sélection d'un unique layer existant et refus de l'absence/duplication ;
-- [x] aperçu visuel du mapping ;
-- [ ] prise en charge d'un artefact officiel vérifié ;
-- [ ] comparaison structurelle avant/après depuis de vrais exports ;
-- [ ] détection des incompatibilités Input/firmware ;
-- [ ] journal de validation matérielle signé par versions et sommes de contrôle ;
-- [ ] automatisation du rollback officiel si Input expose un canal supporté.
+The minimal foundations are already present, but are not declared stable:
 
-Aucun patch direct du stockage Input ne deviendra le chemin normal tant que son
-format et son effet sur le périphérique ne sont pas prouvés.
+- [x] common manifest and V1 schemas;
+- [x] simulation, backup, sanitisation and rollback tests on fixtures;
+- [x] selection of a single existing layer, refusing absence and duplication;
+- [x] visual preview of the mapping;
+- [ ] support for a verified official artefact;
+- [ ] structural before/after comparison from real exports;
+- [ ] detection of Input/firmware incompatibilities;
+- [ ] hardware validation log signed by versions and checksums;
+- [ ] automation of the official rollback if Input exposes a supported channel.
 
-## V3 — catalogue communautaire
+Patching Input's storage directly will not become the normal path until its
+format and its effect on the device are proven.
 
-- ajouter un preset « Claude Code » (terminal) en premier candidat naturel ;
-- ajouter des presets IDE, navigateur, recherche, Figma et Framer ;
-- indexer les presets par application, plateforme et compatibilité ;
-- utiliser les modèles GitHub de proposition et de pull request ;
-- exiger une méthode de sauvegarde et de retour arrière ;
-- publier les résultats négatifs et incompatibilités connus ;
-- permettre plusieurs représentations physiques sans identifiants locaux.
+## V3 — community catalogue
 
-## V4 — expérience simplifiée
+- add a "Claude Code" (terminal) preset as the natural first candidate;
+- add IDE, browser, search, Figma and Framer presets;
+- index presets by application, platform and compatibility;
+- use the GitHub proposal and pull request templates;
+- require a backup and rollback method;
+- publish known negative results and incompatibilities;
+- allow several physical representations without local identifiers.
 
-- catalogue lisible depuis une interface dédiée ;
-- aperçu interactif du clavier ;
-- comparaison avant/après ;
-- installation guidée avec consentement explicite ;
-- mises à jour versionnées sans écraser les personnalisations locales.
+## V4 — simplified experience
 
-## Piste parallèle : Hardware Buddy
+- catalogue readable from a dedicated interface;
+- interactive keyboard preview;
+- before/after comparison;
+- guided installation with explicit consent;
+- versioned updates that do not overwrite local customisations.
 
-La recherche BLE reste indépendante. Elle ne rejoint la feuille de route
-principale que si le service Nordic UART, la coexistence HID et une procédure
-de restauration sûre sont démontrés sur le Codex Micro exact.
+## Parallel track: Hardware Buddy
 
-## Piste parallèle : statut des sessions Claude Code
+The BLE research stays independent. It only joins the main roadmap if the Nordic
+UART service, HID coexistence and a safe restore procedure are demonstrated on
+the exact Codex Micro.
 
-Une seconde piste couvre les six touches Agent : afficher l'état des sessions
-Claude Code locales et sauter à la bonne session. Contrairement à Hardware Buddy,
-ses deux briques centrales reposent sur des mécanismes documentés — le roster
-`claude agents --json` et les hooks — et sont implémentées :
+## Parallel track: Claude Code session status
 
-- [x] plugin de hooks et journal publiable ([`thread-status/`](../thread-status/README.md)) ;
-- [x] réducteur à six emplacements, testé sans matériel ;
-- [x] compagnon `watch` / `status` / `focus` / `doctor` ;
-- [ ] focus d'une session hébergée par un terminal, vérifié de bout en bout ;
-- [x] appui d'une touche Agent relié à `focus <n>` : les touches émettent
-  `v.oai.hid` avec `k` valant `AG00` à `AG05`, donc aucun raccourci global natif
-  n'est nécessaire — `npm run lighting -- watch --focus` ;
-- [x] couche `DeviceAdapter` : le protocole d'éclairage est confirmé sur
-  matériel et `node scripts/lighting.mjs watch` pousse les couleurs d'état —
-  voir [`hid-lighting-protocol.md`](research/hid-lighting-protocol.md).
+A second track covers the six Agent keys: showing the state of local Claude Code
+sessions and jumping to the right one. Unlike Hardware Buddy, both of its core
+building blocks rest on documented mechanisms — the `claude agents --json`
+roster and the hooks — and are implemented:
 
-Une seule limite la maintient hors de la V1 : aucune route n'adresse une
-session Claude Code hébergée par Claude Desktop. Le protocole des LED par
-touche, seconde limite historique, est désormais confirmé sur matériel et
-implémenté — y compris sur le layer `Claude`, à condition que ses six positions
-Agent portent les keycodes `KV_OAI_AG00` à `KV_OAI_AG05`, ce que pose
-[`scripts/enable-agent-keys.mjs`](../scripts/enable-agent-keys.mjs). Mesures et
-bornes dans
+- [x] hooks plugin and publishable journal
+  ([`thread-status/`](../thread-status/README.md));
+- [x] six-slot reducer, tested without hardware;
+- [x] `watch` / `status` / `focus` / `doctor` companion;
+- [ ] focusing a terminal-hosted session, verified end to end;
+- [x] Agent key press wired to `focus <n>`: the keys emit `v.oai.hid` with `k`
+  set to `AG00` through `AG05`, so no native global shortcut is needed —
+  `npm run lighting -- watch --focus`;
+- [x] `DeviceAdapter` layer: the lighting protocol is confirmed on hardware and
+  `node scripts/lighting.mjs watch` pushes the state colours — see
+  [`hid-lighting-protocol.md`](research/hid-lighting-protocol.md);
+- [x] navigating to a session hosted by Claude Desktop:
+  `claude://resume?session=<uuid>` opens it by id. The route is not documented
+  and the handler reports nothing back, so a session whose transcript has left
+  the disk fails silently.
+
+Both historical blockers are now lifted. The per-key LED protocol is confirmed
+on hardware and implemented — including on the `Claude` layer, provided its six
+Agent positions carry the `KV_OAI_AG00` to `KV_OAI_AG05` keycodes, which
+[`scripts/enable-agent-keys.mjs`](../scripts/enable-agent-keys.mjs) sets. What
+keeps this track out of V1 is now its dependency on an undocumented route and on
+quitting the ChatGPT app, not an unsolved problem. Measurements and bounds in
 [`docs/research/thread-status-feasibility.md`](research/thread-status-feasibility.md)
-et [`docs/research/hid-lighting-protocol.md`](research/hid-lighting-protocol.md).
+and [`docs/research/hid-lighting-protocol.md`](research/hid-lighting-protocol.md).

@@ -1,118 +1,113 @@
-# Protocole d'éclairage HID du Codex Micro — format observé, confirmé à l'exécution
+[English](hid-lighting-protocol.md) · [Français](../fr/research/hid-lighting-protocol.md)
+
+# Codex Micro HID lighting protocol — observed format, confirmed at runtime
 
 ## Verdict
 
-**Le canal d'éclairage par touche est ouvert.** Le cadrage rapporté est
-confirmé à l'exécution, le transport non exclusif fonctionne avec `node-hid`
-3.4.0, et une réimplémentation originale est livrée
-(`scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs`,
-`scripts/lib/hid-device.mjs`, `scripts/lighting.mjs`). Chacun peut piloter la
-couleur et l'effet des touches de son propre clavier, ainsi que les deux zones
-globales, et écouter les événements touches et joystick.
+**The per-key lighting channel is open.** The reported framing is confirmed at
+runtime, the non-exclusive transport works with `node-hid` 3.4.0, and an original
+reimplementation ships with the repository (`scripts/lib/hid-frame.mjs`,
+`scripts/lib/hid-lighting.mjs`, `scripts/lib/hid-device.mjs`,
+`scripts/lighting.mjs`). Anyone can drive the colour and effect of their own
+keyboard's keys, plus the two global zones, and listen to key and joystick
+events.
 
-Mesures sur macOS `26.5.2` arm64, firmware Codex Micro `v0.4.1` (relevé par
-`sys.version`), `node-hid` `3.4.0`.
+Measurements on macOS `26.5.2` arm64, Codex Micro firmware `v0.4.1` (read
+through `sys.version`), `node-hid` `3.4.0`.
 
-## Cadre légal, rappelé
+## Legal framing, restated
 
-Ce document décrit un **format observé** : constantes, positions d'octets,
-champs JSON. L'implémentation du dépôt est un code original écrit d'après ces
-faits, pour interopérer avec un périphérique que son utilisateur possède.
-Aucune ligne du SDK Work Louder (`UNLICENSED`, registre privé) n'est reprise
-ni redistribuée ; les extraits lus localement pour établir les faits restent
-sous `.local/`, ignoré par Git.
+This document describes an **observed format**: constants, byte positions, JSON
+fields. The repository's implementation is original code written from those
+facts, to interoperate with a device its user owns. Not a line of the Work Louder
+SDK (`UNLICENSED`, private registry) is reused or redistributed; the extracts
+read locally to establish the facts stay under `.local/`, which Git ignores.
 
-## Matrice de preuve
+## Evidence matrix
 
-| Affirmation | État | Preuve |
+| Claim | State | Proof |
 | --- | --- | --- |
-| Rapports de 64 octets, octet 0 = `0x06`, octet 1 = canal `2` (RPC), octet 2 = longueur, charge UTF-8 à l'octet 3 | **confirmé** | round-trip `sys.version` → `{"result":{"version":"v0.4.1"},"id":798,"method":"sys.version"}` |
-| Charge utile de 61 octets par rapport, continuation multi-rapports au-delà | **confirmé** | poussées `thstatus` de ~140 octets (3 rapports) acquittées six fois pendant la sonde |
-| L'octet 2 porte la longueur **du fragment**, sur chaque rapport | confirmé | cohérent avec l'accumulation par canal côté hôte ; l'hypothèse « longueur totale au premier rapport » (sonde Swift parallèle) est écartée |
-| Canal 1 = journaux de débogage, canal 2 = RPC, messages terminés par saut de ligne | confirmé | lecture du format + réception fonctionnelle |
-| Enveloppe de requête `{method, params, id}`, `id` entier dans `[0, 999)`, non-ASCII échappé en `\uXXXX` | confirmé | round-trips réussis |
-| Réponse `{result, id, method}` ou `{error, id}` ; la méthode est renvoyée en écho | confirmé | réponses observées |
-| Notification sans `id` : `{method, params}`, formes compactes `m`/`p`, `i` possibles | confirmé | format documenté, distribution implémentée |
-| VID `0x303a`, PID `0x8360`, collection vendeur usage page `0xFF00` | confirmé | `hidutil list`, énumération `node-hid` |
-| Ouverture **non exclusive** possible avec `node-hid` 3.4.0 (`HIDAsync.open(path, { nonExclusive: true })`) | **confirmé** | ouverture + round-trip réussis pendant que ChatGPT tient le même périphérique |
-| `v.oai.thstatus` pilote chaque touche Agent : entrées `{id, c, b, e, s, sk, sa}`, champs omis inchangés | **confirmé** | six écritures acquittées, touches allumées une par une, extinction propre |
-| `v.oai.rgbcfg` configure deux zones globales `{ambient, keys}` × `{e, b, s, m, c}` | confirmé (format) | lecture du format ; non exercé à l'écriture ici |
-| Effets : `off=0, solid=1, snake=2, rainbow=3, breath=4, gradient=5, shallowBreath=6` | confirmé (format) | énumération documentée |
-| Notifications `v.oai.hid` `{k, act, ag}` (touches) et `v.oai.rad` `{a, d}` (joystick) | confirmé (format) | types documentés ; écoute implémentée (`listen`) |
-| Correspondance thread id ↔ touche physique : `[0..5]` dans l'ordre `key-9, key-10, key-5…key-8` | **provisoire** | sonde visuelle exécutée ; à figer après confirmation de l'utilisateur |
-| Une requête en vol, 50 ms entre appels, 10 s de garde par réponse | respecté | comportement du transport livré |
+| 64-byte reports, byte 0 = `0x06`, byte 1 = channel `2` (RPC), byte 2 = length, UTF-8 payload from byte 3 | **confirmed** | `sys.version` round-trip → `{"result":{"version":"v0.4.1"},"id":798,"method":"sys.version"}` |
+| 61-byte payload per report, multi-report continuation beyond that | **confirmed** | `thstatus` pushes of ~140 bytes (3 reports) acknowledged six times during the probe |
+| Byte 2 carries the length **of the chunk**, on every report | confirmed | consistent with per-channel accumulation on the host side; the "total length in the first report" hypothesis (parallel Swift probe) is ruled out |
+| Channel 1 = debug logs, channel 2 = RPC, messages terminated by a newline | confirmed | format read + working reception |
+| Request envelope `{method, params, id}`, integer `id` in `[0, 999)`, non-ASCII escaped as `\uXXXX` | confirmed | successful round-trips |
+| Response `{result, id, method}` or `{error, id}`; the method is echoed back | confirmed | responses observed |
+| Notification without `id`: `{method, params}`, compact forms `m`/`p`, `i` possible | confirmed | format documented, dispatch implemented |
+| VID `0x303a`, PID `0x8360`, vendor collection usage page `0xFF00` | confirmed | `hidutil list`, `node-hid` enumeration |
+| **Non-exclusive** open possible with `node-hid` 3.4.0 (`HIDAsync.open(path, { nonExclusive: true })`) | **confirmed** | open + round-trip succeeded while ChatGPT held the same device |
+| `v.oai.thstatus` drives each Agent key: entries `{id, c, b, e, s, sk, sa}`, omitted fields unchanged | **confirmed** | six writes acknowledged, keys lit one by one, clean turn-off |
+| `v.oai.rgbcfg` configures two global zones `{ambient, keys}` × `{e, b, s, m, c}` | confirmed (format) | format read; not exercised for writing here |
+| Effects: `off=0, solid=1, snake=2, rainbow=3, breath=4, gradient=5, shallowBreath=6` | confirmed (format) | documented enumeration |
+| Notifications `v.oai.hid` `{k, act, ag}` (keys) and `v.oai.rad` `{a, d}` (joystick) | confirmed (format) | types documented; listening implemented (`listen`) |
+| Thread id ↔ physical key mapping: `[0..5]` in the order `key-9, key-10, key-5…key-8` | **confirmed on hardware** | one-key-at-a-time probe: ids 0 to 5 follow the order of `SLOT_CONTROLS`, top row then the next, left to right |
+| One request in flight, 50ms between calls, a 10s guard per response | honoured | behaviour of the shipped transport |
 
-## Le point transport, et l'erreur à ne pas reproduire
+## The transport point, and the mistake not to repeat
 
-`node-hid` embarque hidapi, qui ouvre **en mode exclusif par défaut** depuis
-hidapi 0.14. Ouvrir avec `new HID.HID(path)` sans option échoue sur ce
-périphérique tant qu'une autre application le tient — c'est l'échec mesuré par
-la sonde parallèle (`scripts/lighting-probe.mjs`), qui concluait à tort que
-`node-hid` ne pouvait pas ouvrir ce périphérique.
+`node-hid` bundles hidapi, which opens **exclusively by default** since hidapi
+0.14. Opening with `new HID.HID(path)` and no option fails on this device while
+another application holds it — that is the failure measured by the parallel probe
+(`scripts/lighting-probe.mjs`), which wrongly concluded that `node-hid` could not
+open this device.
 
-`node-hid` expose pourtant bien l'option : `HIDAsync.open(path, { nonExclusive: true })`
-appelle `hid_darwin_set_open_exclusive(0)` (`node_modules/node-hid/src/HIDAsync.cc:137`),
-et l'ouverture non exclusive **fonctionne** — preuve par le round-trip
-`sys.version`. L'ouverture non exclusive IOKit (`kIOHIDOptionsTypeNone`), que la
-sonde Swift parallèle a validée, revient au même.
+`node-hid` does expose the option, though:
+`HIDAsync.open(path, { nonExclusive: true })` calls
+`hid_darwin_set_open_exclusive(0)` (`node_modules/node-hid/src/HIDAsync.cc:137`),
+and the non-exclusive open **works** — proven by the `sys.version` round-trip.
+The IOKit non-exclusive open (`kIOHIDOptionsTypeNone`), which the parallel Swift
+probe validated, amounts to the same thing.
 
-Conséquence pratique : le transport Node suffit, pas besoin d'un binaire
-auxiliaire. L'autorisation macOS « Surveillance des saisies » n'a pas été
-requise pour l'ouverture non exclusive sur cette machine.
+Practical consequence: the Node transport is enough, no helper binary needed. The
+macOS "Input Monitoring" permission was not required for the non-exclusive open
+on this machine.
 
-## Concurrence d'écriture, stratégie livrée
+## Write contention, shipped strategy
 
-Le périphérique est ouvert en non exclusif par toutes les applications : les
-lectures sont diffusées à tous, les écritures se disputent, **dernière
-écriture gagnante**. L'app ChatGPT repousse `rgbcfg` puis `thstatus` toutes
-les 35 à 40 secondes.
+The device is opened non-exclusively by every application: reads are broadcast to
+all, writes compete, **last write wins**. The ChatGPT app pushes `rgbcfg` then
+`thstatus` again every 35 to 40 seconds.
 
-Le signal de coexistence est gratuit : les réponses portent la méthode en
-écho, et une réponse dont l'identifiant n'est pas le nôtre est forcément
-celle d'un autre écrivain (ce sont ces « réponses orphelines » qu'Input
-journalise en avertissement). Le mode `--hold` de `scripts/lighting.mjs`
-s'appuie dessus : toute poussée étrangère détectée déclenche une
-réapplication immédiate, avec un filet de sécurité périodique de 10 s. Sans
-`--hold`, l'état posé est recouvert à la cadence de ChatGPT — comportement
-attendu, affiché à l'utilisateur.
+The coexistence signal is free: responses echo the method, and a response whose
+id is not ours necessarily belongs to another writer (these are the "orphan
+responses" that Input logs as warnings). The `--hold` mode of
+`scripts/lighting.mjs` builds on that: any detected foreign push triggers an
+immediate reapply, with a periodic 10s safety net. Without `--hold`, the state
+set here is overwritten at ChatGPT's cadence — expected behaviour, and shown to
+the user.
 
-## Composants livrés
+## Shipped components
 
-| Composant | Rôle |
+| Component | Role |
 | --- | --- |
-| `scripts/lib/hid-frame.mjs` | cadrage pur : fragmentation, réassemblage par canal, accumulateur JSON-RPC (pur, testé) |
-| `scripts/lib/hid-lighting.mjs` | paramètres `thstatus`/`rgbcfg`, palette d'états → six entrées (pur, testé) |
-| `scripts/lib/hid-device.mjs` | transport `node-hid` : découverte, ouverture non exclusive, file cadencée, corrélation par id, détection d'écritures étrangères |
-| `scripts/lighting.mjs` | CLI `list` / `probe` / `set` / `watch` / `listen` / `off`, option `--hold` |
-| `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` | 21 tests sans matériel |
+| `scripts/lib/hid-frame.mjs` | pure framing: fragmentation, per-channel reassembly, JSON-RPC accumulator (pure, tested) |
+| `scripts/lib/hid-lighting.mjs` | `thstatus`/`rgbcfg` parameters, state palette → six entries (pure, tested) |
+| `scripts/lib/hid-device.mjs` | `node-hid` transport: discovery, non-exclusive open, paced queue, correlation by id, foreign-write detection |
+| `scripts/lighting.mjs` | `list` / `probe` / `set` / `watch` / `listen` / `off` CLI, `--hold` option |
+| `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` | 21 tests without hardware |
 
-`watch` est le `DeviceAdapter` prévu par la feuille de route : il suit
-`~/.claude/thread-status/slots.json` et pousse les couleurs d'état des six
-emplacements à chaque changement.
+`watch` is the `DeviceAdapter` the roadmap called for: it follows
+`~/.claude/thread-status/slots.json` and pushes the state colours of the six
+slots on every change.
 
-## Ce qui reste ouvert
+## What is still open
 
-- **Confirmation visuelle du mapping** thread id ↔ touche (table provisoire
-  `[0..5]` dans `SLOT_THREAD_IDS`). La sonde allume les touches une par une ;
-  toute divergence observée se corrige dans cette table.
-- La sémantique exacte de `sk` / `sa` (synchronisation de la couleur d'un
-  thread vers les zones touches / ambiante, dans un sens ou dans l'autre) :
-  non éprouvée, laissée à 0 par défaut.
-- `v.oai.rgbcfg` à l'écriture : format confirmé, jamais envoyé ici. La méthode
-  décrit les deux zones d'un coup ; la CLI exige donc `--keys` et `--ambient`
-  ensemble.
-- Si les identifiants de thread au-delà de 5 existent (autres touches) :
-  aucun indice, non exploré.
-- La pérennité : le format est celui du firmware `v0.4.1` ; une mise à jour
-  peut le faire évoluer sans prévenir.
+- The exact semantics of `sk` / `sa` (syncing a thread's colour towards the key
+  or ambient zones, in either direction): not exercised, left at 0 by default.
+- `v.oai.rgbcfg` for writing: format confirmed, never sent here. The method
+  describes both zones at once, so the CLI requires `--keys` and `--ambient`
+  together.
+- Whether thread ids beyond 5 exist (other keys): no clue, not explored.
+- Longevity: this is the format of firmware `v0.4.1`; an update may change it
+  without notice.
 
 ## Sources
 
-- Format et énumérations : lus localement dans le bundle ChatGPT.app
-  (`@worklouder/device-kit-oai`, `@worklouder/wl-device-kit`) — lecture pour
-  documentation, aucune redistribution.
-- Mesures d'exécution : cette machine, juillet 2026 (round-trip, sonde,
-  chaîne `watch` sur état synthétique).
-- [`thread-status-feasibility.md`](thread-status-feasibility.md) — mesures
-  amont (roster, hooks, contention, réponses orphelines dans le log d'Input).
-- [`appsense-behavior.md`](appsense-behavior.md) — contention et zones.
+- Format and enumerations: read locally in the ChatGPT.app bundle
+  (`@worklouder/device-kit-oai`, `@worklouder/wl-device-kit`) — read for
+  documentation, no redistribution.
+- Runtime measurements: this machine, July 2026 (round-trip, probe, `watch`
+  chain on synthetic state).
+- [`thread-status-feasibility.md`](thread-status-feasibility.md) — upstream
+  measurements (roster, hooks, contention, orphan responses in Input's log).
+- [`appsense-behavior.md`](appsense-behavior.md) — contention and zones.

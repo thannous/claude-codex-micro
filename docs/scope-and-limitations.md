@@ -1,107 +1,113 @@
-# Périmètre et limitations
+[English](scope-and-limitations.md) · [Français](fr/scope-and-limitations.md)
 
-## Dans le périmètre V1
+# Scope and limitations
 
-- conventions sûres pour une bibliothèque de presets ;
-- manifeste et mapping physique Claude ;
-- protection du layer Codex natif à l'index `0` ;
-- sélection d'un unique layer `Claude` existant après inventaire ;
-- conservation locale de son lien AppSense Claude Desktop ;
-- génération locale d'un nouveau `*-profile.json` Input `0.17.3` ;
-- export officiel du profile comme sauvegarde principale ;
-- copie locale vérifiée par SHA-256 ;
-- dry-run, état de session, refus de doublon et rollback guidé ;
-- sanitation fail-closed d'un vrai export de layer ;
-- tests transactionnels sur copies isolées ;
-- analyse séparée de Hardware Buddy.
+## In scope for V1
 
-## Non effectué sur le matériel dans cette branche
+- safe conventions for a preset library;
+- Claude manifest and physical mapping;
+- protection of the native Codex layer at index `0`;
+- selection of a single existing `Claude` layer after inventory;
+- local preservation of its Claude Desktop AppSense link;
+- local generation of a new Input `0.17.3` `*-profile.json`;
+- official profile export as the primary backup;
+- local copy verified by SHA-256;
+- dry run, session state, duplicate refusal and guided rollback;
+- fail-closed sanitisation of a real layer export;
+- transactional tests on isolated copies;
+- separate analysis of Hardware Buddy.
 
-- test des identifiants physiques ;
-- import d'un `*-layer.json` Codex Micro ;
-- persistance après redémarrage ;
-- test de perte de focus ;
-- restauration du keymap matériel.
+## Not done on hardware in this branch
 
-## Toujours hors périmètre
+- testing the physical identifiers;
+- importing a Codex Micro `*-layer.json`;
+- persistence across a restart;
+- focus-loss test;
+- restoring the hardware keymap.
 
-- `Reset settings` ;
-- suppression d'un profile ou layer existant ;
-- modification de raccourcis système ;
-- flash ou redistribution du firmware ;
-- approbation de permissions depuis le clavier ;
-- action destructive, push ou déploiement ;
-- publication d'un export brut ou d'un identifiant matériel ;
-- présentation de Hardware Buddy comme fonctionnel sans preuve ;
-- redistribution du SDK `@worklouder/device-kit-oai` ou de son code.
+## Always out of scope
 
-## Amendement : écriture volatile de l'éclairage
+- `Reset settings`;
+- deleting an existing profile or layer;
+- modifying system shortcuts;
+- flashing or redistributing firmware;
+- approving permissions from the keyboard;
+- destructive actions, pushes or deployments;
+- publishing a raw export or a hardware identifier;
+- presenting Hardware Buddy as working without proof;
+- redistributing the `@worklouder/device-kit-oai` SDK or its code.
 
-Jusqu'ici le dépôt s'interdisait toute écriture directe sur le périphérique. Cet
-amendement ouvre **un cas précis et un seul** : l'envoi de rapports HID de sortie
-portant l'état lumineux d'exécution.
+## Amendment: volatile lighting writes
 
-La distinction qui fonde l'amendement est la persistance, pas la nature du canal :
+Until now the repository ruled out any direct write to the device. This
+amendment opens **one precise case, and one only**: sending HID output reports
+carrying the runtime lighting state.
 
-| Écriture | Statut |
+The distinction the amendment rests on is persistence, not the nature of the
+channel:
+
+| Write | Status |
 | --- | --- |
-| rapport HID d'éclairage, volatile, perdu à la déconnexion | **dans le périmètre**, sous conditions |
-| configuration du périphérique, keymap, layers, couleurs de layer | hors périmètre, inchangé |
-| stockage applicatif d'Input | hors périmètre, inchangé |
-| firmware | hors périmètre, inchangé |
+| HID lighting report, volatile, lost on disconnect | **in scope**, under conditions |
+| device configuration, keymap, layers, layer colours | out of scope, unchanged |
+| Input's application storage | out of scope, unchanged |
+| firmware | out of scope, unchanged |
 
-Conditions cumulatives, toutes requises :
+Cumulative conditions, all required:
 
-1. **Opt-in explicite.** Aucune écriture par défaut, jamais au premier lancement.
-2. **Volatile uniquement.** Rien qui survive à une déconnexion du périphérique.
-3. **Implémentation originale.** Le format observé est documenté ; le SDK
-   propriétaire n'est ni copié, ni redistribué, ni empaqueté.
-4. **Restauration en sortie.** Interruption, arrêt ou exception laissent
-   l'éclairage dans un état neutre, jamais figé sur un état faux.
-5. **Concurrence documentée.** L'app ChatGPT réémet toutes les 35 à 40 secondes,
-   la dernière écriture gagne, et aucune coexistence déterministe n'est promise.
-6. **Réversibilité par abstention.** Ne pas lancer l'outil suffit à revenir à
-   l'état d'origine ; il n'y a rien à désinstaller côté matériel.
+1. **Explicit opt-in.** No write by default, never on first launch.
+2. **Volatile only.** Nothing that survives a device disconnect.
+3. **Original implementation.** The observed format is documented; the
+   proprietary SDK is neither copied, nor redistributed, nor bundled.
+4. **Documented exit boundary and explicit neutralisation.**
+   `lighting-probe.mjs --map` turns the six slots off after a normal sweep and
+   on `SIGINT`; `lighting.mjs off` does so on demand. The long-running
+   `set --hold` and `watch` paths close their HID session on `SIGINT`, but do
+   not neutralise the last volatile state, and shutdown or exception paths are
+   not covered. Disconnect the device or run `npm run lighting -- off` when a
+   neutral state is required.
+5. **Documented contention.** The ChatGPT app re-emits every 35 to 40 seconds,
+   the last write wins, and no deterministic coexistence is promised.
+6. **Reversible by abstention.** Not running the tool is enough to return to the
+   original state; there is nothing to uninstall on the hardware side.
 
-Ce que l'amendement ne change pas : le remappage des touches continue de passer
-exclusivement par le flux de profils Input, et la capture de frappes reste hors
-périmètre.
+What the amendment does not change: key remapping still goes exclusively through
+the Input profile flow, and keystroke capture stays out of scope.
 
-Base retenue pour la réimplémentation : interopérabilité avec un périphérique que
-l'utilisateur possède, code original, aucune redistribution. Voir
+Basis retained for the reimplementation: interoperability with a device the user
+owns, original code, no redistribution. See
 [`research/thread-status-feasibility.md`](research/thread-status-feasibility.md)
-pour les mesures qui établissent le format.
+for the measurements that establish the format.
 
-## Matrice de confiance
+## Confidence matrix
 
-| Affirmation | État | Preuve |
+| Claim | State | Proof |
 | --- | --- | --- |
-| Codex Micro visible comme HID BLE | confirmé localement | observation I/O du 27 juillet 2026 |
-| Input `0.17.3` installé | confirmé localement | bundle et profile réel |
-| Firmware `v0.4.1` installé | confirmé localement | écran Setup |
-| Six layers et AppSense | confirmé par Work Louder | documentation constructeur |
-| Import/export de layer et profile | observé dans Input `0.17.2` | analyse assainie du package officiel |
-| Enveloppe `*-layer.json` | observée statiquement | AST de la fonction d'export |
-| Artefact Claude importable | non disponible | export réel requis |
-| Lien AppSense Claude préservé | confirmé dans le profile généré | tests du générateur et export réel |
-| Retour au layer précédent | non testé | test matériel requis |
-| Sauvegarde/rollback de l'outil | validé sur fixture | tests Node isolés |
-| Restauration réelle du périphérique | non testée | import profile + contrôle matériel requis |
-| Nordic UART / Hardware Buddy | inconnu | preuves GATT et firmware requises |
+| Codex Micro visible as a BLE HID | confirmed locally | I/O observation of 27 July 2026 |
+| Input `0.17.3` installed | confirmed locally | bundle and real profile |
+| Firmware `v0.4.1` installed | confirmed locally | Setup screen |
+| Six layers and AppSense | confirmed by Work Louder | vendor documentation |
+| Layer and profile import/export | observed in Input `0.17.2` | sanitised analysis of the official package |
+| `*-layer.json` envelope | observed statically | AST of the export function |
+| Importable Claude artefact | not available | real export required |
+| Claude AppSense link preserved | confirmed in the generated profile | generator tests and real export |
+| Return to the previous layer | not tested | hardware test required |
+| Tool backup/rollback | validated on a fixture | isolated Node tests |
+| Real device restore | not tested | profile import + hardware check required |
+| Nordic UART / Hardware Buddy | unknown | GATT and firmware evidence required |
 
-## Compatibilité
+## Compatibility
 
-L'observation actuelle concerne macOS `26.5.2` arm64, Claude `1.24012.9`,
-Input `0.17.3` et firmware `v0.4.1`. L'analyse du mécanisme de partage
-`0.17.2` reste historique. Cette combinaison n'est pas une plage de
-compatibilité garantie.
+The current observation covers macOS `26.5.2` arm64, Claude `1.24012.9`,
+Input `0.17.3` and firmware `v0.4.1`. The analysis of the `0.17.2` sharing
+mechanism remains historical. This combination is not a guaranteed compatibility
+range.
 
-Voir [`compatibility.md`](compatibility.md).
+See [`compatibility.md`](compatibility.md).
 
-## Limite du rollback local
+## Limit of the local rollback
 
-La configuration Input copiée peut contenir des métadonnées utiles à
-l'application, mais le keymap est également écrit sur le périphérique. Par
-conséquent, la restauration principale est le flux officiel **Import Profile**.
-La restauration brute du dossier applicatif exige un consentement supplémentaire
-et ne suffit pas à promouvoir le preset.
+The copied Input configuration can carry metadata useful to the application, but
+the keymap is also written to the device. Consequently, the primary restore path
+is the official **Import Profile** flow. Restoring the application folder raw
+requires additional consent and is not enough to promote the preset.
