@@ -14,7 +14,7 @@ macro pour que chaque mesure devienne interprétable.
 
 ## Pourquoi `Esc` est obligatoire
 
-`⌘⇧E` est une **bascule**, vérifié sur Claude Desktop : l'envoyer deux fois de
+`⌘⇧E` est une **bascule**, vérifiée sur Claude Desktop : l'envoyer deux fois de
 suite ouvre puis referme le sélecteur.
 
 Chaque cran doit donc refermer le sélecteur lui-même. Sans le `Esc` final, le

@@ -37,8 +37,9 @@ présentée comme un layer matériel validé.
 
 ## Portes du preset Claude V1
 
-- [x] Flux officiels Import/Export layer et profile identifiés dans Input
-  `0.17.2`.
+- [x] Flux historiques Import/Export layer et profile identifiés par inspection
+  statique d'Input `0.17.2` ; ce n'est pas une preuve de round-trip actuelle en
+  `0.17.3`.
 - [x] Manifeste, mapping, schémas et représentation visuelle publiables.
 - [x] Sauvegarde, vérification SHA-256, dry-run, sélection unique et rollback
   testés sur copies isolées.
@@ -47,7 +48,8 @@ présentée comme un layer matériel validé.
 - [x] Unique layer Claude confirmé ; index `0` comparé avant/après.
 - [x] Profile Input `0.17.3` généré localement avec AppSense conservé.
 - [ ] Positions physiques et identifiants Input vérifiés.
-- [ ] AppSense, touches, cadran, joystick et perte de focus testés.
+- [ ] Activation AppSense, touches, cadran et joystick testés de bout en bout ;
+  le comportement dangereux après perte de focus est déjà mesuré.
 - [ ] Persistance après redémarrage d'Input vérifiée.
 - [ ] Vrai `*-layer.json` exporté, assaini et ajouté avec sa somme SHA-256.
 - [ ] SHA-256 déclaré identique et contenu conforme au mapping canonique.

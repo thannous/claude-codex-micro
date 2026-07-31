@@ -139,4 +139,4 @@ flash propriétaire ne doit être ajouté.
 - [ ] Statut d'import confirmé par une preuve ou indiqué comme non vérifié.
 - [ ] Aucun asset ou firmware propriétaire.
 
-Lire [SECURITY.md](SECURITY.md) avant de publier un rapport sensible.
+Lire [SECURITY.fr.md](SECURITY.fr.md) avant de publier un rapport sensible.

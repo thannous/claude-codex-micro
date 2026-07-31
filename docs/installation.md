@@ -238,8 +238,16 @@ Two options write an AppSense reference instead of only carrying over the one
 from the backup:
 
 ```bash
-node scripts/build-input-profile.mjs backup.json output.json --app-sense-id=0 --base-layer-app-sense-id=2
+CLAUDE_APP_SENSE_ID="<replace-with-current-Claude-linkedAppId>"
+RETURN_APP_SENSE_ID="<replace-with-current-return-app-linkedAppId>"
+node scripts/build-input-profile.mjs backup.json output.json \
+  --app-sense-id="$CLAUDE_APP_SENSE_ID" \
+  --base-layer-app-sense-id="$RETURN_APP_SENSE_ID"
 ```
+
+Resolve both values from the current device configuration and verify them before
+running the command. The placeholders are intentionally non-numeric so a copied
+command fails instead of silently linking the wrong applications.
 
 `--app-sense-id=<n>` forces the `Claude` layer's reference and removes the need
 to require one in the backup: this is the "repair a lost link" use case.
@@ -255,8 +263,11 @@ carry the `linkedApps` table: the target entry must already exist on the board,
 created once in Input's UI with `Auto detect`. A reference to a missing entry
 imports **without error** and leaves AppSense dead without saying so. Read the
 real identifiers first, in `~/Library/Logs/input/main.log`, where
-`sending device config :` is followed by the full JSON — and run `Auto detect`
-only once per application, since it does not deduplicate.
+`sending device config :` is followed by the full JSON. Keep that log local and
+never paste it into an issue: it can contain device addresses, identifiers,
+tokens and other private parameters. Copy only the required `linkedAppId`
+numbers, and redact every sensitive value before sharing an excerpt. Run
+`Auto detect` only once per application, since it does not deduplicate.
 
 The GUI exposes the same two settings in the **Verify and generate** step, under
 "AppSense links". Leaving the fields empty is the same as not passing the

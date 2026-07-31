@@ -59,8 +59,13 @@ Cumulative conditions, all required:
 2. **Volatile only.** Nothing that survives a device disconnect.
 3. **Original implementation.** The observed format is documented; the
    proprietary SDK is neither copied, nor redistributed, nor bundled.
-4. **Restore on exit.** An interrupt, a shutdown or an exception leaves the
-   lighting in a neutral state, never frozen on a false one.
+4. **Documented exit boundary and explicit neutralisation.**
+   `lighting-probe.mjs --map` turns the six slots off after a normal sweep and
+   on `SIGINT`; `lighting.mjs off` does so on demand. The long-running
+   `set --hold` and `watch` paths close their HID session on `SIGINT`, but do
+   not neutralise the last volatile state, and shutdown or exception paths are
+   not covered. Disconnect the device or run `npm run lighting -- off` when a
+   neutral state is required.
 5. **Documented contention.** The ChatGPT app re-emits every 35 to 40 seconds,
    the last write wins, and no deterministic coexistence is promised.
 6. **Reversible by abstention.** Not running the tool is enough to return to the

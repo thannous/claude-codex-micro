@@ -239,8 +239,17 @@ Deux options écrivent une référence AppSense au lieu de seulement reprendre c
 de la sauvegarde :
 
 ```bash
-node scripts/build-input-profile.mjs sauvegarde.json sortie.json --app-sense-id=0 --base-layer-app-sense-id=2
+CLAUDE_APP_SENSE_ID="<remplacer-par-le-linkedAppId-Claude-actuel>"
+RETURN_APP_SENSE_ID="<remplacer-par-le-linkedAppId-actuel-de-l-app-de-retour>"
+node scripts/build-input-profile.mjs sauvegarde.json sortie.json \
+  --app-sense-id="$CLAUDE_APP_SENSE_ID" \
+  --base-layer-app-sense-id="$RETURN_APP_SENSE_ID"
 ```
+
+Relever ces deux valeurs dans la configuration actuelle du périphérique et les
+vérifier avant d'exécuter la commande. Les marqueurs sont volontairement non
+numériques : une commande copiée échoue ainsi au lieu de lier silencieusement
+les mauvaises applications.
 
 `--app-sense-id=<n>` force la référence du layer `Claude` et dispense d'en exiger
 une dans la sauvegarde : c'est le cas d'usage « réparer un lien perdu ».
@@ -257,8 +266,11 @@ déjà exister sur la carte, créée une fois dans l'UI d'Input avec `Auto detec
 Une référence vers une entrée absente s'importe **sans erreur** et laisse
 AppSense mort sans le signaler. Relever les identifiants réels avant, dans
 `~/Library/Logs/input/main.log`, où `sending device config :` est suivi du JSON
-complet — et n'exécuter `Auto detect` qu'une seule fois par application, il ne
-dédoublonne pas.
+complet. Garder ce journal en local et ne jamais le coller dans une issue : il
+peut contenir des adresses du périphérique, des identifiants, des jetons et
+d'autres paramètres privés. Ne copier que les nombres `linkedAppId` requis et
+masquer toute valeur sensible avant de partager un extrait. N'exécuter
+`Auto detect` qu'une seule fois par application : il ne dédoublonne pas.
 
 Le GUI expose les deux mêmes réglages dans l'étape **Vérifier et générer**, section
 « Liens AppSense ». Laisser les champs vides revient à ne pas passer les options :

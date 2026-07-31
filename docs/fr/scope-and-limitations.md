@@ -58,8 +58,13 @@ Conditions cumulatives, toutes requises :
 2. **Volatile uniquement.** Rien qui survive à une déconnexion du périphérique.
 3. **Implémentation originale.** Le format observé est documenté ; le SDK
    propriétaire n'est ni copié, ni redistribué, ni empaqueté.
-4. **Restauration en sortie.** Interruption, arrêt ou exception laissent
-   l'éclairage dans un état neutre, jamais figé sur un état faux.
+4. **Limite de sortie documentée et neutralisation explicite.**
+   `lighting-probe.mjs --map` éteint les six emplacements après un balayage
+   normal et sur `SIGINT` ; `lighting.mjs off` le fait à la demande. Les chemins
+   longs `set --hold` et `watch` ferment leur session HID sur `SIGINT`, mais ne
+   neutralisent pas le dernier état volatil, et les arrêts ou exceptions ne sont
+   pas couverts. Déconnecter le périphérique ou exécuter
+   `npm run lighting -- off` lorsqu'un état neutre est requis.
 5. **Concurrence documentée.** L'app ChatGPT réémet toutes les 35 à 40 secondes,
    la dernière écriture gagne, et aucune coexistence déterministe n'est promise.
 6. **Réversibilité par abstention.** Ne pas lancer l'outil suffit à revenir à

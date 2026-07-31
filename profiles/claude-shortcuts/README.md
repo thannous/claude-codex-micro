@@ -110,4 +110,4 @@ node scripts/validate-presets.mjs
 node --test
 ```
 
-Lire ensuite [`docs/installation.md`](../../docs/installation.md).
+Lire ensuite [`docs/fr/installation.md`](../../docs/fr/installation.md).

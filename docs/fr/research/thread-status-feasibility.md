@@ -5,21 +5,24 @@
 ## Verdict
 
 **Les états sont disponibles officiellement, les LED fonctionnent sur le layer
-`Claude`, et la navigation est résolue sur toutes les surfaces.** Trois
+`Claude`, et la navigation est vérifiée dans Claude Desktop ; le focus du
+terminal est implémenté, mais pas encore testé de bout en bout.** Trois
 conclusions, dans cet ordre de solidité :
 
 1. Détecter « en cours / intervention / terminé / fermé » par session est un
    problème résolu, avec deux mécanismes documentés et complémentaires.
-2. Aller à la session depuis une touche est résolu sur les deux surfaces : focus
-   de fenêtre en AppleScript quand la session tourne dans un terminal, et
-   `claude://resume?session=<uuid>` quand Claude Desktop l'héberge. Cette seconde
-   route n'est pas documentée.
+2. Aller à la session depuis une touche est vérifié par
+   `claude://resume?session=<uuid>` quand Claude Desktop l'héberge. Cette route
+   n'est pas documentée. Le focus de fenêtre du terminal par AppleScript est
+   implémenté et compile, mais attend encore un test de bout en bout avec une
+   session terminal active.
 3. Piloter les six LED **fonctionne, y compris sur le layer `Claude`**, à une
    condition découverte tardivement : les six positions Agent de ce layer doivent
    porter les keycodes `KV_OAI_AG00` à `KV_OAI_AG05`. Le prédicat du firmware est
    le keycode, pas l'index du layer.
 
-Les trois briques sont réunies, et aucun raccourci Claude n'est sacrifié. Mais la
+Les trois briques sont implémentées, le focus du terminal attend encore une
+validation de bout en bout, et aucun raccourci Claude n'est sacrifié. Mais la
 fonction a une condition d'usage : **l'app ChatGPT doit être quittée.** Elle
 réécrit les six LED toutes les 35 à 40 secondes et intercepte les appuis sur les
 touches Agent pour changer de thread Codex. Les deux moitiés de la fonction lui
@@ -82,7 +85,7 @@ Mesuré sur macOS `26.5.2` arm64, Claude `1.24012.9`, Claude Code `2.1.219`.
 | `CLAUDE_CODE_HOST_SESSION_ID` **n'identifie pas** une session | confirmé | deux sessions distinctes partagent `local_f92b6e6a` |
 | Le `tty` distingue terminal et Desktop | confirmé | `tty = ??` pour les trois sessions Desktop |
 | Focus d'une fenêtre de terminal par `tty` en AppleScript | non testé de bout en bout | scripts compilés par `osacompile` ; aucune session en terminal disponible, iTerm2 absent de la machine |
-| Route pour ouvrir une session Claude Code locale dans Desktop **par identifiant** | **réfuté** | `claude://resume?session=<uuid>` ouvre la bonne session, vérifié sur machine ; la route est absente de la doc des deep links, qui ne cite que `claude://code/new` |
+| Route pour ouvrir une session Claude Code locale dans Desktop **par identifiant** | **confirmé sur cette machine** | `claude://resume?session=<uuid>` ouvre la bonne session, vérifié sur machine ; la route est absente de la doc des deep links, qui ne cite que `claude://code/new` |
 | `claude://resume` valide sa cible par une regex UUID stricte | confirmé | lu dans le handler : l'`uuid` est vérifié avant `importCliSession`, puis la navigation |
 | `claude://resume` échoue quand le transcript est absent du disque | rapporté, non testé | chemin d'erreur `transcript_missing` du handler ; aucun compte rendu ne remonte à l'appelant, `open` sort en 0 dans tous les cas |
 | Raccourcis de **cycle** entre sessions dans Claude Desktop | documentés | `Ctrl Tab` / `Ctrl Shift Tab` et `Cmd Shift ]` / `Cmd Shift [` — table des raccourcis du Code tab |

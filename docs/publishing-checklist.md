@@ -37,8 +37,8 @@ being presented as a validated hardware layer.
 
 ## Gates for the Claude V1 preset
 
-- [x] Official layer and profile Import/Export flows identified in Input
-  `0.17.2`.
+- [x] Historical layer and profile Import/Export flows identified by static
+  inspection of Input `0.17.2`; this is not current `0.17.3` round-trip proof.
 - [x] Manifest, mapping, schemas and visual representation publishable.
 - [x] Backup, SHA-256 verification, dry run, single selection and rollback
   tested on isolated copies.
@@ -48,7 +48,8 @@ being presented as a validated hardware layer.
 - [x] Single Claude layer confirmed; index `0` compared before and after.
 - [x] Input `0.17.3` profile generated locally with AppSense preserved.
 - [ ] Physical positions and Input identifiers verified.
-- [ ] AppSense, keys, dial, joystick and focus loss tested.
+- [ ] AppSense activation, keys, dial and joystick tested end to end; unsafe
+  focus-loss behaviour is already measured.
 - [ ] Persistence after an Input restart verified.
 - [ ] Real `*-layer.json` exported, sanitised and added with its SHA-256 sum.
 - [ ] Declared SHA-256 identical and content matching the canonical mapping.

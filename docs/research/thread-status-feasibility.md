@@ -5,22 +5,23 @@
 ## Verdict
 
 **The states are available officially, the LEDs work on the `Claude` layer, and
-navigation is solved on every surface.** Three conclusions, in decreasing order
-of solidity:
+navigation is verified in Claude Desktop; terminal focus is implemented but not
+yet tested end to end.** Three conclusions, in decreasing order of solidity:
 
 1. Detecting "running / needs you / done / closed" per session is a solved
    problem, with two documented and complementary mechanisms.
-2. Going to a session from a key is solved on both surfaces: window focus over
-   AppleScript when the session runs in a terminal, and
-   `claude://resume?session=<uuid>` when Claude Desktop hosts it. The second
-   route is not documented.
+2. Going to a session from a key is verified through
+   `claude://resume?session=<uuid>` when Claude Desktop hosts it. The route is
+   not documented. Terminal window focus over AppleScript is implemented and
+   compiles, but still lacks an end-to-end test with a live terminal session.
 3. Driving the six LEDs **works, including on the `Claude` layer**, on one
    condition discovered late: the six Agent positions of that layer must carry
    the `KV_OAI_AG00` to `KV_OAI_AG05` keycodes. The firmware's predicate is the
    keycode, not the layer index.
 
-All three building blocks are in place, and no Claude shortcut is sacrificed. But
-the feature has a condition of use: **the ChatGPT app must be quit.** It rewrites
+All three building blocks are implemented, with terminal focus still awaiting
+end-to-end validation, and no Claude shortcut is sacrificed. But the feature
+has a condition of use: **the ChatGPT app must be quit.** It rewrites
 the six LEDs every 35 to 40 seconds and intercepts Agent key presses to switch
 Codex thread. Both halves of the feature are therefore contended by the same
 application, and nothing can arbitrate.
@@ -81,7 +82,7 @@ Measured on macOS `26.5.2` arm64, Claude `1.24012.9`, Claude Code `2.1.219`.
 | `CLAUDE_CODE_HOST_SESSION_ID` **does not identify** a session | confirmed | two distinct sessions share `local_f92b6e6a` |
 | The `tty` separates terminal from Desktop | confirmed | `tty = ??` for the three Desktop sessions |
 | Focusing a terminal window by `tty` in AppleScript | not tested end to end | scripts compiled by `osacompile`; no terminal session available, iTerm2 absent from the machine |
-| A route to open a local Claude Code session in Desktop **by id** | **refuted** | `claude://resume?session=<uuid>` opens the right session, verified on this machine; the route is absent from the deep-link documentation, which only mentions `claude://code/new` |
+| A route to open a local Claude Code session in Desktop **by id** | **confirmed on this machine** | `claude://resume?session=<uuid>` opens the right session, verified on this machine; the route is absent from the deep-link documentation, which only mentions `claude://code/new` |
 | `claude://resume` validates its target against a strict UUID regex | confirmed | read in the handler: the `uuid` is checked before `importCliSession`, then navigation |
 | `claude://resume` fails when the transcript is absent from disk | reported, not tested | the handler's `transcript_missing` error path; nothing is reported back to the caller, `open` exits 0 either way |
 | **Cycling** shortcuts between sessions in Claude Desktop | documented | `Ctrl Tab` / `Ctrl Shift Tab` and `Cmd Shift ]` / `Cmd Shift [` — Code tab shortcut table |

@@ -65,4 +65,4 @@ Deux options, au choix :
   faire échouer une session.
 
 Détail des mesures et de ce qui reste ouvert :
-[`docs/research/thread-status-feasibility.md`](../docs/research/thread-status-feasibility.md).
+[`docs/fr/research/thread-status-feasibility.md`](../docs/fr/research/thread-status-feasibility.md).

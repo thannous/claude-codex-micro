@@ -13,7 +13,7 @@ mechanism, and the validations still required on hardware.
 | Firmware | `v0.4.1` | Setup screen observed locally | Input/firmware combination known; hardware validation partial |
 | macOS | `26.5.2` arm64 | local observation | application and HID observed |
 | Claude Desktop | `1.24012.9`, bundle `com.anthropic.claudefordesktop` | local bundle and generated profile | `⌘N`, `⌘D`, `⌘⇧D` configured; `Esc` still to be validated in context |
-| AppSense | existing link of the Claude layer | real export observed | `linkedAppId` preserved locally and forbidden in public artefacts; focus loss still to be tested |
+| AppSense | existing link of the Claude layer | real export and hardware behaviour observed | `linkedAppId` preserved locally and forbidden in public artefacts; focus loss measured: an unlinked application does not return to the native layer |
 | CLI backup | Node.js `>=18` | automated tests | copy, SHA-256 manifest and restore tested on an isolated copy |
 | Layer artefact | `*-layer.json` | absent | must come from a real, sanitised export and go through a round-trip |
 
@@ -28,4 +28,5 @@ mechanism, and the validations still required on hardware.
 
 The Claude preset is `hardware-observed`. It will only move to
 `manually-validated` after the full checklist covering the keys, the wheel, the
-joystick, focus loss, restart and rollback.
+joystick, restart and rollback. The unsafe focus-loss behaviour is already
+measured; its absence from that list is not a claim that AppSense is safe.

@@ -158,7 +158,7 @@ Une personne doit pouvoir :
 
 À terme, le catalogue pourra accueillir des layers IDE, navigateur, recherche,
 Figma, Framer, applications Adobe et workflows communautaires. Lire la
-[vision](docs/vision.md) et la [feuille de route](docs/roadmap.md).
+[vision](docs/fr/vision.md) et la [feuille de route](docs/fr/roadmap.md).
 
 ### Résultat V1 actuel
 
@@ -233,7 +233,7 @@ actif.
 - bundle Claude `com.anthropic.claudefordesktop` ;
 - bundle Input `it.focusense.input-app`.
 
-Voir la [matrice de compatibilité](docs/compatibility.md) pour distinguer les
+Voir la [matrice de compatibilité](docs/fr/compatibility.md) pour distinguer les
 faits, tests de fixture et validations matérielles manquantes.
 
 ### Configurateur graphique
@@ -319,7 +319,7 @@ npm run build:profile -- \
 Importer ensuite `Claude-macOS-profile.json` avec **Add New** dans Input. Le
 fichier source reste inchangé et aucune donnée n'est téléversée.
 
-Lire le [guide d'installation et de retour arrière](docs/installation.md) avant
+Lire le [guide d'installation et de retour arrière](docs/fr/installation.md) avant
 `--apply`.
 
 ### Format de partage
@@ -330,7 +330,7 @@ Input `0.17.2` expose un flux officiel au niveau layer et profile :
 - `*-profile.json` : même enveloppe avec `profile`.
 
 La preuve et ses limites sont documentées dans
-[`docs/research/input-0.17.2-sharing.md`](docs/research/input-0.17.2-sharing.md).
+[`docs/fr/research/input-0.17.2-sharing.md`](docs/fr/research/input-0.17.2-sharing.md).
 
 Le manifeste communautaire n'imite pas ce format. Le parcours principal
 transforme localement un vrai `*-profile.json`. Un éventuel artefact layer
@@ -412,20 +412,20 @@ node scripts/lighting.mjs off
 ```
 
 Protocole, mesures et bornes :
-[`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md).
+[`docs/fr/research/hid-lighting-protocol.md`](docs/fr/research/hid-lighting-protocol.md).
 
 ### Liens de documentation
 
-- [Vision](docs/vision.md)
-- [Feuille de route](docs/roadmap.md)
-- [Installation et rollback](docs/installation.md)
-- [Compatibilité](docs/compatibility.md)
-- [Mécanisme Input 0.17.2](docs/research/input-0.17.2-sharing.md)
-- [Protocole d'éclairage HID du Codex Micro](docs/research/hid-lighting-protocol.md)
+- [Vision](docs/fr/vision.md)
+- [Feuille de route](docs/fr/roadmap.md)
+- [Installation et rollback](docs/fr/installation.md)
+- [Compatibilité](docs/fr/compatibility.md)
+- [Mécanisme Input 0.17.2](docs/fr/research/input-0.17.2-sharing.md)
+- [Protocole d'éclairage HID du Codex Micro](docs/fr/research/hid-lighting-protocol.md)
 - [Conventions des presets](profiles/README.md)
 - [Preset Claude](profiles/claude-shortcuts/README.md)
-- [Contribution](CONTRIBUTING.md)
-- [Sécurité](SECURITY.md)
+- [Contribution](CONTRIBUTING.fr.md)
+- [Sécurité](SECURITY.fr.md)
 
 ### Sources principales
 
@@ -437,4 +437,4 @@ Protocole, mesures et bornes :
 ### Licence
 
 MIT, copyright 2026 Thanh Chau. Voir [LICENSE](LICENSE) et
-[LICENSING.md](LICENSING.md).
+[LICENSING.fr.md](LICENSING.fr.md).

@@ -13,7 +13,7 @@ partage et les validations encore requises sur le matériel.
 | Firmware | `v0.4.1` | écran Setup observé localement | combinaison Input/firmware connue ; validation matérielle partielle |
 | macOS | `26.5.2` arm64 | observation locale | application et HID observés |
 | Claude Desktop | `1.24012.9`, bundle `com.anthropic.claudefordesktop` | bundle local et profil généré | `⌘N`, `⌘D`, `⌘⇧D` configurés ; `Esc` à valider contextuellement |
-| AppSense | lien existant du layer Claude | export réel observé | `linkedAppId` conservé localement et interdit dans les artefacts publics ; perte de focus à tester |
+| AppSense | lien existant du layer Claude | export réel et comportement matériel observés | `linkedAppId` conservé localement et interdit dans les artefacts publics ; perte de focus mesurée : une application non liée ne ramène pas au layer natif |
 | Sauvegarde CLI | Node.js `>=18` | tests automatisés | copie, manifeste SHA-256 et restauration testés sur une copie isolée |
 | Artefact layer | `*-layer.json` | absent | doit provenir d'un export réel assaini et subir un round-trip |
 
@@ -27,4 +27,6 @@ partage et les validations encore requises sur le matériel.
 
 Le preset Claude est `hardware-observed`. Il ne passera à
 `manually-validated` qu'après la checklist complète des touches, de la molette,
-du joystick, de la perte de focus, du redémarrage et du rollback.
+du joystick, du redémarrage et du rollback. Le comportement dangereux après
+perte de focus est déjà mesuré ; son absence de cette liste ne signifie pas
+qu'AppSense est sûr.
