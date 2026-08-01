@@ -95,7 +95,7 @@ Claude Code locales et sauter à la bonne session. Contrairement à Hardware Bud
 ses deux briques centrales reposent sur des mécanismes documentés — le roster
 `claude agents --json` et les hooks — et sont implémentées :
 
-- [x] plugin de hooks et journal publiable ([`thread-status/`](../../thread-status/README.md)) ;
+- [x] plugin de hooks et journal publiable ([`thread-status/`](../../thread-status/README.fr.md)) ;
 - [x] réducteur à six emplacements, testé sans matériel ;
 - [x] compagnon `watch` / `status` / `focus` / `doctor` ;
 - [ ] focus d'une session hébergée par un terminal, vérifié de bout en bout ;

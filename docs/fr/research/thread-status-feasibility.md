@@ -515,7 +515,7 @@ propres touches.
 
 | Composant | Chemin |
 | --- | --- |
-| Plugin de hooks | [`thread-status/`](../../../thread-status/README.md) |
+| Plugin de hooks | [`thread-status/`](../../../thread-status/README.fr.md) |
 | Réducteur pur, six emplacements | `scripts/lib/thread-slots.mjs` |
 | Compagnon `watch` / `status` / `focus` / `doctor` | `scripts/thread-status.mjs` |
 | Cadrage HID et modèle d'éclairage | `scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs` |

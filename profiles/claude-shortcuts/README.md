@@ -1,107 +1,107 @@
+[English](README.md) · [Français](README.fr.md)
+
 # Claude Desktop — Codex Micro V1
 
-Ce dossier contient le premier preset de référence de la bibliothèque. Il
-transforme localement un profile contenant exactement un layer `Claude`, déjà
-lié avec AppSense et distinct du layer Codex natif protégé à l'index `0`.
+This folder contains the library's first reference preset. It locally transforms
+a profile containing exactly one `Claude` layer, already linked with AppSense and
+distinct from the native Codex layer protected at index `0`.
 
-## État réel
+## Real state
 
-- format communautaire et mapping : implémentés ;
-- générateur de profile : validé sur un export Input `0.17.3` ;
-- mécanisme officiel Input `*-layer.json` : observé historiquement dans Input
-  `0.17.2` ;
-- sauvegarde, inventaire, dry-run et rollback : implémentés et testés sur des
-  copies isolées ;
-- fichier officiel Claude `*-layer.json` : **pas encore capturé** ;
-- validation complète de toutes les commandes, de la perte de focus et du
-  rollback matériel : **encore requise**.
+- community format and mapping: implemented;
+- profile generator: validated on an Input `0.17.3` export;
+- official Input `*-layer.json` mechanism: observed historically in Input
+  `0.17.2`;
+- backup, inventory, dry run and rollback: implemented and tested on isolated
+  copies;
+- official Claude `*-layer.json` file: **not captured yet**;
+- full validation of every command, of focus loss and of the hardware rollback:
+  **still required**.
 
-Le manifeste V1 reste `hardware-observed`. Le contrat logique
-`macos.example.json` reste séparément `proposal-not-applied`. Aucun des deux ne
-doit être présenté comme un fichier universel prêt à importer, et aucun
-artefact layer ne doit être publié avant le round-trip matériel et la
-vérification de son SHA-256.
+The V1 manifest stays `hardware-observed`. The logical contract
+`macos.example.json` stays separately `proposal-not-applied`. Neither may be
+presented as a universal, ready-to-import file, and no layer artefact may be
+published before the hardware round-trip and the verification of its SHA-256.
 
-## Fichiers
+## Files
 
 ```text
-manifest.json             identité, compatibilité, preuve et installation
-mapping.json              mapping physique et règles de sécurité
-macos.example.json        proposition logique V0 non importable
-schema.json               schéma du contrat historique
-assets/layout.svg         représentation originale du clavier
-artifacts/README.md       porte d'entrée du futur export officiel
+manifest.json             identity, compatibility, proof and installation
+mapping.json              physical mapping and safety rules
+macos.example.json        non-importable V0 logical proposal
+schema.json               schema of the historical contract
+assets/layout.svg         original representation of the keyboard
+artifacts/README.md       entry point for the future official export
 ```
 
-Les schémas réutilisables se trouvent dans `profiles/schema/v1/`.
+The reusable schemas live in `profiles/schema/v1/`.
 
-## Mapping physique proposé
+## Proposed physical mapping
 
-Orientation : vue du dessus, câble à l'opposé de l'utilisateur.
+Orientation: seen from above, cable pointing away from the user.
 
-| Contrôle | Position | Action |
+| Control | Position | Action |
 | --- | --- | --- |
-| Touche 1 | rangée des quatre touches carrées, tout à gauche | `⌘N` — nouvelle conversation |
-| Touche 2 | même rangée, deuxième | `⌘D` — mode vocal |
-| Touche 3 | même rangée, troisième | `⌘⇧D` — afficher/masquer le diff |
-| Touche 4 | même rangée, tout à droite | `Esc` — annuler/fermer selon le contexte |
-| Molette cliquable | coin supérieur gauche | Effort Claude, horaire : `+1` ; antihoraire : `−1` ; clic configurable |
-| Joystick sans clic | coin supérieur droit | quatre flèches directionnelles |
+| Key 1 | row of four square keys, far left | `⌘N` — new conversation |
+| Key 2 | same row, second | `⌘D` — voice mode |
+| Key 3 | same row, third | `⌘⇧D` — show/hide the diff |
+| Key 4 | same row, far right | `Esc` — cancel/close, depending on context |
+| Clickable wheel | upper left corner | Claude Effort, clockwise: `+1`; counterclockwise: `−1`; press configurable |
+| Non-clickable joystick | upper right corner | four directional arrows |
 
-![Schéma du layer Claude](assets/layout.svg)
+![Claude layer diagram](assets/layout.svg)
 
-Ce preset V1 laisse par défaut les six touches agents, la touche large du bas,
-la touche inférieure droite et l'appui du cadran sans action. Ces contrôles
-restent configurables dans le GUI ; seul le capteur tactile est réservé au
-changement de layer.
+By default this V1 preset leaves the six Agent keys, the wide bottom key, the
+lower-right key and the dial press without an action. Those controls stay
+configurable in the GUI; only the touch sensor is reserved for layer switching.
 
 ## AppSense
 
-Le lien cible uniquement :
+The link targets only:
 
 ```text
 Claude
 com.anthropic.claudefordesktop
 ```
 
-La politique exige exactement un layer Claude et conserve son `linkedAppId`.
-L'outil ne crée pas de second lien et ne modifie jamais les autres liens.
+The policy requires exactly one Claude layer and preserves its `linkedAppId`. The
+tool does not create a second link and never modifies the others.
 
-## Configurateur local
+## Local configurator
 
 ```sh
 npm run configure
 ```
 
-Le GUI charge un export officiel appartenant à l'utilisateur, permet de
-personnaliser les contrôles sûrs et génère un nouveau
-`Claude-macOS-profile.json`. Seul ce fichier personnel est destiné au flux
-**Add New** d'Input ; le contrat logique du dépôt ne l'est pas.
+The GUI loads an official export belonging to the user, lets you customise the
+safe controls, and generates a new `Claude-macOS-profile.json`. Only that
+personal file is meant for Input's **Add New** flow; the repository's logical
+contract is not.
 
-Le catalogue du GUI propose aussi deux actions d'envoi sur choix explicite :
-Retour pour envoyer, et `⌥⌘Retour` pour envoyer dans une session dupliquée.
-Entrée reste indisponible dans l'éditeur de combinaison personnalisée et ces
-actions ne font pas partie du preset public par défaut.
+The GUI catalogue also offers two sending actions on an explicit choice: Return
+to send, and `⌥⌘Return` to send in a duplicated session. Enter stays unavailable
+in the custom combination editor, and these actions are not part of the public
+preset by default.
 
-La rotation de la molette porte le mode **Effort Claude** par défaut : chaque cran
-ouvre le sélecteur avec `⌘⇧E`, déplace son curseur d'un niveau avec `←` ou `→`,
-puis le referme avec `Esc`, sans utiliser `Entrée`. Le GUI permet de la remettre
-sur le défilement, le défilement ligne par ligne, le volume, ou de la désassigner.
-`⌘⇧E` étant une bascule, ce `Esc` est obligatoire. La macro attend 80 ms que le
-sélecteur apparaisse, puis 10 ms qu'il affiche le niveau atteint avant de le
-refermer, soit environ 90 ms par cran payés dans le firmware.
+Wheel rotation carries the **Claude Effort** mode by default: each notch opens
+the picker with `⌘⇧E`, moves its slider one level with `←` or `→`, then closes it
+with `Esc`, without using `Enter`. The GUI lets you set it back to scrolling,
+line-by-line scrolling, volume, or unassign it. Since `⌘⇧E` is a toggle, that
+`Esc` is mandatory. The macro waits 80ms for the picker to appear, then 10ms for
+it to show the level reached before closing — roughly 90ms per notch, paid in the
+firmware.
 
-Le double appui sur Option pour la saisie rapide et Verr. Maj. pour la dictée
-globale restent hors du layer AppSense.
+The double press on Option for quick entry, and Caps Lock for global dictation,
+stay outside the AppSense layer.
 
-## Sécurité
+## Safety
 
-Le validateur du preset logique public interdit dans les contrôles actifs :
-Retour/Entrée, envoi, approbation ou refus de permission, suppression,
-`git push`, déploiement et commande destructive. Les deux actions d'envoi du
-GUI personnel restent donc un choix local explicite.
+The validator of the public logical preset forbids, on active controls:
+Return/Enter, sending, approving or refusing a permission, deletion, `git push`,
+deployment and destructive commands. The personal GUI's two sending actions
+therefore remain an explicit local choice.
 
-Valider le preset :
+To validate the preset:
 
 ```sh
 npm ci --no-audit --no-fund
@@ -110,4 +110,4 @@ node scripts/validate-presets.mjs
 node --test
 ```
 
-Lire ensuite [`docs/fr/installation.md`](../../docs/fr/installation.md).
+Then read [`docs/installation.md`](../../docs/installation.md).

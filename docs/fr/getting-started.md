@@ -117,6 +117,6 @@ Input. La copie brute du stockage n'est qu'un recours secondaire explicite.
 
 ## 8. Piste BLE séparée
 
-Lire [`ble/protocol.md`](../../ble/protocol.md) et
-[`ble/feasibility.md`](../../ble/feasibility.md). Aucun résultat du preset HID ne
+Lire [`ble/protocol.md`](../../ble/protocol.fr.md) et
+[`ble/feasibility.md`](../../ble/feasibility.fr.md). Aucun résultat du preset HID ne
 prouve la compatibilité Hardware Buddy.

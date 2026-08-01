@@ -1,3 +1,5 @@
+<p align="right"><a href="README.md">English</a> · <a href="README.fr.md">Français</a></p>
+
 <h1 align="center">Codex Micro × Claude</h1>
 
 <p align="center">
@@ -141,142 +143,136 @@ and [`docs/research/thread-status-feasibility.md`](docs/research/thread-status-f
 
 ---
 
-## Documentation détaillée
+## Detailed documentation
 
 ### Vision
 
-Une personne doit pouvoir :
+A person must be able to:
 
-1. comprendre le mapping avant de toucher au clavier ;
-2. vérifier sa compatibilité ;
-3. sauvegarder la configuration Input existante ;
-4. simuler le changement ;
-5. transformer uniquement le layer `Claude` existant dans une copie locale ;
-6. tester AppSense et chaque contrôle ;
-7. restaurer l'état précédent ;
-8. contribuer un autre preset avec le même niveau d'exigence.
+1. understand the mapping before touching the keyboard;
+2. check its compatibility;
+3. back up the existing Input configuration;
+4. simulate the change;
+5. transform only the existing `Claude` layer, in a local copy;
+6. test AppSense and every control;
+7. restore the previous state;
+8. contribute another preset held to the same standard.
 
-À terme, le catalogue pourra accueillir des layers IDE, navigateur, recherche,
-Figma, Framer, applications Adobe et workflows communautaires. Lire la
-[vision](docs/fr/vision.md) et la [feuille de route](docs/fr/roadmap.md).
+In time, the catalogue can host IDE, browser, search, Figma, Framer, Adobe and
+community-workflow layers. Read the [vision](docs/vision.md) and the
+[roadmap](docs/roadmap.md).
 
-### Résultat V1 actuel
+### Current V1 result
 
-Le dépôt contient désormais :
+The repository now contains:
 
-- un manifeste portable V1 et des schémas réutilisables ;
-- un mapping physique Claude avec couleur, cadran, joystick et AppSense ;
-- une représentation SVG originale du Codex Micro ;
-- un configurateur graphique local lancé par `npm run configure` ;
-- un outil Node.js de diagnostic, inventaire, sauvegarde, dry-run, sanitation et
-  rollback ;
-- un générateur local de profile Input `0.17.3` qui préserve le layer natif et
-  le lien AppSense existant ;
-- des tests transactionnels sur copies isolées ;
-- une analyse reproductible du mécanisme de partage d'Input `0.17.2` ;
-- une procédure permettant de capturer ensuite le véritable export officiel.
+- a portable V1 manifest and reusable schemas;
+- a Claude physical mapping with colour, dial, joystick and AppSense;
+- an original SVG representation of the Codex Micro;
+- a local graphical configurator launched by `npm run configure`;
+- a Node.js tool for diagnosis, inventory, backup, dry run, sanitisation and
+  rollback;
+- a local Input `0.17.3` profile generator that preserves the native layer and
+  the existing AppSense link;
+- transactional tests on isolated copies;
+- a reproducible analysis of the Input `0.17.2` sharing mechanism;
+- a procedure making it possible to capture the real official export later.
 
-L'analyse du package officiel confirme des commandes **Import layer** et
-**Export layer**, des fichiers `*-layer.json`, ainsi que l'enveloppe JSON
-attendue. Le vrai fichier Claude n'est volontairement pas fabriqué : ses objets
-internes doivent provenir d'un export réel du Codex Micro.
+The analysis of the official package confirms **Import layer** and **Export
+layer** commands, `*-layer.json` files, and the expected JSON envelope. The real
+Claude file is deliberately not fabricated: its internal objects must come from a
+real Codex Micro export.
 
-Le manifeste V1 est `hardware-observed` : le générateur a été validé sur un
-export Input `0.17.3`, mais le round-trip d'un artefact `*-layer.json` et la
-checklist matérielle complète restent ouverts. Le fichier logique
-`macos.example.json` reste séparément `proposal-not-applied` : ce n'est pas un
-preset universel à importer.
+The V1 manifest is `hardware-observed`: the generator was validated on an Input
+`0.17.3` export, but the round-trip of a `*-layer.json` artefact and the full
+hardware checklist are still open. The logical file `macos.example.json` stays
+separately `proposal-not-applied`: it is not a universal preset to import.
 
-### Mapping Claude proposé
+### Proposed Claude mapping
 
-Le layer natif Codex situé à l'index `0` est protégé. Le profile source doit
-contenir exactement un layer `Claude`, différent de l'index `0` et déjà lié à
-Claude Desktop avec AppSense.
+The native Codex layer at index `0` is protected. The source profile must contain
+exactly one `Claude` layer, different from index `0` and already linked to Claude
+Desktop with AppSense.
 
-| Contrôle | Action |
+| Control | Action |
 | --- | --- |
-| rangée des quatre touches carrées, gauche | `⌘N` — nouvelle conversation |
-| même rangée, deuxième | `⌘D` — mode vocal |
-| même rangée, troisième | `⌘⇧D` — afficher ou masquer le diff |
-| même rangée, droite | `Esc` — annuler ou fermer selon le contexte |
-| molette cliquable, coin supérieur gauche | `PageUp` / `PageDown` ; clic configurable |
-| joystick sans clic, coin supérieur droit | quatre flèches directionnelles |
-| autres contrôles | aucune action ; capteur de layer réservé |
+| row of four square keys, left | `⌘N` — new conversation |
+| same row, second | `⌘D` — voice mode |
+| same row, third | `⌘⇧D` — show or hide the diff |
+| same row, right | `Esc` — cancel or close, depending on context |
+| clickable wheel, upper left corner | `PageUp` / `PageDown`; press configurable |
+| non-clickable joystick, upper right corner | four directional arrows |
+| other controls | no action; layer sensor reserved |
 
-Couleur proposée : `#D97757`. Activation : Claude Desktop au premier plan via
-AppSense et `Auto detect`.
+Proposed colour: `#D97757`. Activation: Claude Desktop in the foreground through
+AppSense and `Auto detect`.
 
-![Mapping physique Claude](profiles/claude-shortcuts/assets/layout.svg)
+![Claude physical mapping](profiles/claude-shortcuts/assets/layout.svg)
 
-Les raccourcis globaux de Claude restent hors du layer AppSense : double appui
-sur Option pour la saisie rapide et Verr. Maj. pour la dictée globale. Ils
-doivent rester disponibles quand une autre application est au premier plan.
+Claude's global shortcuts stay outside the AppSense layer: double press on Option
+for quick entry, and Caps Lock for global dictation. They have to stay available
+when another application is in the foreground.
 
-### Ce qui est interdit par défaut
+### What is forbidden by default
 
-- Retour/Entrée et envoi de message ;
-- approbation ou refus de permission ;
-- suppression ;
-- `git push` ;
-- déploiement ;
-- commande shell ou action destructive.
+- Return/Enter and sending a message;
+- approving or refusing a permission;
+- deletion;
+- `git push`;
+- deployment;
+- shell commands or destructive actions.
 
-Les validateurs échouent si l'une de ces actions apparaît dans un contrôle
-actif.
+The validators fail if any of these actions appears on an active control.
 
-### Compatibilité observée
+### Observed compatibility
 
-- macOS `26.5.2` arm64 ;
-- Work Louder Input `0.17.3` pour le générateur de profile ;
-- firmware Codex Micro `v0.4.1` ;
-- Claude Desktop `1.24012.9` ;
-- bundle Claude `com.anthropic.claudefordesktop` ;
-- bundle Input `it.focusense.input-app`.
+- macOS `26.5.2` arm64;
+- Work Louder Input `0.17.3` for the profile generator;
+- Codex Micro firmware `v0.4.1`;
+- Claude Desktop `1.24012.9`;
+- Claude bundle `com.anthropic.claudefordesktop`;
+- Input bundle `it.focusense.input-app`.
 
-Voir la [matrice de compatibilité](docs/fr/compatibility.md) pour distinguer les
-faits, tests de fixture et validations matérielles manquantes.
+See the [compatibility matrix](docs/compatibility.md) to tell facts, fixture
+tests and missing hardware validations apart.
 
-### Configurateur graphique
+### Graphical configurator
 
 ```sh
 npm run configure
 ```
 
-La première ouverture peut installer les dépendances verrouillées du GUI, puis
-lance l'interface uniquement sur `127.0.0.1` et ouvre le navigateur.
+The first launch may install the GUI's locked dependencies, then serves the
+interface on `127.0.0.1` only and opens the browser.
 
-L'interface est disponible en anglais (langue par défaut), français, espagnol
-et allemand. Le choix de langue est mémorisé localement dans le navigateur.
+The interface is available in English (the default language), French, Spanish and
+German. The language choice is remembered locally in the browser.
 
-Le parcours est un assistant en trois étapes : charger l'export officiel Work
-Louder Input (avec aide intégrée pour créer le layer `Claude` et le lien
-AppSense), personnaliser les contrôles, puis vérifier et générer. L'écran de
-vérification affiche les garanties de préservation (layer natif, AppSense,
-autres layers) et l'empreinte SHA-256 du `Claude-macOS-profile.json` produit.
-Le fichier source, le layer natif, les autres layers et les autres liens
-AppSense sont conservés. Le JSON logique public n'est jamais présenté comme
-directement importable.
+The flow is a three-step wizard: load the official Work Louder Input export (with
+built-in help for creating the `Claude` layer and the AppSense link), customise
+the controls, then verify and generate. The verification screen shows the
+preservation guarantees (native layer, AppSense, other layers) and the SHA-256
+fingerprint of the `Claude-macOS-profile.json` produced. The source file, the
+native layer, the other layers and the other AppSense links are preserved. The
+public logical JSON is never presented as directly importable.
 
-Le configurateur relit le mapping déjà présent dans le layer Claude chargé,
-mémorise localement la configuration en cours, suit le thème clair ou sombre
-du système et propose :
+The configurator reads back the mapping already present in the loaded Claude
+layer, remembers the current configuration locally, follows the system's light or
+dark theme, and offers:
 
-- les 13 switches physiques, y compris l'appui de la molette, ainsi que sa
-  rotation et le joystick ; seul le capteur tactile de changement de layer
-  reste réservé ;
-- un catalogue étendu de raccourcis Claude Desktop : session, voix, diff,
-  recherche, navigation, réglages, fenêtre, zoom et deux actions d'envoi
-  explicites ;
-- des raccourcis personnalisés restreints aux touches sûres (Retour/Entrée,
-  Suppression et Retour arrière restent interdits dans l'éditeur
-  personnalisé) ;
-- quatre modes de molette : effort Claude par défaut, pages, lignes, et volume
-  expérimental.
+- the 13 physical switches, including the wheel press, along with its rotation
+  and the joystick; only the layer-switching touch sensor stays reserved;
+- an expanded catalogue of Claude Desktop shortcuts: session, voice, diff,
+  search, navigation, settings, window, zoom and two explicit send actions;
+- custom shortcuts restricted to safe keys (Return/Enter, Delete and Backspace
+  stay forbidden in the custom editor);
+- four wheel modes: Claude effort by default, pages, lines, and experimental
+  volume.
 
-### Démarrage sans modification
+### Getting started without modifying anything
 
-Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
-sont verrouillées dans `package-lock.json`.
+Prerequisite: Node.js 18 or newer. The validation dependencies are locked in
+`package-lock.json`.
 
 ```sh
 git clone https://github.com/thannous/claude-codex-micro.git
@@ -287,13 +283,12 @@ node scripts/input-layer.mjs doctor --json
 node scripts/input-layer.mjs install --dry-run --json
 ```
 
-La dernière commande reste bloquée sans inventaire local contenant exactement
-un layer `Claude`, ce qui est volontaire.
+The last command stays blocked without a local inventory containing exactly one
+`Claude` layer, which is deliberate.
 
-### Installation sûre
+### Safe installation
 
-Le parcours réel commence par un export officiel de profile et une sauvegarde
-vérifiée :
+The real path starts with an official profile export and a verified backup:
 
 ```sh
 node scripts/input-layer.mjs backup \
@@ -316,62 +311,63 @@ npm run build:profile -- \
   "$HOME/Downloads/Claude-macOS-profile.json"
 ```
 
-Importer ensuite `Claude-macOS-profile.json` avec **Add New** dans Input. Le
-fichier source reste inchangé et aucune donnée n'est téléversée.
+Then import `Claude-macOS-profile.json` with **Add New** in Input. The source
+file stays unchanged and no data is uploaded.
 
-Lire le [guide d'installation et de retour arrière](docs/fr/installation.md) avant
+Read the [installation and rollback guide](docs/installation.md) before
 `--apply`.
 
-### Format de partage
+### Sharing format
 
-Input `0.17.2` expose un flux officiel au niveau layer et profile :
+Input `0.17.2` exposes an official flow at the layer and profile level:
 
-- `*-layer.json` : `keyboard`, `language`, `layer`, actions et groupes ;
-- `*-profile.json` : même enveloppe avec `profile`.
+- `*-layer.json`: `keyboard`, `language`, `layer`, actions and groups;
+- `*-profile.json`: the same envelope with `profile`.
 
-La preuve et ses limites sont documentées dans
-[`docs/fr/research/input-0.17.2-sharing.md`](docs/fr/research/input-0.17.2-sharing.md).
+The evidence and its limits are documented in
+[`docs/research/input-0.17.2-sharing.md`](docs/research/input-0.17.2-sharing.md).
 
-Le manifeste communautaire n'imite pas ce format. Le parcours principal
-transforme localement un vrai `*-profile.json`. Un éventuel artefact layer
-public restera optionnel et devra être lié à son SHA-256, au mapping canonique
-et à une preuve de round-trip.
+The community manifest does not imitate that format. The main path transforms a
+real `*-profile.json` locally. Any public layer artefact will stay optional and
+will have to be tied to its SHA-256, to the canonical mapping and to round-trip
+evidence.
 
 ### Structure
 
 ```text
 profiles/
-  schema/v1/                schémas réutilisables
+  schema/v1/                reusable schemas
   claude-shortcuts/
-    manifest.json           identité, preuve et installation
-    mapping.json            mapping physique et sécurité
-    assets/layout.svg       aperçu original
-    artifacts/              futur export officiel assaini
+    manifest.json           identity, proof and installation
+    mapping.json            physical mapping and safety
+    assets/layout.svg       original preview
+    artifacts/              future sanitised official export
 scripts/
-  configure.mjs             lancement local du configurateur graphique
-  prepare-gui.mjs           préparation verrouillée des dépendances du GUI
-  build-input-profile.mjs   génération locale du profile importable
-  input-layer.mjs           diagnostic, sauvegarde et installation guidée
-  thread-status.mjs         compagnon des six touches Agent (états des sessions)
-  lighting.mjs              pilotage de l'éclairage : probe/set/watch/listen/off
-  lib/                      fonctions de validation, de preset et le canal HID
-  validate-profile.mjs      contrat logique Claude historique
-  validate-presets.mjs      invariants de la bibliothèque
+  configure.mjs             local launch of the graphical configurator
+  prepare-gui.mjs           locked preparation of the GUI's dependencies
+  build-input-profile.mjs   local generation of the importable profile
+  input-layer.mjs           diagnosis, backup and guided installation
+  thread-status.mjs         six Agent keys companion (session states)
+  lighting.mjs              lighting control: probe/set/watch/listen/off
+  lib/                      validation and preset functions, and the HID channel
+  validate-profile.mjs      historical Claude logical contract
+  validate-presets.mjs      library invariants
 prototype/
-  src/                      interface locale du configurateur
+  src/                      local configurator interface
 shared/
-  input-profile.mjs         transformation canonique partagée avec le GUI
+  input-profile.mjs         canonical transformation shared with the GUI
 tests/
-  input-layer.test.mjs      sauvegarde, rollback, sanitation et idempotence
+  input-layer.test.mjs      backup, rollback, sanitisation and idempotence
 docs/
-  installation.md           procédure complète
-  compatibility.md          matrice de preuve
-  research/                 analyse Input assainie
-ble/                        piste Hardware Buddy séparée
+  installation.md           complete procedure
+  compatibility.md          evidence matrix
+  research/                 sanitised Input analysis
+  fr/                       French translation of this documentation
+ble/                        separate Hardware Buddy track
 ```
 
-Les sauvegardes, inventaires et sessions sont stockés sous `.local/`, ignoré
-par Git. `work/` et `outputs/` restent également locaux.
+Backups, inventories and sessions are stored under `.local/`, which Git ignores.
+`work/` and `outputs/` also stay local.
 
 ### Validation
 
@@ -381,60 +377,59 @@ node scripts/check-doc-links.mjs
 git diff --check
 ```
 
-La CI exécute les mêmes contrôles. Les tests isolés prouvent le comportement de
-l'outil, pas celui d'Input ou du clavier réel.
+CI runs the same checks. The isolated tests prove the tool's behaviour, not that
+of Input or of the real keyboard.
 
-### Piste BLE Hardware Buddy
+### BLE Hardware Buddy track
 
-Cette piste reste indépendante. La présence du Codex Micro en BLE HID ne prouve
-ni le Nordic UART Service, ni la coexistence HID + NUS, ni un firmware
-modifiable. Aucun firmware, outil de flash ou approbation automatique n'est
-publié.
+This track stays independent. The Codex Micro being present as a BLE HID proves
+neither the Nordic UART Service, nor HID + NUS coexistence, nor modifiable
+firmware. No firmware, flashing tool or automatic approval is published.
 
-Lire [`ble/README.md`](ble/README.md) et
+Read [`ble/README.md`](ble/README.md) and
 [`ble/feasibility.md`](ble/feasibility.md).
 
-### Pilotage de l'éclairage des touches
+### Key lighting control
 
-Voir [Agent key lighting — experimental](#agent-key-lighting--experimental),
-plus haut : conditions, garantie d'isolation et commandes y sont réunies. Les
-commandes et leur sortie sont en anglais, comme tout le reste de l'outillage.
+See [Agent key lighting — experimental](#agent-key-lighting--experimental)
+above: the conditions, the isolation guarantee and the commands are gathered
+there.
 
-Le jeu complet des sous-commandes :
+The full set of subcommands:
 
 ```sh
-node scripts/lighting.mjs probe              # canal et mapping des touches
+node scripts/lighting.mjs probe              # channel and key mapping
 node scripts/lighting.mjs set slot 3 '#C2483D' --effect=breath
 node scripts/lighting.mjs set all '#D97757'
 node scripts/lighting.mjs zones --keys=#D97757 --ambient=#6D5A7D
-node scripts/lighting.mjs listen             # événements touches et joystick
+node scripts/lighting.mjs listen             # key and joystick events
 node scripts/lighting.mjs off
 ```
 
-Protocole, mesures et bornes :
-[`docs/fr/research/hid-lighting-protocol.md`](docs/fr/research/hid-lighting-protocol.md).
+Protocol, measurements and bounds:
+[`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md).
 
-### Liens de documentation
+### Documentation links
 
-- [Vision](docs/fr/vision.md)
-- [Feuille de route](docs/fr/roadmap.md)
-- [Installation et rollback](docs/fr/installation.md)
-- [Compatibilité](docs/fr/compatibility.md)
-- [Mécanisme Input 0.17.2](docs/fr/research/input-0.17.2-sharing.md)
-- [Protocole d'éclairage HID du Codex Micro](docs/fr/research/hid-lighting-protocol.md)
-- [Conventions des presets](profiles/README.md)
-- [Preset Claude](profiles/claude-shortcuts/README.md)
-- [Contribution](CONTRIBUTING.fr.md)
-- [Sécurité](SECURITY.fr.md)
+- [Vision](docs/vision.md)
+- [Roadmap](docs/roadmap.md)
+- [Installation and rollback](docs/installation.md)
+- [Compatibility](docs/compatibility.md)
+- [Input 0.17.2 mechanism](docs/research/input-0.17.2-sharing.md)
+- [Codex Micro HID lighting protocol](docs/research/hid-lighting-protocol.md)
+- [Preset conventions](profiles/README.md)
+- [Claude preset](profiles/claude-shortcuts/README.md)
+- [Contributing](CONTRIBUTING.md)
+- [Security](SECURITY.md)
 
-### Sources principales
+### Main sources
 
-- [Work Louder — configuration officielle du Codex Micro](https://worklouder.cc/openai-micro-setup)
-- [Work Louder — releases Input](https://github.com/worklouder/input-releases/releases)
-- [Claude — saisie rapide sur macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
-- [Claude — ouvrir l'application avec un lien](https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link)
+- [Work Louder — official Codex Micro setup](https://worklouder.cc/openai-micro-setup)
+- [Work Louder — Input releases](https://github.com/worklouder/input-releases/releases)
+- [Claude — quick entry on macOS](https://support.claude.com/en/articles/12626668-use-quick-entry-with-claude-desktop-on-mac)
+- [Claude — open the application with a link](https://support.claude.com/en/articles/14729294-open-claude-desktop-with-a-link)
 
 ### Licence
 
-MIT, copyright 2026 Thanh Chau. Voir [LICENSE](LICENSE) et
-[LICENSING.fr.md](LICENSING.fr.md).
+MIT, copyright 2026 Thanh Chau. See [LICENSE](LICENSE) and
+[LICENSING.md](LICENSING.md).

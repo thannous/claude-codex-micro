@@ -1,13 +1,15 @@
-# Profils et presets communautaires
+[English](README.md) · [Français](README.fr.md)
 
-Ce dossier sépare trois objets qui ne doivent pas être confondus :
+# Community profiles and presets
 
-1. le **manifeste communautaire**, portable et lisible ;
-2. le **mapping physique**, indépendant des identifiants locaux d'Input ;
-3. l'éventuel **export officiel Work Louder**, importable uniquement après un
-   round-trip prouvé.
+This folder separates three objects that must not be conflated:
 
-## Structure V1
+1. the **community manifest**, portable and readable;
+2. the **physical mapping**, independent of Input's local identifiers;
+3. the possible **official Work Louder export**, importable only after a proven
+   round-trip.
+
+## V1 structure
 
 ```text
 profiles/
@@ -22,74 +24,74 @@ profiles/
     artifacts/
 ```
 
-Le premier preset est `claude-shortcuts/`.
+The first preset is `claude-shortcuts/`.
 
-## Cycle de preuve
+## Proof cycle
 
-| Statut | Signification |
+| Status | Meaning |
 | --- | --- |
-| `proposal-not-applied` | contrat, mapping et outils seulement |
-| `hardware-observed` | environnement et configuration réelle inventoriés |
-| `manually-validated` | layer et AppSense testés sur le matériel déclaré |
-| `export-format-verified` | export, import isolé, doublon et rollback reproduits |
+| `proposal-not-applied` | contract, mapping and tools only |
+| `hardware-observed` | environment and real configuration inventoried |
+| `manually-validated` | layer and AppSense tested on the declared hardware |
+| `export-format-verified` | export, isolated import, duplicate and rollback reproduced |
 
-Un environnement peut être `hardware-observed` sans que le preset lui-même
-quitte `proposal-not-applied`.
+An environment can be `hardware-observed` without the preset itself leaving
+`proposal-not-applied`.
 
-## Manifeste
+## Manifest
 
-`manifest.json` décrit :
+`manifest.json` describes:
 
-- l'application et le matériel cibles ;
-- les versions observées ;
-- le niveau de preuve ;
-- les layers protégés ;
-- la politique de sélection d'un unique layer existant ;
-- le mécanisme d'installation ;
-- l'artefact officiel éventuel ;
-- les validations requises et réalisées.
+- the target application and hardware;
+- the observed versions;
+- the level of proof;
+- the protected layers;
+- the policy for selecting a single existing layer;
+- the installation mechanism;
+- the official artefact, if any;
+- the validations required and carried out.
 
-Le manifeste ne contient jamais d'index local supposé universel, de port, de
-numéro de série ou de chemin utilisateur.
+The manifest never contains a local index assumed to be universal, a port, a
+serial number or a user path.
 
 ## Mapping
 
-`mapping.json` décrit :
+`mapping.json` describes:
 
-- les positions physiques stables et lisibles ;
-- les raccourcis ou comportements ;
-- la couleur du layer ;
-- AppSense ;
-- les contrôles sans action ;
-- les actions sensibles exclues.
+- the stable, readable physical positions;
+- the shortcuts or behaviours;
+- the layer colour;
+- AppSense;
+- the controls with no action;
+- the sensitive actions excluded.
 
-Un `inputControlId` peut rester `null` jusqu'à sa vérification dans Input. Il ne
-doit pas être deviné à partir d'un autre appareil.
+An `inputControlId` may stay `null` until it is verified in Input. It must not be
+guessed from another device.
 
-## Artefact officiel
+## Official artefact
 
-Input `0.17.2` expose `Import layer` et `Export layer` avec des fichiers
-`*-layer.json`. Un artefact public doit provenir de ce flux officiel.
+Input `0.17.2` exposes `Import layer` and `Export layer` with `*-layer.json`
+files. A public artefact must come from that official flow.
 
-Pour atteindre `export-format-verified` :
+To reach `export-format-verified`:
 
-1. exporter le profile d'origine ;
-2. créer et vérifier une sauvegarde locale ;
-3. transformer une copie du profile contenant exactement un layer cible ;
-4. exporter le layer ;
-5. assainir l'export avec `scripts/input-layer.mjs sanitize-export` ;
-6. l'importer dans une configuration isolée ;
-7. comparer chaque contrôle au mapping ;
-8. répéter l'import afin de prouver l'idempotence ou un refus propre ;
-9. restaurer le profile d'origine ;
-10. documenter les versions et résultats.
+1. export the original profile;
+2. create and verify a local backup;
+3. transform a copy of the profile containing exactly one target layer;
+4. export the layer;
+5. sanitise the export with `scripts/input-layer.mjs sanitize-export`;
+6. import it into an isolated configuration;
+7. compare every control against the mapping;
+8. repeat the import to prove idempotence, or a clean refusal;
+9. restore the original profile;
+10. document the versions and results.
 
-Un JSON communautaire ne doit jamais être renommé en `*-layer.json` pour donner
-l'impression d'être officiellement importable.
+A community JSON must never be renamed to `*-layer.json` to give the impression
+that it is officially importable.
 
-## Ajouter un preset
+## Adding a preset
 
-Créer un dossier stable, par exemple :
+Create a stable folder, for example:
 
 ```text
 profiles/figma-macos/
@@ -100,7 +102,7 @@ profiles/figma-macos/
   artifacts/README.md
 ```
 
-Copier les schémas V1 par référence, adapter le mapping, puis exécuter :
+Copy the V1 schemas by reference, adapt the mapping, then run:
 
 ```sh
 node scripts/validate-presets.mjs
@@ -109,14 +111,15 @@ node scripts/check-doc-links.mjs
 git diff --check
 ```
 
-## Invariants obligatoires
+## Mandatory invariants
 
-- l'index `0` du layer Codex natif reste protégé ;
-- aucun autre profile, layer ou lien AppSense n'est remplacé implicitement ;
-- le layer cible existe une seule fois, hors index `0`, avant la transformation ;
-- son lien AppSense existant est conservé ;
-- dry-run et sauvegarde précèdent toute installation ;
-- Retour/Entrée, permissions, suppression, push, déploiement et commandes
-  destructrices restent absents par défaut ;
-- les fichiers bruts restent sous `.local/`, ignoré par Git ;
-- toute limitation est publiée sans exagérer le niveau de preuve.
+- index `0` of the native Codex layer stays protected;
+- no other profile, layer or AppSense link is replaced implicitly;
+- the target layer exists exactly once, outside index `0`, before the
+  transformation;
+- its existing AppSense link is preserved;
+- a dry run and a backup precede any installation;
+- Return/Enter, permissions, deletion, push, deployment and destructive commands
+  stay absent by default;
+- raw files stay under `.local/`, which Git ignores;
+- every limitation is published without overstating the level of proof.

@@ -1,70 +1,72 @@
-# Faisabilité BLE sur le Codex Micro
+[English](feasibility.md) · [Français](feasibility.fr.md)
 
-## Verdict actuel
+# BLE feasibility on the Codex Micro
 
-La faisabilité est **ouverte mais non démontrée**.
+## Current verdict
 
-Le Codex Micro possède une liaison BLE HID active et Work Louder documente des
-canaux BLE. Hardware Buddy attend toutefois un périphérique GATT qui annonce un
-nom `Claude…`, expose le Nordic UART Service et traite des lignes JSON. Aucun de
-ces éléments n'a été observé sur le Codex Micro.
+Feasibility is **open but not demonstrated**.
 
-## Matrice de preuve
+The Codex Micro has an active BLE HID link and Work Louder documents BLE
+channels. Hardware Buddy, however, expects a GATT device that advertises a
+`Claude…` name, exposes the Nordic UART Service and handles JSON lines. None of
+those has been observed on the Codex Micro.
 
-| Porte | État | Preuve ou action nécessaire |
+## Evidence matrix
+
+| Gate | State | Proof or action required |
 | --- | --- | --- |
-| Connexion BLE disponible | Oui, couche HID | Registre I/O macOS et documentation Work Louder |
-| Clavier utilisable en HID | Oui, visible par macOS | Périphérique HID actif Work Louder |
-| Nom annoncé commençant par `Claude` | Non observé | Le nom HID observé est `Codex Micro #1` |
-| Nordic UART Service | Inconnu | Scan GATT ciblé, après accord |
-| Firmware identifiable | Inconnu | Version/export depuis l'outil Work Louder |
-| Firmware modifiable | Inconnu | Documentation, sources ou SDK du modèle exact |
-| Mode programmation et récupération | Inconnu | Procédure constructeur vérifiée |
-| Coexistence HID + NUS | Inconnu | Prototype restaurable et test matériel |
-| Mode développeur Claude | Non vérifié | Activation manuelle, après accord |
-| Échange heartbeat | Non testé | Test isolé sans commande de permission |
-| Décision de permission sûre | Non testée | Revue de sécurité et test explicite |
+| BLE connection available | Yes, HID layer | macOS I/O registry and Work Louder documentation |
+| Keyboard usable over HID | Yes, visible to macOS | active Work Louder HID device |
+| Advertised name starting with `Claude` | Not observed | the observed HID name is `Codex Micro #1` |
+| Nordic UART Service | Unknown | targeted GATT scan, after agreement |
+| Identifiable firmware | Unknown | version/export from the Work Louder tool |
+| Modifiable firmware | Unknown | documentation, sources or SDK for the exact model |
+| Programming and recovery mode | Unknown | verified vendor procedure |
+| HID + NUS coexistence | Unknown | restorable prototype and hardware test |
+| Claude developer mode | Not verified | manual activation, after agreement |
+| Heartbeat exchange | Not tested | isolated test with no permission command |
+| Safe permission decision | Not tested | security review and explicit test |
 
-## Chemins possibles
+## Possible paths
 
-### A. Extension du firmware Codex Micro
+### A. Extending the Codex Micro firmware
 
-Ce chemin n'est acceptable que si le firmware du modèle exact est documenté,
-sauvegardable et restaurable :
+This path is only acceptable if the exact model's firmware is documented,
+backup-able and restorable:
 
-1. conserver le service HID et tous les mappings ;
-2. ajouter le Nordic UART Service ;
-3. annoncer un nom compatible avec Claude ;
-4. traiter les lignes JSON dans une file bornée ;
-5. réserver les décisions de permission à un geste physique délibéré.
+1. keep the HID service and every mapping;
+2. add the Nordic UART Service;
+3. advertise a Claude-compatible name;
+4. handle JSON lines in a bounded queue;
+5. reserve permission decisions for a deliberate physical gesture.
 
-Ce chemin est suspendu : aucune preuve de firmware extensible n'existe.
+This path is suspended: no evidence of extensible firmware exists.
 
-### B. Companion BLE séparé
+### B. Separate BLE companion
 
-Un microcontrôleur BLE séparé peut implémenter Hardware Buddy tandis que le
-Codex Micro reste un clavier de raccourcis. Ce chemin réduit le risque de rendre
-le clavier inutilisable et protège les layers existants, mais ce n'est pas une
-intégration firmware du Codex Micro.
+A separate BLE microcontroller can implement Hardware Buddy while the Codex Micro
+stays a shortcut keyboard. This path reduces the risk of making the keyboard
+unusable and protects the existing layers, but it is not a Codex Micro firmware
+integration.
 
-### C. Raccourcis HID uniquement
+### C. HID shortcuts only
 
-C'est le premier livrable et le seul chemin documenté comme immédiatement
-plausible. Il n'exige pas le protocole Hardware Buddy et peut être testé touche
-par touche après inventaire, sauvegarde et autorisation.
+This is the first deliverable and the only path documented as immediately
+plausible. It does not require the Hardware Buddy protocol and can be tested key
+by key after inventory, backup and authorisation.
 
-## Prochaine preuve utile
+## Next useful piece of evidence
 
-Avant tout scan, appairage ou flash, il faut identifier :
+Before any scan, pairing or flash, the following must be identified:
 
-1. le modèle et la révision exacts du Codex Micro ;
-2. le firmware et le configurateur actuellement utilisés ;
-3. les six layers et liens AppSense existants ;
-4. l'existence d'un export ou d'une image de restauration ;
-5. l'acceptabilité d'un companion séparé si le firmware est fermé.
+1. the exact model and revision of the Codex Micro;
+2. the firmware and configurator currently in use;
+3. the six existing layers and AppSense links;
+4. whether an export or a recovery image exists;
+5. whether a separate companion is acceptable if the firmware is closed.
 
 ## Sources
 
-- [Work Louder — Bluetooth, layers et AppSense](https://worklouder.cc/openai-micro-setup)
+- [Work Louder — Bluetooth, layers and AppSense](https://worklouder.cc/openai-micro-setup)
 - [Anthropic — Hardware Buddy BLE Protocol](https://github.com/anthropics/claude-desktop-buddy/blob/main/REFERENCE.md)
-- [Anthropic — firmware d'exemple ESP32](https://github.com/anthropics/claude-desktop-buddy)
+- [Anthropic — ESP32 example firmware](https://github.com/anthropics/claude-desktop-buddy)

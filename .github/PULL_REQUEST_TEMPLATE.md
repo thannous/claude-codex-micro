@@ -1,91 +1,90 @@
-## Objectif
+## Goal
 
-Décrire le problème traité, la solution choisie et le résultat attendu.
+Describe the problem addressed, the solution chosen and the expected result.
 
-## Type de modification
+## Type of change
 
-Cochez ce qui s'applique. Indiquez `N/A` dans les preuves pour les validations
-sans rapport avec cette PR.
+Tick what applies. Write `N/A` in the evidence section for validations unrelated
+to this PR.
 
-- [ ] Documentation uniquement
-- [ ] Générateur CLI
+- [ ] Documentation only
+- [ ] CLI generator
 - [ ] GUI
-- [ ] Mapping ou preset
-- [ ] Sauvegarde ou restauration
-- [ ] Import ou export Work Louder Input
-- [ ] Schéma ou manifeste
-- [ ] CI ou outillage
+- [ ] Mapping or preset
+- [ ] Backup or restore
+- [ ] Work Louder Input import or export
+- [ ] Schema or manifest
+- [ ] CI or tooling
 
-## Compatibilité
+## Compatibility
 
-- Matériel :
-- Work Louder Input :
-- Firmware :
-- Système :
-- Application cible :
+- Hardware:
+- Work Louder Input:
+- Firmware:
+- Operating system:
+- Target application:
 
-Cette PR :
+This PR:
 
-- [ ] reste compatible avec les anciens profils ;
-- [ ] nécessite une migration documentée ;
-- [ ] modifie le format des manifests ;
-- [ ] modifie le format des imports ou exports ;
-- [ ] contient un autre changement incompatible décrit ci-dessous.
+- [ ] stays compatible with older profiles;
+- [ ] requires a documented migration;
+- [ ] changes the manifest format;
+- [ ] changes the import or export format;
+- [ ] contains another breaking change, described below.
 
-### Changement incompatible ou migration
+### Breaking change or migration
 
-Décrire l'impact, la procédure de migration et le retour arrière, ou indiquer
-`Aucun`.
+Describe the impact, the migration procedure and the rollback, or write `None`.
 
-## Validation commune
+## Common validation
 
-- [ ] `git diff --check` réussit.
-- [ ] Le statut de preuve est exact.
-- [ ] Aucun identifiant local, secret ou asset propriétaire n'est inclus.
-- [ ] Aucune action sensible n'est activée par défaut.
+- [ ] `git diff --check` passes.
+- [ ] The proof status is accurate.
+- [ ] No local identifier, secret or proprietary asset is included.
+- [ ] No sensitive action is enabled by default.
 
-## Validation documentaire
+## Documentation validation
 
-Requise pour toute modification de documentation :
+Required for any documentation change:
 
-- [ ] `node scripts/check-doc-links.mjs` réussit.
-- [ ] Les commandes, versions et limites annoncées correspondent au
-      comportement observé.
+- [ ] `node scripts/check-doc-links.mjs` passes.
+- [ ] The commands, versions and limits stated match the observed behaviour.
+- [ ] Both language versions are updated, or the gap is stated explicitly.
 
-## Validation fonctionnelle
+## Functional validation
 
-Requise si la PR ne concerne pas uniquement la documentation :
+Required if the PR is not documentation-only:
 
-- [ ] `npm ci --no-audit --no-fund` réussit sans modifier le lockfile.
-- [ ] `npm run check` réussit, y compris le build et les tests du GUI.
-- [ ] Aucun changement involontaire n'apparaît dans les profils générés.
-- [ ] Le GUI a été testé sans erreur ni avertissement inattendu dans la console,
-      s'il est affecté.
+- [ ] `npm ci --no-audit --no-fund` passes without modifying the lockfile.
+- [ ] `npm run check` passes, including the GUI build and tests.
+- [ ] No unintended change appears in the generated profiles.
+- [ ] The GUI was tested with no unexpected console error or warning, if
+      affected.
 
-## Validation Work Louder
+## Work Louder validation
 
-Requise si la PR modifie le mapping, la sauvegarde, la restauration, l'import
-ou l'export :
+Required if the PR changes the mapping, the backup, the restore, the import or
+the export:
 
-- [ ] Le layer Codex natif et les autres profils sont préservés.
-- [ ] Le lien AppSense existant est préservé.
-- [ ] La sauvegarde et le retour arrière sont documentés et testés.
-- [ ] L'import dans Work Louder Input réussit.
-- [ ] L'export obtenu peut être relu et validé.
-- [ ] Le comportement a été testé sur un Codex Micro physique, ou cette limite
-      est explicitement indiquée.
+- [ ] The native Codex layer and the other profiles are preserved.
+- [ ] The existing AppSense link is preserved.
+- [ ] The backup and the rollback are documented and tested.
+- [ ] The import into Work Louder Input succeeds.
+- [ ] The resulting export can be read back and validated.
+- [ ] The behaviour was tested on a physical Codex Micro, or that limit is
+      stated explicitly.
 
-## Preuves et limites
+## Evidence and limits
 
-Indiquer jusqu'où la modification a été vérifiée :
+State how far the change was verified:
 
-- Schéma et validateurs :
-- Générateur :
-- GUI :
-- Profil généré :
-- Work Louder Input :
-- Codex Micro physique :
+- Schema and validators:
+- Generator:
+- GUI:
+- Generated profile:
+- Work Louder Input:
+- Physical Codex Micro:
 
-Joindre les commandes exécutées, les résultats observés et ce qui reste non
-vérifié. Un build réussi ou un JSON valide ne constitue pas à lui seul une
-preuve d'import ou de fonctionnement matériel.
+Attach the commands run, the results observed and what remains unverified. A
+successful build or a valid JSON is not, on its own, proof of import or of
+hardware behaviour.

@@ -1,27 +1,29 @@
-# Protocole Claude Hardware Buddy
+[English](protocol.md) · [Français](protocol.fr.md)
 
-Cette note résume le
-[protocole public Anthropic](https://github.com/anthropics/claude-desktop-buddy/blob/main/REFERENCE.md).
-Elle ne prouve pas que le Codex Micro l'implémente.
+# Claude Hardware Buddy protocol
+
+This note summarises Anthropic's
+[public protocol](https://github.com/anthropics/claude-desktop-buddy/blob/main/REFERENCE.md).
+It does not prove that the Codex Micro implements it.
 
 ## Transport
 
-Le périphérique doit annoncer un nom commençant par `Claude` et exposer le
-Nordic UART Service :
+The device must advertise a name starting with `Claude` and expose the Nordic
+UART Service:
 
-| Rôle | UUID |
+| Role | UUID |
 | --- | --- |
 | Service | `6e400001-b5a3-f393-e0a9-e50e24dcca9e` |
-| RX, desktop → périphérique | `6e400002-b5a3-f393-e0a9-e50e24dcca9e` |
-| TX, périphérique → desktop | `6e400003-b5a3-f393-e0a9-e50e24dcca9e` |
+| RX, desktop → device | `6e400002-b5a3-f393-e0a9-e50e24dcca9e` |
+| TX, device → desktop | `6e400003-b5a3-f393-e0a9-e50e24dcca9e` |
 
-Les messages sont des objets JSON UTF-8, un objet par ligne terminé par `\n`.
-Le périphérique doit réassembler les lignes fragmentées à la limite du MTU.
+Messages are UTF-8 JSON objects, one object per line terminated by `\n`. The
+device must reassemble lines fragmented at the MTU boundary.
 
-## État et événements
+## State and events
 
-Claude envoie un instantané lors d'un changement et un keepalive toutes les
-10 secondes. Il peut notamment contenir :
+Claude sends a snapshot on any change, and a keepalive every 10 seconds. It can
+contain, among other things:
 
 ```json
 {
@@ -36,44 +38,42 @@ Claude envoie un instantané lors d'un changement et un keepalive toutes les
 }
 ```
 
-Une absence d'instantané pendant environ 30 secondes doit être traitée comme
-une perte de connexion.
+No snapshot for roughly 30 seconds must be treated as a connection loss.
 
-Une fin de tour peut aussi produire un événement ponctuel :
+The end of a turn can also produce a one-off event:
 
 ```json
 {"evt":"turn","role":"assistant","content":[]}
 ```
 
-Les événements sérialisés de plus de 4 Kio sont abandonnés par le desktop.
+Serialised events larger than 4 KiB are dropped by the desktop.
 
-## Décisions de permission
+## Permission decisions
 
-Quand `prompt` est présent, le protocole autorise :
+When `prompt` is present, the protocol allows:
 
 ```json
 {"cmd":"permission","id":"req_abc","decision":"once"}
 ```
 
-ou :
+or:
 
 ```json
 {"cmd":"permission","id":"req_abc","decision":"deny"}
 ```
 
-Ces messages ne constituent pas une recommandation d'implémentation. Le profil
-de raccourcis initial exclut toute décision de permission. Une intégration
-future devrait au minimum imposer un geste physique délibéré, vérifier
-strictement l'identifiant et revenir à un état neutre en cas de déconnexion.
+These messages are not an implementation recommendation. The initial shortcut
+profile excludes every permission decision. A future integration should at
+minimum require a deliberate physical gesture, check the identifier strictly, and
+return to a neutral state on disconnect.
 
-## Activation côté Claude
+## Enabling it on the Claude side
 
-Le pont est désactivé par défaut. La procédure Anthropic passe par le mode
-développeur, la fenêtre Hardware Buddy et une autorisation Bluetooth macOS.
-Elle modifierait les réglages Claude/macOS et n'a pas été exécutée.
+The bridge is disabled by default. Anthropic's procedure goes through developer
+mode, the Hardware Buddy window and a macOS Bluetooth permission. It would modify
+Claude/macOS settings and has not been carried out.
 
-## Limite
+## Limit
 
-Le protocole est destiné aux makers et n'est pas une fonctionnalité produit
-officiellement supportée. Il peut évoluer indépendamment du Codex Micro et de
-Work Louder Input.
+The protocol is aimed at makers and is not an officially supported product
+feature. It can evolve independently of the Codex Micro and of Work Louder Input.
