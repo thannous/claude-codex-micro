@@ -16,11 +16,50 @@
 // the state to `running` forever; the roster catches that. Conversely the roster
 // publishes no state at all; the hooks deliver it instantly.
 
+/**
+ * @typedef {object} SessionSlot
+ * @property {string} sessionId Claude Code session identifier.
+ * @property {string} state One of the shared `STATES` values.
+ * @property {number} [updatedAt] Timestamp of the last state transition.
+ * @property {string} [name] Display name from the official roster.
+ * @property {string} [cwd] Session working directory.
+ * @property {number} [pid] Session process identifier.
+ * @property {string} [tty] Terminal identifier reported by `ps`.
+ * @property {string} [terminalApp] Supported terminal application name.
+ * @property {string} [entrypoint] Claude Code host entrypoint.
+ * @property {string} [hostSessionId] Host grouping id, not a navigation target.
+ */
+
+/**
+ * @typedef {object} SlotSnapshot
+ * @property {1} version Snapshot schema version.
+ * @property {Array<SessionSlot|null>} slots Six physical Agent-key assignments.
+ * @property {Record<string, string>} pending Hook states awaiting roster membership.
+ * @property {number} dropped Pending states evicted from the bounded map.
+ * @property {number} overflow Live sessions that could not claim a slot.
+ */
+
+/**
+ * @typedef {object} NavigationTarget
+ * @property {"empty"|"terminal"|"resume"|"desktop"|"unsupported"} kind Route decision.
+ * @property {string} [sessionId] Claude Code session identifier.
+ * @property {string} [tty] Terminal identifier for AppleScript focus.
+ * @property {string|null} [app] Terminal application to focus.
+ * @property {string} [url] Undocumented Claude Desktop resume URL.
+ * @property {string|null} [cwd] Working directory for a closed-session resume command.
+ * @property {string|null} [name] Session display name.
+ * @property {string|null} [entrypoint] Host entrypoint when no route is available.
+ * @property {string|null} [hostSessionId] Non-addressable host grouping id.
+ * @property {string} [reason] Evidence-backed explanation for an unsupported route.
+ */
+
+/** Number of physical Agent keys available for session assignment. */
 export const SLOT_COUNT = 6;
 
-// The six Agent keys, in physical reading order: top row (two keys) then the
-// next row (four keys). The ids come from KEY_CONTROL_LOCATIONS in
-// shared/input-profile.mjs.
+/**
+ * Six Agent controls in physical reading order: two top-row keys followed by
+ * four on the next row. Ids originate in `KEY_CONTROL_LOCATIONS`.
+ */
 export const SLOT_CONTROLS = Object.freeze(["key-9", "key-10", "key-5", "key-6", "key-7", "key-8"]);
 
 // Re-exported from shared/, where they are the single source of truth: the GUI
@@ -42,6 +81,13 @@ const BLOCKING_NOTIFICATIONS = new Set([
 // held in a bounded pending map rather than given a slot.
 const MAX_PENDING = 32;
 
+/**
+ * Converts one Claude hook payload into a lighting state transition.
+ * Non-blocking notifications and unrecognized events deliberately return null.
+ *
+ * @param {object|null|undefined} event Normalized hook event.
+ * @returns {string|null} A shared `STATES` value, or null for no transition.
+ */
 export function stateFromHookEvent(event) {
   switch (event?.event) {
     case "SessionStart":
@@ -61,6 +107,11 @@ export function stateFromHookEvent(event) {
   }
 }
 
+/**
+ * Creates the canonical empty, versioned six-slot snapshot.
+ *
+ * @returns {SlotSnapshot} Fresh mutable snapshot with no shared nested state.
+ */
 export function emptySnapshot() {
   return {
     version: 1,
@@ -82,6 +133,13 @@ function cloneSnapshot(snapshot) {
   };
 }
 
+/**
+ * Sanitizes persisted data into the current snapshot shape and slot count.
+ * Invalid snapshots fail closed to {@link emptySnapshot}; extra slots vanish.
+ *
+ * @param {unknown} value Deserialized snapshot candidate.
+ * @returns {SlotSnapshot} Defensive copy safe for reducer operations.
+ */
 export function normalizeSnapshot(value) {
   const base = emptySnapshot();
   if (!value || typeof value !== "object" || !Array.isArray(value.slots)) return base;
@@ -134,8 +192,14 @@ function rememberPending(snapshot, sessionId, state) {
 }
 
 /**
- * Applies a hook event. A session missing from the roster gets no slot: its
- * state is held pending, and gets promoted if the roster later confirms it.
+ * Applies a hook transition without mutating the input snapshot. A session
+ * missing from the roster gets no slot: its state remains pending until roster
+ * membership is confirmed.
+ *
+ * @param {SlotSnapshot} snapshot Current reducer state.
+ * @param {object} event Normalized hook event with a `sessionId` when addressable.
+ * @param {number} [now=0] Timestamp recorded on an applied transition.
+ * @returns {{snapshot: SlotSnapshot, changed: boolean}} Next state and render hint.
  */
 export function applyHookEvent(snapshot, event, now = 0) {
   const next = cloneSnapshot(snapshot);
@@ -163,11 +227,16 @@ export function applyHookEvent(snapshot, event, now = 0) {
 }
 
 /**
- * Reconciles the official roster. Creates the missing entries, refreshes the
- * metadata, and marks `ended` any session whose process has disappeared.
+ * Reconciles the authoritative roster without mutating the input snapshot.
+ * Missing sessions are assigned or promoted; disappeared processes become
+ * `ended`, while active and blocked sessions are never evicted.
  *
- * @param roster array from `claude agents --json`, optionally enriched with
- *   `tty` and `terminalApp` fields by the caller.
+ * @param {SlotSnapshot} snapshot Current reducer state.
+ * @param {object[]} roster Rows from `claude agents --json`, optionally enriched
+ * with `tty` and `terminalApp` by the caller.
+ * @param {number} [now=0] Timestamp recorded on membership changes.
+ * @returns {{snapshot: SlotSnapshot, changed: boolean, notes: string[]}}
+ * Next state, render hint, and explicit overflow diagnostics.
  */
 export function applyRoster(snapshot, roster, now = 0) {
   const next = cloneSnapshot(snapshot);
@@ -221,6 +290,14 @@ export function applyRoster(snapshot, roster, now = 0) {
   return { snapshot: next, changed, notes };
 }
 
+/**
+ * Projects reducer state into the six rows consumed by CLI rendering and HID
+ * lighting, preserving the underlying slot entry for navigation.
+ *
+ * @param {SlotSnapshot} snapshot Current reducer state.
+ * @returns {Array<{slot: number, control: string, state: string, color: string|null, entry: SessionSlot|null}>}
+ * Rows in physical Agent-key order.
+ */
 export function slotView(snapshot) {
   return snapshot.slots.map((entry, index) => ({
     slot: index + 1,
@@ -240,6 +317,9 @@ export function slotView(snapshot) {
  * AppleScript compared against each window's real `tty` and could never match.
  * The only navigable sessions were therefore all failing with "window not
  * found".
+ *
+ * @param {string|null|undefined} tty Terminal name from `ps -o tty=`.
+ * @returns {string|null} Absolute device path, or null for non-terminal hosts.
  */
 export function ttyDevice(tty) {
   if (!tty || tty === "??" || tty === "-") return null;
@@ -262,6 +342,9 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
  * A session with no `tty` is hosted by Claude Desktop. `claude://resume`
  * addresses it by its `sessionId` — the roster's, not the `hostSessionId`,
  * which groups several sessions and addresses none of them.
+ *
+ * @param {SessionSlot|null|undefined} entry Slot entry to route.
+ * @returns {NavigationTarget} Evidence-backed route decision with no side effect.
  */
 export function resolveNavigation(entry) {
   if (!entry) return { kind: "empty" };

@@ -24,14 +24,26 @@ import {
 } from "./hid-frame.mjs";
 import { METHODS } from "./hid-lighting.mjs";
 
+/** USB vendor id reported by the Codex Micro vendor interface. */
 export const VENDOR_ID = 0x303a;
+
+/** USB product id reported by the Codex Micro vendor interface. */
 export const PRODUCT_ID = 0x8360;
+
+/** Vendor usage page carrying the JSON-RPC transport. */
 export const VENDOR_USAGE_PAGE = 0xff00;
 
 const CALL_TIMEOUT_MS = 10000;
+
+/** Minimum delay between RPC calls required for reliable firmware handling. */
 export const CALL_SPACING_MS = 50;
 
+/** Error carrying a stable transport code suitable for CLI and GUI handling. */
 export class DeviceError extends Error {
+  /**
+   * @param {string} code Stable machine-readable failure code.
+   * @param {string} [message] Human-readable detail; defaults to the code.
+   */
   constructor(code, message) {
     super(message ?? code);
     this.name = "DeviceError";
@@ -39,8 +51,12 @@ export class DeviceError extends Error {
   }
 }
 
-// Lazy import: node-hid is a native optionalDependency. The error message has to
-// say what to do, not only that it is missing.
+/**
+ * Loads the optional native HID dependency only when hardware access is used.
+ *
+ * @returns {Promise<typeof import("node-hid")>} Loaded `node-hid` module.
+ * @throws {DeviceError} With `HID_UNAVAILABLE` when the dependency cannot load.
+ */
 export async function loadHid() {
   try {
     return await import("node-hid");
@@ -52,8 +68,13 @@ export async function loadHid() {
   }
 }
 
-// Lists the Codex Micro vendor interfaces. The keyboard exposes several HID
-// collections; only usage page 0xFF00 carries the RPC channel.
+/**
+ * Tests whether a `node-hid` descriptor is the Codex Micro vendor collection.
+ * The keyboard collection is deliberately excluded even when VID/PID match.
+ *
+ * @param {object|null|undefined} device HID descriptor returned by `node-hid`.
+ * @returns {boolean} Whether the descriptor carries the vendor RPC channel.
+ */
 export function isCodexVendorInterface(device) {
   return (
     device?.vendorId === VENDOR_ID &&
@@ -62,6 +83,12 @@ export function isCodexVendorInterface(device) {
   );
 }
 
+/**
+ * Enumerates only Codex Micro vendor RPC interfaces.
+ *
+ * @returns {Promise<object[]>} Matching `node-hid` device descriptors.
+ * @throws {DeviceError} When the optional HID dependency is unavailable.
+ */
 export async function listInterfaces() {
   const hid = await loadHid();
   return hid.devices().filter(isCodexVendorInterface);
@@ -75,9 +102,11 @@ async function openHandle(path) {
   return hid.HIDAsync.open(path);
 }
 
-// RPC session: paced sequential queue, responses correlated by id, notifications
-// dispatched, foreign writes detected. One session = one request in flight, the
-// way the firmware expects it.
+/**
+ * Paced RPC session over one HID handle. Calls are serialized, responses are
+ * correlated by id, notifications are dispatched, and foreign lighting writes
+ * are surfaced to the optional coexistence callback.
+ */
 export class DeviceSession {
   #handle;
   #assembler = createLineAssembler();
@@ -91,6 +120,13 @@ export class DeviceSession {
   #closed = false;
   #lastCallStartedAt = 0;
 
+  /**
+   * @param {{on: Function, write: Function, close: Function}} handle Open HID handle.
+   * @param {object} [options] Session callbacks.
+   * @param {(method: string, response: unknown) => void|Promise<void>} [options.onForeignWrite]
+   * Called for orphan responses to known lighting methods.
+   * @param {(line: string) => void} [options.onDebugLine] Called for firmware debug lines.
+   */
   constructor(handle, { onForeignWrite, onDebugLine } = {}) {
     this.#handle = handle;
     this.#onForeignWrite = onForeignWrite ?? null;
@@ -103,6 +139,16 @@ export class DeviceSession {
     });
   }
 
+  /**
+   * Opens the requested interface, or the first matching Codex Micro interface.
+   *
+   * @param {object} [options] Device selection and callbacks.
+   * @param {string} [options.path] Exact `node-hid` path to open.
+   * @param {(method: string, response: unknown) => void|Promise<void>} [options.onForeignWrite]
+   * @param {(line: string) => void} [options.onDebugLine]
+   * @returns {Promise<DeviceSession>} Ready, event-wired session.
+   * @throws {DeviceError} With `DEVICE_NOT_FOUND` when no interface is available.
+   */
   static async open({ path, ...options } = {}) {
     const target = path ?? (await listInterfaces()).at(0)?.path;
     if (!target) {
@@ -114,6 +160,14 @@ export class DeviceSession {
     return new DeviceSession(await openHandle(target), options);
   }
 
+  /**
+   * Registers one handler for a firmware notification method.
+   * A newer handler for the same method replaces the previous one.
+   *
+   * @param {string} method Notification method name.
+   * @param {(params: unknown) => void} handler Notification consumer.
+   * @returns {() => void} Idempotent unsubscriber for this exact handler.
+   */
   onNotification(method, handler) {
     this.#notifyHandlers.set(method, handler);
     return () => {
@@ -121,9 +175,16 @@ export class DeviceSession {
     };
   }
 
-  // Queues a call and waits for its response. Tasks run one at a time with
-  // CALL_SPACING_MS of spacing, since the firmware handles commands in a
-  // trickle.
+  /**
+   * Queues one RPC call and resolves only its correlated response. Calls run
+   * sequentially with {@link CALL_SPACING_MS} between start times.
+   *
+   * @param {string} method Firmware method name.
+   * @param {unknown} [params] Method parameters; `null` when omitted.
+   * @param {number} [id] Explicit request id, primarily for deterministic tests.
+   * @returns {Promise<object>} Parsed firmware response envelope.
+   * @throws {DeviceError} Via rejection on timeout, write, RPC, or disconnect failure.
+   */
   call(method, params = null, id = createRpcId()) {
     return new Promise((resolve, reject) => {
       this.#queue.push({ method, params, id, resolve, reject });
@@ -227,6 +288,12 @@ export class DeviceSession {
     for (const task of this.#queue.splice(0)) task.reject(error);
   }
 
+  /**
+   * Rejects queued and in-flight calls, then closes the underlying HID handle.
+   * Calling it after the HID stack has already closed is safe.
+   *
+   * @returns {Promise<void>} Resolves after the close attempt completes.
+   */
   async close() {
     this.#closed = true;
     this.#failAll(new DeviceError("DEVICE_DISCONNECTED", "Session closed."));

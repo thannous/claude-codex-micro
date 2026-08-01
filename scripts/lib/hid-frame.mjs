@@ -8,26 +8,43 @@
 
 import { randomInt } from "node:crypto";
 
-// 64-byte report: [0] report id, [1] channel, [2] length of the chunk carried by
-// THIS report, [3..63] UTF-8 payload.
+/** Size in bytes of every vendor HID report, including its three-byte header. */
 export const REPORT_SIZE = 64;
+
+/** Report identifier used by the Codex Micro vendor channel. */
 export const REPORT_ID = 0x06;
+
+/** Channel identifier carrying firmware debug lines. */
 export const CHANNEL_DEBUG = 1;
+
+/** Channel identifier carrying JSON-RPC traffic. */
 export const CHANNEL_RPC = 2;
+
+/** Maximum UTF-8 payload carried by one report after the three-byte header. */
 export const CHUNK_PAYLOAD = REPORT_SIZE - 3; // 61 bytes per report
 
-// The call id is bounded by the firmware, which rejects values outside
-// [0, 999). Short ids also avoid pushing a request from one report to two for
-// the sake of a few bytes.
+/**
+ * Exclusive upper bound for RPC identifiers accepted by the firmware.
+ * Short identifiers also keep small requests inside a single HID report.
+ */
 export const RPC_ID_LIMIT = 999;
 
+/**
+ * Creates an RPC identifier inside the firmware-supported range `[0, 999)`.
+ *
+ * @returns {number} A random integer suitable for a request envelope.
+ */
 export function createRpcId() {
   return randomInt(0, RPC_ID_LIMIT);
 }
 
-// The channel replaces every non-ASCII character with its \uXXXX escape (or the
-// surrogate pair beyond the BMP). Lighting payloads are already ASCII in
-// practice; the escaping is applied to match the format.
+/**
+ * Escapes every non-ASCII code point using the representation expected by the
+ * vendor channel, including surrogate pairs beyond the BMP.
+ *
+ * @param {string} text Text to encode inside a request.
+ * @returns {string} ASCII-only text containing `\\uXXXX` escapes.
+ */
 export function escapeUnicode(text) {
   return text.replace(/[^\x00-\x7F]/gu, (char) => {
     const codePoint = char.codePointAt(0);
@@ -40,8 +57,13 @@ export function escapeUnicode(text) {
   });
 }
 
-// The channel's JSON-RPC envelope: { method, params, id }. `params` is null when
-// the method expects none.
+/**
+ * Builds and validates the minified JSON-RPC request envelope sent over HID.
+ *
+ * @param {{method: string, params?: unknown, id: number}} request Request data.
+ * @returns {string} An ASCII-only serialized `{method, params, id}` envelope.
+ * @throws {Error} When the method is empty or the id is outside `[0, 999)`.
+ */
 export function buildRequest({ method, params = null, id }) {
   if (typeof method !== "string" || !method) throw new Error("Expected an RPC method name.");
   if (!Number.isInteger(id) || id < 0 || id >= RPC_ID_LIMIT) {
@@ -50,9 +72,13 @@ export function buildRequest({ method, params = null, id }) {
   return escapeUnicode(JSON.stringify({ method, params, id }));
 }
 
-// Splits a message into 64-byte reports. A message longer than CHUNK_PAYLOAD is
-// fragmented into consecutive reports that repeat the same header; only the
-// length byte varies. An empty message emits nothing.
+/**
+ * Splits a UTF-8 RPC message into fixed-size vendor HID reports.
+ * Consecutive fragments repeat the same header; an empty message emits none.
+ *
+ * @param {string} message Serialized request to frame.
+ * @returns {Buffer[]} Ordered 64-byte reports ready for `node-hid`.
+ */
 export function encodeFrames(message) {
   const buffer = Buffer.from(message, "utf8");
   const frames = [];
@@ -70,8 +96,13 @@ export function encodeFrames(message) {
   return frames;
 }
 
-// Extracts channel and payload from an incoming report. The buffer delivered by
-// the HID stack includes the report id in byte 0, as it does on the way out.
+/**
+ * Decodes the header and UTF-8 payload of one incoming vendor report.
+ *
+ * @param {Buffer|Uint8Array|number[]} report Report including its id byte.
+ * @returns {{channel: number, length: number, payload: string}} Decoded fragment.
+ * @throws {Error} When the report is shorter than the three-byte header.
+ */
 export function decodeReport(report) {
   const data = Buffer.isBuffer(report) ? report : Buffer.from(report);
   if (data.length < 3) throw new Error(`HID report too short: ${data.length} byte(s).`);
@@ -84,10 +115,13 @@ export function decodeReport(report) {
   };
 }
 
-// Reassembles the stream of reports into lines. The device terminates each
-// message with a newline; a long message arrives fragmented over several
-// reports and is only complete at the final newline. Each channel has its own
-// buffer: debug logs do not mix into the RPC.
+/**
+ * Creates a stateful assembler that separates channels and emits complete,
+ * trimmed lines only after the firmware's newline delimiter is received.
+ *
+ * @returns {(report: Buffer|Uint8Array|number[]) => Array<{channel: number, line: string}>}
+ * A report consumer whose buffers are private to this assembler instance.
+ */
 export function createLineAssembler() {
   const buffers = new Map();
   return function push(report) {
@@ -99,13 +133,14 @@ export function createLineAssembler() {
   };
 }
 
-// Rebuilds JSON-RPC messages from the lines of the RPC channel. A document can
-// itself arrive over several lines (indented JSON): accumulate until parsing
-// succeeds. Three shapes on the channel:
-//
-//   - response:     { "result": …, "id": n }          (id also carried as "i")
-//   - notification: { "method": "v.oai.hid", "params": … }  (also "m"/"p")
-//   - invalid:      neither id nor method — buffer dropped
+/**
+ * Creates a stateful JSON accumulator for response, notification, and invalid
+ * messages. Indented JSON is retained until parsing succeeds; stray prefixes
+ * before the first object are discarded.
+ *
+ * @returns {(text: string) => ({kind: "response", id: string, method: string|null, raw: string, parsed: object}|{kind: "notification", method: string, params: unknown, raw: string, parsed: object}|{kind: "invalid", raw: string, parsed: object}|null)}
+ * A line consumer that returns `null` while a JSON document is incomplete.
+ */
 export function createRpcAccumulator() {
   let pending = "";
   return function push(text) {

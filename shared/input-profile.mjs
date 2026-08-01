@@ -1,6 +1,7 @@
 const DEVICE_TYPE = "codex_micro";
 const TARGET_LAYER_NAME = "Claude";
 
+/** Supported shortcut modifier names mapped to Work Louder keycodes. */
 const MODIFIER_KEYCODES = {
   Command: "KC_LGUI",
   Shift: "KC_LSFT",
@@ -8,9 +9,10 @@ const MODIFIER_KEYCODES = {
   Control: "KC_LCTL",
 };
 
-// Final keys allowed in a shortcut. Return/Enter, Delete and Backspace are
-// deliberately absent: an accidental press must never send, approve or destroy
-// anything.
+/**
+ * Allowlisted final shortcut keys mapped to Work Louder keycodes. Send,
+ * deletion, and approval keys are deliberately absent from this public API.
+ */
 const FINAL_KEYCODES = {
   ...Object.fromEntries(
     Array.from({ length: 26 }, (_, index) => {
@@ -50,10 +52,10 @@ const MODIFIER_KEY_BY_KEYCODE = Object.fromEntries(
   Object.entries(MODIFIER_KEYCODES).map(([key, keycode]) => [keycode, key]),
 );
 
+/** Final keys rejected even if a caller attempts to bypass the GUI catalogue. */
 const FORBIDDEN_KEYS = Object.freeze(["Enter", "Return", "Delete", "Backspace"]);
 
-// A printable key on its own would type text into the conversation: it is only
-// accepted together with a modifier.
+/** Printable final keys that require at least one modifier for safe assignment. */
 const PRINTABLE_KEYS = new Set([
   ...Array.from({ length: 26 }, (_, index) => String.fromCharCode(65 + index)),
   ...Array.from({ length: 10 }, (_, digit) => String(digit)),
@@ -65,9 +67,10 @@ const PRINTABLE_KEYS = new Set([
   "Minus",
 ]);
 
-// The twelve programmable keycaps are spread over four rows. The first cell of
-// the last row is the layer-change sensor: it is deliberately absent from this
-// table and stays untouched.
+/**
+ * Public control ids mapped to physical profile cells. The layer-change sensor
+ * is intentionally absent so transformations cannot overwrite it.
+ */
 const KEY_CONTROL_LOCATIONS = Object.freeze({
   "key-9": { row: 0, column: 0 },
   "key-10": { row: 0, column: 1 },
@@ -82,11 +85,13 @@ const KEY_CONTROL_LOCATIONS = Object.freeze({
   "key-11": { row: 3, column: 1 },
   "key-12": { row: 3, column: 2 },
 });
+/** Physical key controls in deterministic transformation and reporting order. */
 const KEY_CONTROL_ORDER = Object.keys(KEY_CONTROL_LOCATIONS);
-// The top-left rotary encoder exposes counterclockwise, clockwise, and press
-// cells. Its press is the thirteenth configurable physical switch.
+
+/** Control id for the press cell of the top-left rotary encoder. */
 const ENCODER_PRESS_CONTROL = "key-13";
 
+/** Safe Claude mapping applied when callers do not provide an override. */
 const DEFAULT_MAPPING = {
   joystick: "navigation",
   // The wheel is in Effort mode by default: that is this board's distinctive
@@ -109,6 +114,7 @@ const DEFAULT_MAPPING = {
   "key-13": "none",
 };
 
+/** Canonical catalogue actions understood by the profile transformer. */
 const ACTION_DEFINITIONS = {
   newSession: {
     name: "Claude New",
@@ -269,6 +275,10 @@ const EFFORT_PICKER_DELAY_MS = 80;
 // at the end of the macro and would change nothing on screen.
 const EFFORT_FEEDBACK_DELAY_MS = 10;
 
+/**
+ * Supported wheel modes and their physical clockwise/counterclockwise outputs.
+ * Experimental modes are marked in their value rather than silently enabled.
+ */
 const WHEEL_MODES = {
   scroll: { counterClockwise: "KC_PGUP", clockwise: "KC_PGDN" },
   effort: {
@@ -545,19 +555,10 @@ function addActionsToGroup(profile, actionIds) {
   group.actionIds = [...new Set([...group.actionIds, ...actionIds])];
 }
 
-// On top of the two `navigation` and `none` presets, the joystick accepts a
-// per-direction assignment:
-//
-//   { directions: 4, sectors: ["newSession", "voice", "diff", "stop"] }
-//
-// Each sector takes the same value as a key — catalogue id, custom shortcut, or
-// `none`. Input's serialisation does convert `KA_` references inside sectors, so
-// a full macro is possible there and not only a bare keycode.
-//
-// 45° stay reserved for the `KI_X` close zone at the top, exactly like Input's
-// default template. The remaining 315° are shared out, so 78.75° at four
-// directions and 39.4° at eight. Beyond eight, aiming with a thumb gets
-// unreliable: the bound is ergonomic, the format imposes none.
+/**
+ * Ergonomically supported custom joystick sector counts. Each sector accepts
+ * the same catalogue/custom value as a key; 45° remain reserved for `KI_X`.
+ */
 const JOYSTICK_DIRECTION_COUNTS = Object.freeze([4, 8]);
 const JOYSTICK_CLOSE_ANGLE = 45 / 360;
 const JOYSTICK_START_ANGLE = (90 - 45 / 2) / 360;
@@ -579,6 +580,15 @@ function validateCustomJoystick(joystick) {
   );
 }
 
+/**
+ * Computes the normalized radial geometry shared by profile serialization and
+ * GUI rendering, including the fixed 45° `KI_X` close zone.
+ *
+ * @param {number} directionCount Positive number of assignable sectors.
+ * @returns {{close: {a1: number, a2: number}, sectors: Array<{index: number, a1: number, a2: number}>}}
+ * Normalized turn fractions in clockwise order.
+ * @throws {Error} With `JOYSTICK_SECTOR_COUNT` for a non-positive count.
+ */
 function radialSectorGeometry(directionCount) {
   assert(
     Number.isInteger(directionCount) && directionCount > 0,
@@ -610,6 +620,17 @@ function radialSectors(keycodes) {
   ];
 }
 
+/**
+ * Validates and inventories an official Codex Micro `*-profile.json` export.
+ * It requires exactly one non-native Claude layer and never mutates the source.
+ *
+ * @param {object} source Parsed Work Louder Input profile export.
+ * @param {{requireAppSense?: boolean}} [options] Whether the Claude layer must
+ * already reference a local AppSense entry.
+ * @returns {{device: string, language: string, profileName: string, layerName: string, layerIndex: number, appSenseLinked: boolean, configurableSwitches: number, inputSchema: string}}
+ * Stable inventory consumed by the CLI and GUI.
+ * @throws {Error} With a stable `code` when device, layer, layout, or AppSense invariants fail.
+ */
 export function inspectInputProfile(source, { requireAppSense = true } = {}) {
   assert(source && typeof source === "object", "Le fichier JSON est vide.", "EMPTY_FILE");
   assert(
@@ -713,10 +734,16 @@ function hasClaudeLayout(layer) {
   );
 }
 
-// Creates the "Claude" layer from an export that has none, by cloning the
-// structure of an existing layer. The AppSense link (linkedAppId) references
-// Input's local registry and cannot be invented here: the created layer has to
-// be linked through "Auto detect" after import.
+/**
+ * Synthesizes a neutral Claude layer by cloning a compatible layer structure.
+ * Assignable controls are cleared, the native sensor is preserved, and no
+ * device-local AppSense reference is invented.
+ *
+ * @param {object} source Official profile export that has no Claude layer.
+ * @returns {{source: object, templateName: string, layerIndex: number}} A cloned
+ * profile plus the chosen template and new layer index.
+ * @throws {Error} With a stable `code` when creation would be ambiguous or unsafe.
+ */
 export function addClaudeLayer(source) {
   assert(source && typeof source === "object", "Le fichier JSON est vide.", "EMPTY_FILE");
   assert(
@@ -788,6 +815,15 @@ export function addClaudeLayer(source) {
   };
 }
 
+/**
+ * Decodes the existing Claude layer back into the configurator's canonical
+ * mapping, including custom actions, wheel mode, and joystick sectors.
+ *
+ * @param {object} source Official profile export containing one Claude layer.
+ * @returns {{mapping: object, assigned: number}} Derived mapping and count of
+ * non-`none` assignments.
+ * @throws {Error} When the source profile violates inspection invariants.
+ */
 export function deriveMappingFromProfile(source) {
   const inspection = inspectInputProfile(source, { requireAppSense: false });
   const layer = source.profile.layers[inspection.layerIndex];
@@ -886,6 +922,26 @@ function validateAppSenseId(value, label) {
   );
 }
 
+/**
+ * Produces a new Claude profile while protecting the native layer, unrelated
+ * layers, source object, and local AppSense boundaries.
+ *
+ * Forced AppSense ids are references only: the corresponding entries must
+ * already exist in the device-local `linkedApps` registry. When a base-layer id
+ * is supplied, only that layer's `linkedAppId` may change; its keymap remains
+ * byte-for-byte equivalent.
+ *
+ * @param {object} source Official Work Louder Input profile export.
+ * @param {object} [requestedMapping] Partial configurator mapping overlaid on
+ * {@link DEFAULT_MAPPING}.
+ * @param {object} [options] AppSense and validation controls.
+ * @param {boolean} [options.requireAppSense=true] Require an inherited Claude link.
+ * @param {number} [options.appSenseId] Existing local entry for the Claude layer.
+ * @param {number} [options.baseLayerAppSenseId] Existing local entry used to
+ * return automatically to the protected native layer.
+ * @returns {{profile: object, report: object}} New profile and preservation report.
+ * @throws {Error} With a stable `code` when assignments or preservation rules fail.
+ */
 export function buildInputProfile(
   source,
   requestedMapping = DEFAULT_MAPPING,
