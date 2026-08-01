@@ -13,6 +13,27 @@
 
 import { SLOT_CONTROLS, STATE_COLORS, STATES } from "./thread-slots.mjs";
 
+/**
+ * @typedef {object} ThreadLightingInput
+ * @property {number} id Firmware slot identifier.
+ * @property {string|number} [color] Packed RGB integer or `#RRGGBB` string.
+ * @property {number} [brightness] Brightness in the inclusive range `[0, 1]`.
+ * @property {number} [effect] One of the numeric values in {@link EFFECTS}.
+ * @property {number} [speed] Animation speed in the inclusive range `[0, 1]`.
+ * @property {boolean} [syncKeysLighting] Whether the slot follows the key zone.
+ * @property {boolean} [syncAmbientLighting] Whether the slot follows the ambient zone.
+ */
+
+/**
+ * @typedef {object} ZoneLightingInput
+ * @property {number} effect Firmware effect identifier.
+ * @property {number} brightness Brightness in the inclusive range `[0, 1]`.
+ * @property {number} speed Animation speed in the inclusive range `[0, 1]`.
+ * @property {unknown} magic Firmware field preserved verbatim.
+ * @property {string|number} color Packed RGB integer or `#RRGGBB` string.
+ */
+
+/** Vendor RPC method names used by lighting and HID notifications. */
 export const METHODS = Object.freeze({
   threadsLighting: "v.oai.thstatus",
   rgbConfig: "v.oai.rgbcfg",
@@ -20,8 +41,10 @@ export const METHODS = Object.freeze({
   notifyJoystick: "v.oai.rad",
 });
 
-// Firmware animation effects. `solid` is the only useful one for a steady state
-// light; the others are exposed for free-form use.
+/**
+ * Firmware animation effect identifiers. `solid` is the stable-state effect;
+ * the other values are available for explicit free-form lighting commands.
+ */
 export const EFFECTS = Object.freeze({
   off: 0,
   solid: 1,
@@ -32,14 +55,19 @@ export const EFFECTS = Object.freeze({
   shallowBreath: 6,
 });
 
-// Slot → thread id mapping on the channel. CONFIRMED on hardware by
-// `node scripts/lighting.mjs probe --delay=3000`, which lights the keys one by
-// one: the sequence of ids 0 to 5 follows exactly the physical order of
-// SLOT_CONTROLS — the two keys of the top row, left to right, then the four of
-// the next row.
+/**
+ * Slot-to-thread-id mapping confirmed on hardware. The sequence `0..5` follows
+ * {@link SLOT_CONTROLS}: two top-row keys, then four keys on the next row.
+ */
 export const SLOT_THREAD_IDS = Object.freeze(SLOT_CONTROLS.map((_, index) => index));
 
-// "#D97757" → 0xD97757. The channel expects a packed RGB integer.
+/**
+ * Converts a CSS-style colour or validates an existing packed RGB integer.
+ *
+ * @param {string|number} color `#RRGGBB`, `RRGGBB`, or an integer in `[0, 0xFFFFFF]`.
+ * @returns {number} Packed RGB value expected by the firmware.
+ * @throws {Error} When the value is outside the supported colour format.
+ */
 export function colorToInt(color) {
   if (typeof color === "number" && Number.isInteger(color) && color >= 0 && color <= 0xffffff) {
     return color;
@@ -56,9 +84,15 @@ function clampUnit(name, value) {
   return value;
 }
 
-// One per-slot lighting entry. Only `id` is required; every optional field
-// omitted leaves the corresponding parameter unchanged. The minified keys
-// (`c`, `b`, `e`, `s`, `sk`, `sa`) are the channel's own format.
+/**
+ * Builds one partial `v.oai.thstatus` entry. Omitted optional fields remain
+ * unchanged on the device; returned keys use the firmware's minified format.
+ *
+ * @param {ThreadLightingInput} input Slot update in repository-facing names.
+ * @returns {{id: number, c?: number, b?: number, e?: number, s?: number, sk?: number, sa?: number}}
+ * Firmware-facing partial update.
+ * @throws {Error} When an id, colour, effect, brightness, or speed is invalid.
+ */
 export function threadEntry({ id, color, brightness, effect, speed, syncKeysLighting, syncAmbientLighting }) {
   if (!Number.isInteger(id) || id < 0) throw new Error(`Expected an integer thread id ≥ 0: ${id}`);
   const entry = { id };
@@ -74,13 +108,24 @@ export function threadEntry({ id, color, brightness, effect, speed, syncKeysLigh
   return entry;
 }
 
-// v.oai.thstatus parameters: an array of entries, one per slot.
+/**
+ * Builds the parameter array for `v.oai.thstatus`.
+ *
+ * @param {ThreadLightingInput[]} entries Repository-facing slot updates.
+ * @returns {Array<object>} Firmware-facing entries in the original order.
+ */
 export function threadsLightingParams(entries) {
   return entries.map(threadEntry);
 }
 
-// One v.oai.rgbcfg zone. All five fields are required: the method describes a
-// complete zone configuration, not a partial update.
+/**
+ * Builds one complete `v.oai.rgbcfg` zone; unlike thread entries, no field is
+ * optional because the method replaces the whole zone configuration.
+ *
+ * @param {ZoneLightingInput} input Complete zone description.
+ * @returns {{e: number, b: number, s: number, m: unknown, c: number}} Minified zone.
+ * @throws {Error} When colour, brightness, or speed is invalid.
+ */
 export function zoneSide({ effect, brightness, speed, magic, color }) {
   return {
     e: effect,
@@ -91,13 +136,25 @@ export function zoneSide({ effect, brightness, speed, magic, color }) {
   };
 }
 
+/**
+ * Builds the two-zone parameter object for `v.oai.rgbcfg`.
+ *
+ * @param {{ambient: ZoneLightingInput, keys: ZoneLightingInput}} input Zone inputs.
+ * @returns {{ambient: object, keys: object}} Firmware-facing complete configuration.
+ */
 export function rgbConfigParams({ ambient, keys }) {
   return { ambient: zoneSide(ambient), keys: zoneSide(keys) };
 }
 
-// Translates the six thread-status slots into thstatus entries. A free slot is
-// unlit (brightness 0); the others carry their state colour from the repository
-// palette, as a solid effect.
+/**
+ * Translates the six session slots into solid lighting entries. Free slots are
+ * explicitly unlit; known states use the shared repository palette.
+ *
+ * @param {Array<{state?: string}|null>} rows Exactly six session-slot rows.
+ * @param {{brightness?: number}} [options] Brightness for non-free slots.
+ * @returns {Array<object>} Six `v.oai.thstatus` entries in physical key order.
+ * @throws {Error} When the slot count or brightness is invalid.
+ */
 export function slotsToThreadEntries(rows, { brightness = 1 } = {}) {
   if (!Array.isArray(rows) || rows.length !== SLOT_CONTROLS.length) {
     throw new Error(`Expected ${SLOT_CONTROLS.length} slots.`);
@@ -110,7 +167,12 @@ export function slotsToThreadEntries(rows, { brightness = 1 } = {}) {
   });
 }
 
-// Turns the six slots off without touching the other parameters.
+/**
+ * Builds partial entries that turn all six Agent slots off without changing
+ * their colours, effects, speeds, or zone synchronization.
+ *
+ * @returns {Array<object>} Six brightness-only `v.oai.thstatus` entries.
+ */
 export function allOffParams() {
   return SLOT_THREAD_IDS.map((id) => threadEntry({ id, brightness: 0 }));
 }

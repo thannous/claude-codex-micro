@@ -40,6 +40,18 @@ Every stable preset separates:
 The common schemas live in `profiles/schema/v1/`. The BLE track stays separate
 under `ble/`.
 
+## Documenting complex APIs
+
+Exported APIs at hardware and data-integrity boundaries require adjacent JSDoc.
+Document inputs, outputs, stable errors, side effects and preservation rules;
+do not repeat the implementation line by line. The guarded boundaries currently
+cover HID framing and sessions, lighting payloads, AppSense/profile transforms,
+session-slot navigation and the GUI profile workflow.
+
+`tests/api-docs.test.mjs` imports these boundary modules and rejects an exported
+callable or constant without a formal contract. Update the test's explicit
+module list when a new boundary module is introduced.
+
 ## Preparing the environment
 
 Prerequisite: Node.js 18 or newer. The validation dependencies are pinned by

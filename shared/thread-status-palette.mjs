@@ -7,6 +7,7 @@
 // importers keep working, and the GUI imports it to draw its legend — so the two
 // cannot diverge.
 
+/** Canonical session states shared by the reducer, lighting bridge, and GUI. */
 export const STATES = Object.freeze({
   free: "free",
   idle: "idle",
@@ -16,9 +17,10 @@ export const STATES = Object.freeze({
   ended: "ended",
 });
 
-// Hues taken from the repository palette. `blocked` is the only one added: no
-// existing colour meant "a decision is waiting".
-// `free` is `null`: a free slot is unlit, not coloured.
+/**
+ * Repository palette by session state. `free` is null because an unused slot
+ * is unlit; `blocked` is reserved exclusively for a decision awaiting a person.
+ */
 export const STATE_COLORS = Object.freeze({
   free: null,
   idle: "#6D5A7D",
@@ -28,8 +30,7 @@ export const STATE_COLORS = Object.freeze({
   ended: "#2F2927",
 });
 
-// Reading order for a legend: from the most urgent to the most inert. This is
-// not the order of `STATES`, which follows a session's life cycle.
+/** Legend order from the most urgent state to the most inert. */
 export const LEGEND_ORDER = Object.freeze([
   STATES.blocked,
   STATES.running,

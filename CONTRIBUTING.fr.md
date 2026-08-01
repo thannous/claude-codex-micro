@@ -40,6 +40,19 @@ Chaque preset stable sépare :
 Les schémas communs se trouvent dans `profiles/schema/v1/`. La piste BLE reste
 séparée sous `ble/`.
 
+## Documenter les API complexes
+
+Les API exportées aux frontières matérielles et d'intégrité des données exigent
+un JSDoc adjacent. Documenter les entrées, sorties, erreurs stables, effets de
+bord et règles de préservation ; ne pas répéter l'implémentation ligne par ligne.
+Les frontières protégées couvrent actuellement le framing et les sessions HID,
+les charges d'éclairage, les transformations AppSense/profile, la navigation des
+emplacements de session et le workflow de profil du GUI.
+
+`tests/api-docs.test.mjs` importe ces modules frontières et refuse les callables
+et constantes exportés sans contrat formel. Mettre à jour la liste explicite des
+modules du test lorsqu'une nouvelle frontière est introduite.
+
 ## Préparer l'environnement
 
 Prérequis : Node.js 18 ou version ultérieure. Les dépendances de validation
