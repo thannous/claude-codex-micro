@@ -115,8 +115,8 @@ side.
 | --- | --- | --- |
 | Action keycodes on `v.oai.hid` `k` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send; `ACT11` unexplained | **confirmed, plus the explanation of `ACT11`** — see below |
 | Joystick encoding of `v.oai.rad` | `a` normalised over `[0, 1]`: right `0`, down `0.25`, left `0.5`, up `0.75`; `d` a distance over `[0, 1]` | **confirmed**: `0.0107`, `0.2388`, `0.4894`, `0.7614` at `d = 1`. One divergence on release, below |
-| Encoder events | `{k, act: 2}` for a rotation notch, `ENC_CLK` for the click, CW/CC swapped relative to the physical direction | **confirmed**: `act: 2` on rotation with no release event, `ENC_CLK` in `1`/`0`; the swap matches [`effort-wheel-calibration.md`](effort-wheel-calibration.md) |
-| Codex queries the device | `sys.version`, and `device.status` returning `{version, profile_index, layer_index, battery, is_charging}` | **not verified**: unreachable from the host side, where we never see what Codex sends to the device |
+| Encoder events | `{k, act: 2}` for a rotation notch, `ENC_CLK` for the click, CW/CC swapped relative to the physical direction | **confirmed**: `act: 2` on rotation with no release event, `ENC_CLK` in `1`/`0`; a declared-clockwise run gave 30 `ENC_CC` and 0 `ENC_CW` |
+| Codex queries the device | `sys.version`, and `device.status` returning `{version, profile_index, layer_index, battery, is_charging}` | **confirmed**: the device's real answer is broadcast to every reader — see below |
 
 ### `ACT11` is not a key
 
@@ -137,6 +137,26 @@ apparent gap: `ACT11` has no actuator of its own to expose.
 Counting follows from that: **13 keycodes for 12 key actuators**, plus the wheel
 press — which is how the 13 switches announced in the README are made up, by a
 different composition than the 13 keycodes.
+
+### Codex's own traffic is readable from here
+
+The non-exclusive open broadcasts input reports to **every** reader, which
+includes the device's answers to *Codex*, not only to us. A raw capture that
+bypasses `hid-frame.mjs` shows the real `device.status` response, emitted every
+60.009 s:
+
+```json
+{"version":"v0.6.1","profile_index":0,"layer_index":1,"battery":100,"is_charging":false}
+```
+
+The field set is exactly the one the shim claimed. `layer_index` reports the
+active layer, so the roadmap's layer work can read it without any device-side
+vantage point.
+
+This corrects an earlier statement in this document, which described that
+payload as unreachable from the host side. It is not: the reasoning confused
+"we cannot send Codex's requests" with "we cannot see the answers", and the
+broadcast property already documented above makes the second one false.
 
 ### Two divergences from the shim
 
@@ -165,22 +185,16 @@ document is the measured one. And the `device.status` payload is what the shim
   describes both zones at once, so the CLI requires `--keys` and `--ambient`
   together.
 - Whether thread ids beyond 5 exist (other keys): no clue, not explored.
-- **Dropped encoder notches.** In the `v0.6.1` capture, five deliberate slow
-  notches (1.7 to 2.3 s apart) produced only four events, while a fast burst in
-  the other direction produced five, two of them 99 ms apart. An earlier capture
-  lost one notch out of four. Loss is therefore **not** explained by rotation
-  speed, which is the reassuring half; the unexplained half is why a slow,
-  isolated notch goes missing at all. Worth a counted, instrumented run before
-  trusting a notch-per-notch effort mapping.
-- The direction of rotation in that capture rests on the operator's intent, not
-  on an independent signal: the two rotation phases were both meant to be
-  clockwise and emitted opposite keycodes. The `clockwise → ENC_CC` reading
-  therefore still stands on the hardware measurement recorded in
-  [`effort-wheel-calibration.md`](effort-wheel-calibration.md), which this
-  capture is consistent with but does not by itself re-prove.
-- The real `device.status` payload of a Micro, and `profile_index` /
-  `layer_index` in particular: unreachable from the host side, would need a
-  device-side vantage point.
+- **Whether the device drops rotation notches at all: untested.** Several
+  captures returned fewer rotation events than the operator meant to produce,
+  but the physical count was never independently ground-truthed — it rested on
+  counting detents by hand, which the operator judged unreliable afterwards. No
+  drop rate can be derived from those runs, and none should be quoted from them.
+  What *is* settled is that any such loss would not be ours: a raw capture
+  bypassing `hid-frame.mjs` logged 38 reports, 30 notch events and **zero
+  unparseable lines**, so every notch that reached the host was parsed and the
+  silent `catch` in `#dispatch` swallowed nothing. Settling the question needs
+  an independent counter, not a human one.
 - Longevity: this is the format of firmware `v0.4.1`; an update may change it
   without notice.
 

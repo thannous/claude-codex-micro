@@ -112,8 +112,8 @@ quatrième est hors d'atteinte depuis le côté hôte.
 | --- | --- | --- |
 | Keycodes d'action dans `k` de `v.oai.hid` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send ; `ACT11` inexpliqué | **confirmé, et `ACT11` expliqué** — voir ci-dessous |
 | Encodage du joystick dans `v.oai.rad` | `a` normalisé sur `[0, 1]` : droite `0`, bas `0,25`, gauche `0,5`, haut `0,75` ; `d` distance sur `[0, 1]` | **confirmé** : `0,0107`, `0,2388`, `0,4894`, `0,7614` à `d = 1`. Une divergence au relâchement, ci-dessous |
-| Événements de la molette | `{k, act: 2}` pour un cran, `ENC_CLK` pour le clic, CW/CC inversés par rapport au sens physique | **confirmé** : `act: 2` à la rotation sans événement de relâche, `ENC_CLK` en `1`/`0` ; l'inversion recoupe [`effort-wheel-calibration.md`](effort-wheel-calibration.md) |
-| Codex interroge le périphérique | `sys.version`, et `device.status` renvoyant `{version, profile_index, layer_index, battery, is_charging}` | **non vérifié** : inatteignable côté hôte, où l'on ne voit jamais ce que Codex envoie au périphérique |
+| Événements de la molette | `{k, act: 2}` pour un cran, `ENC_CLK` pour le clic, CW/CC inversés par rapport au sens physique | **confirmé** : `act: 2` à la rotation sans événement de relâche, `ENC_CLK` en `1`/`0` ; une série déclarée horaire a donné 30 `ENC_CC` et 0 `ENC_CW` |
+| Codex interroge le périphérique | `sys.version`, et `device.status` renvoyant `{version, profile_index, layer_index, battery, is_charging}` | **confirmé** : la vraie réponse du périphérique est diffusée à tous les lecteurs — voir ci-dessous |
 
 ### `ACT11` n'est pas une touche
 
@@ -135,6 +135,27 @@ propre à exposer.
 Le décompte en découle : **13 keycodes pour 12 actionneurs de touche**, plus le
 clic de molette — c'est ainsi que se composent les 13 switches annoncés par le
 README, par un assemblage différent de celui des 13 keycodes.
+
+### Le trafic propre de Codex est lisible d'ici
+
+L'ouverture non exclusive diffuse les reports d'entrée à **tous** les lecteurs,
+ce qui inclut les réponses du périphérique à *Codex*, pas seulement aux nôtres.
+Une capture brute contournant `hid-frame.mjs` montre la vraie réponse à
+`device.status`, émise toutes les 60,009 s :
+
+```json
+{"version":"v0.6.1","profile_index":0,"layer_index":1,"battery":100,"is_charging":false}
+```
+
+Le jeu de champs est exactement celui qu'annonçait le shim. `layer_index`
+rapporte la couche active : le travail sur les couches prévu par la feuille de
+route peut donc la lire sans aucun point d'observation côté périphérique.
+
+Cela corrige une affirmation antérieure de ce document, qui décrivait cette
+charge utile comme inatteignable côté hôte. Elle ne l'est pas : le raisonnement
+confondait « nous ne pouvons pas émettre les requêtes de Codex » et « nous ne
+pouvons pas en voir les réponses », or la propriété de diffusion déjà documentée
+plus haut rend la seconde fausse.
 
 ### Deux divergences avec le shim
 
@@ -167,23 +188,16 @@ travail sur les couches prévu par la feuille de route.
   ensemble.
 - Si les identifiants de thread au-delà de 5 existent (autres touches) :
   aucun indice, non exploré.
-- **Crans de molette perdus.** Dans la capture `v0.6.1`, cinq crans lents et
-  délibérés (espacés de 1,7 à 2,3 s) n'ont produit que quatre événements, tandis
-  qu'une rafale rapide en sens inverse en a produit cinq, dont deux à 99 ms
-  d'écart. Une capture antérieure avait perdu un cran sur quatre. La perte n'est
-  donc **pas** expliquée par la vitesse de rotation — c'est la moitié
-  rassurante ; la moitié inexpliquée, c'est qu'un cran lent et isolé se perde.
-  À reprendre en série comptée et instrumentée avant de se fier à une
-  correspondance cran par cran pour l'effort.
-- Le sens de rotation dans cette capture repose sur l'intention de l'opérateur,
-  pas sur un signal indépendant : les deux phases de rotation devaient toutes
-  deux être horaires et ont émis des keycodes opposés. La lecture
-  `horaire → ENC_CC` tient donc toujours sur la mesure matérielle consignée dans
-  [`effort-wheel-calibration.md`](effort-wheel-calibration.md), avec laquelle
-  cette capture est cohérente sans la re-prouver par elle-même.
-- La vraie charge utile de `device.status` d'un Micro, et `profile_index` /
-  `layer_index` en particulier : inatteignables côté hôte, il faudrait un point
-  d'observation côté périphérique.
+- **Savoir si le périphérique perd des crans : non testé.** Plusieurs captures
+  ont rendu moins d'événements de rotation que l'opérateur entendait produire,
+  mais le compte physique n'a jamais été établi indépendamment — il reposait sur
+  un comptage de crans à la main, que l'opérateur a jugé peu fiable après coup.
+  Aucun taux de perte ne peut en être tiré, et aucun ne doit en être cité. Ce
+  qui est acquis, c'est qu'une telle perte ne viendrait pas de nous : une
+  capture brute contournant `hid-frame.mjs` a journalisé 38 reports, 30 crans et
+  **zéro ligne illisible**, donc chaque cran parvenu à l'hôte a été parsé et le
+  `catch` silencieux de `#dispatch` n'a rien avalé. Trancher demanderait un
+  compteur indépendant, pas humain.
 - La pérennité : le format est celui du firmware `v0.4.1` ; une mise à jour
   peut le faire évoluer sans prévenir.
 
