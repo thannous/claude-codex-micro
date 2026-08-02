@@ -102,26 +102,60 @@ annoncer un Codex Micro synthétique, et observe donc le trafic que Codex envoie
 report `0x06`, canal `2`, fragments de 61 octets, même descripteur — ce qui
 corrobore la matrice ci-dessus de façon indépendante.
 
-Quatre faits s'y ajoutent. Tous sont **lus dans les sources de ce projet, non
-vérifiés ici** ; ils décrivent des valeurs, là où ce document ne décrivait
-jusqu'ici que des noms de champs.
+Il y ajoutait quatre faits portant sur des **valeurs**, là où ce document ne
+décrivait que des noms de champs. Trois des quatre ont depuis été **mesurés
+ici** sur le firmware `v0.6.1` (capture du 2 août 2026,
+`scripts/lighting.mjs listen`, chaque commande actionnée à la main). Le
+quatrième est hors d'atteinte depuis le côté hôte.
 
-| Fait | Détail |
-| --- | --- |
-| Noms des touches d'action portés par `k` dans `v.oai.hid` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send. `ACT11` reste inexpliqué. Les touches Agent sont `AG00`–`AG05`, comme mesuré ici. |
-| Encodage du joystick dans `v.oai.rad` | `a` est normalisé sur `[0, 1]` : droite = `0`, bas = `0,25`, gauche = `0,5`, haut = `0,75`. `d` est une distance sur `[0, 1]` ; un relâchement répète l'angle avec `d: 0`, après 80 ms dans le shim. |
-| Événements de la molette | `{k: "ENC_CW" \| "ENC_CC", act: 2}` — `act` 2 signale un cran de rotation, distinct du `1`/`0` presse/relâche des touches. Le clic est `ENC_CLK`. Le shim inverse volontairement CW et CC, au motif que Codex nomme les directions vues du dessous du boîtier. |
-| Codex interroge le périphérique | `sys.version`, et `device.status` attendant `{version, profile_index, layer_index, battery, is_charging}`. Le shim répond `true` à toute requête qu'il ne comprend pas, en précisant que la file RPC de Codex est sérialisée et se bloque sur un identifiant non acquitté. |
+| Fait | Affirmation du shim | Mesuré ici |
+| --- | --- | --- |
+| Keycodes d'action dans `k` de `v.oai.hid` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send ; `ACT11` inexpliqué | **confirmé, et `ACT11` expliqué** — voir ci-dessous |
+| Encodage du joystick dans `v.oai.rad` | `a` normalisé sur `[0, 1]` : droite `0`, bas `0,25`, gauche `0,5`, haut `0,75` ; `d` distance sur `[0, 1]` | **confirmé** : `0,0107`, `0,2388`, `0,4894`, `0,7614` à `d = 1`. Une divergence au relâchement, ci-dessous |
+| Événements de la molette | `{k, act: 2}` pour un cran, `ENC_CLK` pour le clic, CW/CC inversés par rapport au sens physique | **confirmé** : `act: 2` à la rotation sans événement de relâche, `ENC_CLK` en `1`/`0` ; l'inversion recoupe [`effort-wheel-calibration.md`](effort-wheel-calibration.md) |
+| Codex interroge le périphérique | `sys.version`, et `device.status` renvoyant `{version, profile_index, layer_index, battery, is_charging}` | **non vérifié** : inatteignable côté hôte, où l'on ne voit jamais ce que Codex envoie au périphérique |
 
-Deux réserves. Le shim se contente d'observer : ses étiquettes de champs sont
-des déductions, pas des mesures. Il lit une entrée de thread comme `{id,
-color: c, enabled: e, effect: m}`, alors que `e` est l'énumération d'effet
-confirmée sur matériel ici et que `m` apparaît dans la description des zones,
-pas dans les entrées de thread. En cas de désaccord, c'est ce document qui a
-mesuré. Et la charge utile de `device.status` est ce que le shim *prétend*
-être, non ce que rapporte un vrai Micro : `profile_index` et `layer_index` sont
-une piste à sonder pour le travail sur les couches prévu par la feuille de
-route, pas une mesure.
+### `ACT11` n'est pas une touche
+
+Un seul appui sur la touche large du bas émet **deux keycodes**, `ACT11` puis
+`ACT10`, trois fois sur trois :
+
+```
+23:14:14.245 ACT11 act1   +5ms ACT10 act1   … ACT10 act0  +3ms ACT11 act0
+23:14:18.502 ACT11 act1   +6ms ACT10 act1   … ACT10 act0  +4ms ACT11 act0
+23:14:21.334 ACT11 act1   +6ms ACT10 act1   … ACT10 act0  +6ms ACT11 act0
+```
+
+L'ordre est invariable, l'imbrication tient en 3 à 6 ms, et les durées d'appui
+(163, 203, 213 ms) sont celles de toutes les autres touches de la même capture.
+C'est **un actionneur physique occupant deux positions de matrice**, pas deux
+touches. D'où le trou apparent chez le shim : `ACT11` n'a pas d'actionneur
+propre à exposer.
+
+Le décompte en découle : **13 keycodes pour 12 actionneurs de touche**, plus le
+clic de molette — c'est ainsi que se composent les 13 switches annoncés par le
+README, par un assemblage différent de celui des 13 keycodes.
+
+### Deux divergences avec le shim
+
+- **Relâchement du joystick.** Le périphérique envoie `{a: 0, d: 0}` et remet
+  donc l'angle à zéro, là où le shim répète le dernier angle avec `d: 0`. Un
+  consommateur lisant l'angle au relâchement lirait « droite » sur le vrai
+  matériel.
+- **Pas de champ `ag`.** Les touches Agent n'émettent que `{k, act}`. Le shim
+  envoie un index `ag` avec ses appuis Agent, et la matrice ci-dessus liste
+  `{k, act, ag}` : `ag` n'a jamais été observé dans cette capture.
+
+### Réserve sur les étiquettes du shim
+
+Le shim se contente d'observer : ses étiquettes de champs sont des déductions,
+pas des mesures. Il lit une entrée de thread comme `{id, color: c, enabled: e,
+effect: m}`, alors que `e` est l'énumération d'effet confirmée sur matériel ici
+et que `m` apparaît dans la description des zones, pas dans les entrées de
+thread. En cas de désaccord, c'est ce document qui a mesuré. Et la charge utile
+de `device.status` est ce que le shim *prétend* être, non ce que rapporte un
+vrai Micro : `profile_index` et `layer_index` restent une piste à sonder pour le
+travail sur les couches prévu par la feuille de route.
 
 ## Ce qui reste ouvert
 
@@ -133,9 +167,23 @@ route, pas une mesure.
   ensemble.
 - Si les identifiants de thread au-delà de 5 existent (autres touches) :
   aucun indice, non exploré.
-- Les quatre faits côté périphérique ci-dessus : lus dans une source tierce,
-  jamais reproduits ici. `ACT11`, la vraie charge utile de `device.status` d'un
-  Micro et le sens physique de `ENC_CW` sont les trois à mesurer en premier.
+- **Crans de molette perdus.** Dans la capture `v0.6.1`, cinq crans lents et
+  délibérés (espacés de 1,7 à 2,3 s) n'ont produit que quatre événements, tandis
+  qu'une rafale rapide en sens inverse en a produit cinq, dont deux à 99 ms
+  d'écart. Une capture antérieure avait perdu un cran sur quatre. La perte n'est
+  donc **pas** expliquée par la vitesse de rotation — c'est la moitié
+  rassurante ; la moitié inexpliquée, c'est qu'un cran lent et isolé se perde.
+  À reprendre en série comptée et instrumentée avant de se fier à une
+  correspondance cran par cran pour l'effort.
+- Le sens de rotation dans cette capture repose sur l'intention de l'opérateur,
+  pas sur un signal indépendant : les deux phases de rotation devaient toutes
+  deux être horaires et ont émis des keycodes opposés. La lecture
+  `horaire → ENC_CC` tient donc toujours sur la mesure matérielle consignée dans
+  [`effort-wheel-calibration.md`](effort-wheel-calibration.md), avec laquelle
+  cette capture est cohérente sans la re-prouver par elle-même.
+- La vraie charge utile de `device.status` d'un Micro, et `profile_index` /
+  `layer_index` en particulier : inatteignables côté hôte, il faudrait un point
+  d'observation côté périphérique.
 - La pérennité : le format est celui du firmware `v0.4.1` ; une mise à jour
   peut le faire évoluer sans prévenir.
 

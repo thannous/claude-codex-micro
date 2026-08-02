@@ -15,6 +15,11 @@ events.
 Measurements on macOS `26.5.2` arm64, Codex Micro firmware `v0.4.1` (read
 through `sys.version`), `node-hid` `3.4.0`.
 
+**Re-verified on firmware `v0.6.1`**, 2 August 2026, after a vendor update. The
+framing, the RPC channel and `v.oai.thstatus` survive two minor versions
+unchanged. The notification surface was measured in full on that occasion; the
+results are in the section below.
+
 ## Legal framing, restated
 
 This document describes an **observed format**: constants, byte positions, JSON
@@ -100,25 +105,57 @@ the device. Its framing matches this document exactly — report `0x06`, channel
 `2`, 61-byte chunks, same descriptor — which is independent corroboration of the
 matrix above.
 
-Four facts it adds. All are **read from that project's source, not verified
-here**; they describe values, where this document so far only described field
-names.
+It added four facts about **values**, where this document previously described
+only field names. Three of the four have since been **measured here** on
+firmware `v0.6.1` (capture of 2 August 2026, `scripts/lighting.mjs listen`,
+every control actuated by hand). The fourth cannot be reached from the host
+side.
 
-| Fact | Detail |
-| --- | --- |
-| Action key names carried by `v.oai.hid` `k` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send. `ACT11` is unaccounted for. Agent keys are `AG00`–`AG05`, as measured here. |
-| Joystick encoding of `v.oai.rad` | `a` is normalised over `[0, 1]`: right = `0`, down = `0.25`, left = `0.5`, up = `0.75`. `d` is a distance over `[0, 1]`; a release repeats the angle with `d: 0`, after 80 ms in the shim. |
-| Encoder events | `{k: "ENC_CW" \| "ENC_CC", act: 2}` — `act` 2 marks a rotation notch, distinct from the `1`/`0` press/release of keys. The click is `ENC_CLK`. The shim swaps CW and CC deliberately, on the grounds that Codex names the directions as seen from the underside of the case. |
-| Codex queries the device | `sys.version`, and `device.status` expecting `{version, profile_index, layer_index, battery, is_charging}`. The shim answers every request it does not understand with `true`, stating that Codex's RPC queue is serialised and stalls on an unanswered id. |
+| Fact | Shim's claim | Measured here |
+| --- | --- | --- |
+| Action keycodes on `v.oai.hid` `k` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send; `ACT11` unexplained | **confirmed, plus the explanation of `ACT11`** — see below |
+| Joystick encoding of `v.oai.rad` | `a` normalised over `[0, 1]`: right `0`, down `0.25`, left `0.5`, up `0.75`; `d` a distance over `[0, 1]` | **confirmed**: `0.0107`, `0.2388`, `0.4894`, `0.7614` at `d = 1`. One divergence on release, below |
+| Encoder events | `{k, act: 2}` for a rotation notch, `ENC_CLK` for the click, CW/CC swapped relative to the physical direction | **confirmed**: `act: 2` on rotation with no release event, `ENC_CLK` in `1`/`0`; the swap matches [`effort-wheel-calibration.md`](effort-wheel-calibration.md) |
+| Codex queries the device | `sys.version`, and `device.status` returning `{version, profile_index, layer_index, battery, is_charging}` | **not verified**: unreachable from the host side, where we never see what Codex sends to the device |
 
-Two cautions. The shim only observes, so its field labels are inferences rather
-than measurements: it reads a thread entry as `{id, color: c, enabled: e,
-effect: m}`, whereas `e` is the effect enumeration confirmed on hardware here
-and `m` appears in zone descriptions, not in thread entries. Where the two
-disagree, this document is the measured one. And the `device.status` payload is
-what the shim *claims* to be, not what a real Micro reports — `profile_index`
-and `layer_index` are a lead worth probing for the layer work in the roadmap,
-not a measurement.
+### `ACT11` is not a key
+
+A single press of the wide bottom key emits **two keycodes**, `ACT11` then
+`ACT10`, three times out of three:
+
+```
+23:14:14.245 ACT11 act1   +5ms ACT10 act1   … ACT10 act0  +3ms ACT11 act0
+23:14:18.502 ACT11 act1   +6ms ACT10 act1   … ACT10 act0  +4ms ACT11 act0
+23:14:21.334 ACT11 act1   +6ms ACT10 act1   … ACT10 act0  +6ms ACT11 act0
+```
+
+The order is invariant, the nesting is 3 to 6 ms, and the hold durations (163,
+203, 213 ms) match every other key in the same capture. This is one physical
+actuator occupying **two matrix positions**, not two keys. Hence the shim's
+apparent gap: `ACT11` has no actuator of its own to expose.
+
+Counting follows from that: **13 keycodes for 12 key actuators**, plus the wheel
+press — which is how the 13 switches announced in the README are made up, by a
+different composition than the 13 keycodes.
+
+### Two divergences from the shim
+
+- **Joystick release.** The device sends `{a: 0, d: 0}`, resetting the angle.
+  The shim repeats the last angle with `d: 0`. A consumer reading the angle on
+  release would see "right" on real hardware.
+- **No `ag` field.** The Agent keys emit `{k, act}` only. The shim sends an `ag`
+  index alongside agent taps, and the matrix above lists `{k, act, ag}` — `ag`
+  was never observed in this capture.
+
+### Caution on the shim's labels
+
+The shim only observes, so its field labels are inferences rather than
+measurements: it reads a thread entry as `{id, color: c, enabled: e, effect: m}`,
+whereas `e` is the effect enumeration confirmed on hardware here and `m` appears
+in zone descriptions, not in thread entries. Where the two disagree, this
+document is the measured one. And the `device.status` payload is what the shim
+*claims* to be, not what a real Micro reports — `profile_index` and
+`layer_index` remain a lead worth probing for the layer work in the roadmap.
 
 ## What is still open
 
@@ -128,9 +165,22 @@ not a measurement.
   describes both zones at once, so the CLI requires `--keys` and `--ambient`
   together.
 - Whether thread ids beyond 5 exist (other keys): no clue, not explored.
-- The four device-side facts above: read from a third-party source, never
-  reproduced here. `ACT11`, the real `device.status` payload of a Micro, and the
-  physical direction of `ENC_CW` are the three worth measuring first.
+- **Dropped encoder notches.** In the `v0.6.1` capture, five deliberate slow
+  notches (1.7 to 2.3 s apart) produced only four events, while a fast burst in
+  the other direction produced five, two of them 99 ms apart. An earlier capture
+  lost one notch out of four. Loss is therefore **not** explained by rotation
+  speed, which is the reassuring half; the unexplained half is why a slow,
+  isolated notch goes missing at all. Worth a counted, instrumented run before
+  trusting a notch-per-notch effort mapping.
+- The direction of rotation in that capture rests on the operator's intent, not
+  on an independent signal: the two rotation phases were both meant to be
+  clockwise and emitted opposite keycodes. The `clockwise → ENC_CC` reading
+  therefore still stands on the hardware measurement recorded in
+  [`effort-wheel-calibration.md`](effort-wheel-calibration.md), which this
+  capture is consistent with but does not by itself re-prove.
+- The real `device.status` payload of a Micro, and `profile_index` /
+  `layer_index` in particular: unreachable from the host side, would need a
+  device-side vantage point.
 - Longevity: this is the format of firmware `v0.4.1`; an update may change it
   without notice.
 
