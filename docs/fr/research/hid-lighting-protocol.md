@@ -92,6 +92,37 @@ attendu, affiché à l'utilisateur.
 `~/.claude/thread-status/slots.json` et pousse les couleurs d'état des six
 emplacements à chaque changement.
 
+## Observations côté périphérique, via un shim indépendant
+
+Tout ce qui précède a été mesuré côté hôte : c'est nous qui écrivons vers le
+clavier. Un projet MIT distinct, `maxxspotter/codex-micro-app`, fait l'inverse.
+Son `apps/micro-shim/` patche `node-hid` à l'intérieur du processus Codex pour y
+annoncer un Codex Micro synthétique, et observe donc le trafic que Codex envoie
+*vers* le périphérique. Son cadrage correspond exactement à ce document —
+report `0x06`, canal `2`, fragments de 61 octets, même descripteur — ce qui
+corrobore la matrice ci-dessus de façon indépendante.
+
+Quatre faits s'y ajoutent. Tous sont **lus dans les sources de ce projet, non
+vérifiés ici** ; ils décrivent des valeurs, là où ce document ne décrivait
+jusqu'ici que des noms de champs.
+
+| Fait | Détail |
+| --- | --- |
+| Noms des touches d'action portés par `k` dans `v.oai.hid` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send. `ACT11` reste inexpliqué. Les touches Agent sont `AG00`–`AG05`, comme mesuré ici. |
+| Encodage du joystick dans `v.oai.rad` | `a` est normalisé sur `[0, 1]` : droite = `0`, bas = `0,25`, gauche = `0,5`, haut = `0,75`. `d` est une distance sur `[0, 1]` ; un relâchement répète l'angle avec `d: 0`, après 80 ms dans le shim. |
+| Événements de la molette | `{k: "ENC_CW" \| "ENC_CC", act: 2}` — `act` 2 signale un cran de rotation, distinct du `1`/`0` presse/relâche des touches. Le clic est `ENC_CLK`. Le shim inverse volontairement CW et CC, au motif que Codex nomme les directions vues du dessous du boîtier. |
+| Codex interroge le périphérique | `sys.version`, et `device.status` attendant `{version, profile_index, layer_index, battery, is_charging}`. Le shim répond `true` à toute requête qu'il ne comprend pas, en précisant que la file RPC de Codex est sérialisée et se bloque sur un identifiant non acquitté. |
+
+Deux réserves. Le shim se contente d'observer : ses étiquettes de champs sont
+des déductions, pas des mesures. Il lit une entrée de thread comme `{id,
+color: c, enabled: e, effect: m}`, alors que `e` est l'énumération d'effet
+confirmée sur matériel ici et que `m` apparaît dans la description des zones,
+pas dans les entrées de thread. En cas de désaccord, c'est ce document qui a
+mesuré. Et la charge utile de `device.status` est ce que le shim *prétend*
+être, non ce que rapporte un vrai Micro : `profile_index` et `layer_index` sont
+une piste à sonder pour le travail sur les couches prévu par la feuille de
+route, pas une mesure.
+
 ## Ce qui reste ouvert
 
 - La sémantique exacte de `sk` / `sa` (synchronisation de la couleur d'un
@@ -102,6 +133,9 @@ emplacements à chaque changement.
   ensemble.
 - Si les identifiants de thread au-delà de 5 existent (autres touches) :
   aucun indice, non exploré.
+- Les quatre faits côté périphérique ci-dessus : lus dans une source tierce,
+  jamais reproduits ici. `ACT11`, la vraie charge utile de `device.status` d'un
+  Micro et le sens physique de `ENC_CW` sont les trois à mesurer en premier.
 - La pérennité : le format est celui du firmware `v0.4.1` ; une mise à jour
   peut le faire évoluer sans prévenir.
 
@@ -115,3 +149,9 @@ emplacements à chaque changement.
 - [`thread-status-feasibility.md`](thread-status-feasibility.md) — mesures
   amont (roster, hooks, contention, réponses orphelines dans le log d'Input).
 - [`appsense-behavior.md`](appsense-behavior.md) — contention et zones.
+- [`maxxspotter/codex-micro-app`](https://github.com/maxxspotter/codex-micro-app)
+  (MIT), `apps/micro-shim/` — les observations côté périphérique ci-dessus. Sa
+  couche d'interception `node-hid` est elle-même adaptée de l'émulateur
+  [Codex Micro Stream Deck](https://github.com/mpociot/codex-micro-stream-deck-emulator)
+  de Marcel Pociot, sous licence MIT. Lecture pour documentation ; aucun code de
+  l'un ou l'autre projet n'est réutilisé ici.

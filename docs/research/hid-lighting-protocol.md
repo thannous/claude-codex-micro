@@ -90,6 +90,36 @@ the user.
 `~/.claude/thread-status/slots.json` and pushes the state colours of the six
 slots on every change.
 
+## Device-side observations, from an independent shim
+
+Everything above was measured host-side: we write to the keyboard. A separate
+MIT project, `maxxspotter/codex-micro-app`, does the opposite. Its
+`apps/micro-shim/` patches `node-hid` inside the Codex desktop process to
+advertise a synthetic Codex Micro, so it observes the traffic Codex sends *to*
+the device. Its framing matches this document exactly — report `0x06`, channel
+`2`, 61-byte chunks, same descriptor — which is independent corroboration of the
+matrix above.
+
+Four facts it adds. All are **read from that project's source, not verified
+here**; they describe values, where this document so far only described field
+names.
+
+| Fact | Detail |
+| --- | --- |
+| Action key names carried by `v.oai.hid` `k` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send. `ACT11` is unaccounted for. Agent keys are `AG00`–`AG05`, as measured here. |
+| Joystick encoding of `v.oai.rad` | `a` is normalised over `[0, 1]`: right = `0`, down = `0.25`, left = `0.5`, up = `0.75`. `d` is a distance over `[0, 1]`; a release repeats the angle with `d: 0`, after 80 ms in the shim. |
+| Encoder events | `{k: "ENC_CW" \| "ENC_CC", act: 2}` — `act` 2 marks a rotation notch, distinct from the `1`/`0` press/release of keys. The click is `ENC_CLK`. The shim swaps CW and CC deliberately, on the grounds that Codex names the directions as seen from the underside of the case. |
+| Codex queries the device | `sys.version`, and `device.status` expecting `{version, profile_index, layer_index, battery, is_charging}`. The shim answers every request it does not understand with `true`, stating that Codex's RPC queue is serialised and stalls on an unanswered id. |
+
+Two cautions. The shim only observes, so its field labels are inferences rather
+than measurements: it reads a thread entry as `{id, color: c, enabled: e,
+effect: m}`, whereas `e` is the effect enumeration confirmed on hardware here
+and `m` appears in zone descriptions, not in thread entries. Where the two
+disagree, this document is the measured one. And the `device.status` payload is
+what the shim *claims* to be, not what a real Micro reports — `profile_index`
+and `layer_index` are a lead worth probing for the layer work in the roadmap,
+not a measurement.
+
 ## What is still open
 
 - The exact semantics of `sk` / `sa` (syncing a thread's colour towards the key
@@ -98,6 +128,9 @@ slots on every change.
   describes both zones at once, so the CLI requires `--keys` and `--ambient`
   together.
 - Whether thread ids beyond 5 exist (other keys): no clue, not explored.
+- The four device-side facts above: read from a third-party source, never
+  reproduced here. `ACT11`, the real `device.status` payload of a Micro, and the
+  physical direction of `ENC_CW` are the three worth measuring first.
 - Longevity: this is the format of firmware `v0.4.1`; an update may change it
   without notice.
 
@@ -111,3 +144,8 @@ slots on every change.
 - [`thread-status-feasibility.md`](thread-status-feasibility.md) — upstream
   measurements (roster, hooks, contention, orphan responses in Input's log).
 - [`appsense-behavior.md`](appsense-behavior.md) — contention and zones.
+- [`maxxspotter/codex-micro-app`](https://github.com/maxxspotter/codex-micro-app)
+  (MIT), `apps/micro-shim/` — the device-side observations above. Its `node-hid`
+  interception layer is itself adapted from Marcel Pociot's MIT-licensed
+  [Codex Micro Stream Deck emulator](https://github.com/mpociot/codex-micro-stream-deck-emulator).
+  Read for documentation; no code from either project is reused here.
