@@ -92,6 +92,92 @@ attendu, affiché à l'utilisateur.
 `~/.claude/thread-status/slots.json` et pousse les couleurs d'état des six
 emplacements à chaque changement.
 
+## Observations côté périphérique, via un shim indépendant
+
+Tout ce qui précède a été mesuré côté hôte : c'est nous qui écrivons vers le
+clavier. Un projet MIT distinct, `maxxspotter/codex-micro-app`, fait l'inverse.
+Son `apps/micro-shim/` patche `node-hid` à l'intérieur du processus Codex pour y
+annoncer un Codex Micro synthétique, et observe donc le trafic que Codex envoie
+*vers* le périphérique. Son cadrage correspond exactement à ce document —
+report `0x06`, canal `2`, fragments de 61 octets, même descripteur — ce qui
+corrobore la matrice ci-dessus de façon indépendante.
+
+Il y ajoutait quatre faits portant sur des **valeurs**, là où ce document ne
+décrivait que des noms de champs. Trois des quatre ont depuis été **mesurés
+ici** sur le firmware `v0.6.1` (capture du 2 août 2026,
+`scripts/lighting.mjs listen`, chaque commande actionnée à la main). Le
+quatrième est hors d'atteinte depuis le côté hôte.
+
+| Fait | Affirmation du shim | Mesuré ici |
+| --- | --- | --- |
+| Keycodes d'action dans `k` de `v.oai.hid` | `ACT06` fast, `ACT07` approve, `ACT08` reject, `ACT09` split, `ACT10` mic, `ACT12` send ; `ACT11` inexpliqué | **confirmé, et `ACT11` expliqué** — voir ci-dessous |
+| Encodage du joystick dans `v.oai.rad` | `a` normalisé sur `[0, 1]` : droite `0`, bas `0,25`, gauche `0,5`, haut `0,75` ; `d` distance sur `[0, 1]` | **confirmé** : `0,0107`, `0,2388`, `0,4894`, `0,7614` à `d = 1`. Une divergence au relâchement, ci-dessous |
+| Événements de la molette | `{k, act: 2}` pour un cran, `ENC_CLK` pour le clic, CW/CC inversés par rapport au sens physique | **confirmé** : `act: 2` à la rotation sans événement de relâche, `ENC_CLK` en `1`/`0` ; une série déclarée horaire a donné 30 `ENC_CC` et 0 `ENC_CW` |
+| Codex interroge le périphérique | `sys.version`, et `device.status` renvoyant `{version, profile_index, layer_index, battery, is_charging}` | **confirmé** : la vraie réponse du périphérique est diffusée à tous les lecteurs — voir ci-dessous |
+
+### `ACT11` n'est pas une touche
+
+Un seul appui sur la touche large du bas émet **deux keycodes**, `ACT11` puis
+`ACT10`, trois fois sur trois :
+
+```
+23:14:14.245 ACT11 act1   +5ms ACT10 act1   … ACT10 act0  +3ms ACT11 act0
+23:14:18.502 ACT11 act1   +6ms ACT10 act1   … ACT10 act0  +4ms ACT11 act0
+23:14:21.334 ACT11 act1   +6ms ACT10 act1   … ACT10 act0  +6ms ACT11 act0
+```
+
+L'ordre est invariable, l'imbrication tient en 3 à 6 ms, et les durées d'appui
+(163, 203, 213 ms) sont celles de toutes les autres touches de la même capture.
+C'est **un actionneur physique occupant deux positions de matrice**, pas deux
+touches. D'où le trou apparent chez le shim : `ACT11` n'a pas d'actionneur
+propre à exposer.
+
+Le décompte en découle : **13 keycodes pour 12 actionneurs de touche**, plus le
+clic de molette — c'est ainsi que se composent les 13 switches annoncés par le
+README, par un assemblage différent de celui des 13 keycodes.
+
+### Le trafic propre de Codex est lisible d'ici
+
+L'ouverture non exclusive diffuse les reports d'entrée à **tous** les lecteurs,
+ce qui inclut les réponses du périphérique à *Codex*, pas seulement aux nôtres.
+Une capture brute contournant `hid-frame.mjs` montre la vraie réponse à
+`device.status`, émise toutes les 60,009 s :
+
+```json
+{"version":"v0.6.1","profile_index":0,"layer_index":1,"battery":100,"is_charging":false}
+```
+
+Le jeu de champs est exactement celui qu'annonçait le shim. `layer_index`
+rapporte la couche active : le travail sur les couches prévu par la feuille de
+route peut donc la lire sans aucun point d'observation côté périphérique.
+
+Cela corrige une affirmation antérieure de ce document, qui décrivait cette
+charge utile comme inatteignable côté hôte. Elle ne l'est pas : le raisonnement
+confondait « nous ne pouvons pas émettre les requêtes de Codex » et « nous ne
+pouvons pas en voir les réponses », or la propriété de diffusion déjà documentée
+plus haut rend la seconde fausse.
+
+### Deux divergences avec le shim
+
+- **Relâchement du joystick.** Le périphérique envoie `{a: 0, d: 0}` et remet
+  donc l'angle à zéro, là où le shim répète le dernier angle avec `d: 0`. Un
+  consommateur lisant l'angle au relâchement lirait « droite » sur le vrai
+  matériel.
+- **Pas de champ `ag`.** Les touches Agent n'émettent que `{k, act}`. Le shim
+  envoie un index `ag` avec ses appuis Agent, et la matrice ci-dessus liste
+  `{k, act, ag}` : `ag` n'a jamais été observé dans cette capture.
+
+### Réserve sur les étiquettes du shim
+
+Le shim se contente d'observer : ses étiquettes de champs sont des déductions,
+pas des mesures. Il lit une entrée de thread comme `{id, color: c, enabled: e,
+effect: m}`, alors que `e` est l'énumération d'effet confirmée sur matériel ici
+et que `m` apparaît dans la description des zones, pas dans les entrées de
+thread. En cas de désaccord, c'est ce document qui a mesuré. Et la charge utile
+de `device.status` est ce que le shim *prétend* être, non ce que rapporte un
+vrai Micro : `profile_index` et `layer_index` restent une piste à sonder pour le
+travail sur les couches prévu par la feuille de route.
+
 ## Ce qui reste ouvert
 
 - La sémantique exacte de `sk` / `sa` (synchronisation de la couleur d'un
@@ -102,6 +188,16 @@ emplacements à chaque changement.
   ensemble.
 - Si les identifiants de thread au-delà de 5 existent (autres touches) :
   aucun indice, non exploré.
+- **Savoir si le périphérique perd des crans : non testé.** Plusieurs captures
+  ont rendu moins d'événements de rotation que l'opérateur entendait produire,
+  mais le compte physique n'a jamais été établi indépendamment — il reposait sur
+  un comptage de crans à la main, que l'opérateur a jugé peu fiable après coup.
+  Aucun taux de perte ne peut en être tiré, et aucun ne doit en être cité. Ce
+  qui est acquis, c'est qu'une telle perte ne viendrait pas de nous : une
+  capture brute contournant `hid-frame.mjs` a journalisé 38 reports, 30 crans et
+  **zéro ligne illisible**, donc chaque cran parvenu à l'hôte a été parsé et le
+  `catch` silencieux de `#dispatch` n'a rien avalé. Trancher demanderait un
+  compteur indépendant, pas humain.
 - La pérennité : le format est celui du firmware `v0.4.1` ; une mise à jour
   peut le faire évoluer sans prévenir.
 
@@ -115,3 +211,9 @@ emplacements à chaque changement.
 - [`thread-status-feasibility.md`](thread-status-feasibility.md) — mesures
   amont (roster, hooks, contention, réponses orphelines dans le log d'Input).
 - [`appsense-behavior.md`](appsense-behavior.md) — contention et zones.
+- [`maxxspotter/codex-micro-app`](https://github.com/maxxspotter/codex-micro-app)
+  (MIT), `apps/micro-shim/` — les observations côté périphérique ci-dessus. Sa
+  couche d'interception `node-hid` est elle-même adaptée de l'émulateur
+  [Codex Micro Stream Deck](https://github.com/mpociot/codex-micro-stream-deck-emulator)
+  de Marcel Pociot, sous licence MIT. Lecture pour documentation ; aucun code de
+  l'un ou l'autre projet n'est réutilisé ici.
