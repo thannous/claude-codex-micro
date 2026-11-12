@@ -1,0 +1,392 @@
+{
+  "keyboard": "codex_micro",
+  "language": "us",
+  "profile": {
+    "id": 102,
+    "name": "Claude macOS",
+    "layers": [
+      {
+        "id": 0,
+        "name": "Layer 1",
+        "color": "#FF0000",
+        "layout": {
+          "encoders": [
+            [
+              {
+                "keycode": "KV_OAI_ENC_CC"
+              },
+              {
+                "keycode": "KV_OAI_ENC_CW"
+              },
+              {
+                "keycode": "KV_OAI_ENC_CLK"
+              }
+            ]
+          ],
+          "joystick": {
+            "type": "VENDOR",
+            "sectors": []
+          },
+          "base": [
+            [
+              {
+                "keycode": "KV_OAI_AG00"
+              },
+              {
+                "keycode": "KV_OAI_AG01"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_AG02"
+              },
+              {
+                "keycode": "KV_OAI_AG03"
+              },
+              {
+                "keycode": "KV_OAI_AG04"
+              },
+              {
+                "keycode": "KV_OAI_AG05"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_ACT06"
+              },
+              {
+                "keycode": "KV_OAI_ACT07"
+              },
+              {
+                "keycode": "KV_OAI_ACT08"
+              },
+              {
+                "keycode": "KV_OAI_ACT09"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_ACT10"
+              },
+              {
+                "keycode": "KV_OAI_ACT11"
+              },
+              {
+                "keycode": "KV_OAI_ACT12"
+              }
+            ]
+          ]
+        },
+        "os": 0
+      },
+      {
+        "id": 1,
+        "name": "Claude",
+        "color": "#F00",
+        "layout": {
+          "encoders": [
+            [
+              {
+                "keycode": "KA_0"
+              },
+              {
+                "keycode": "KA_1"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ]
+          ],
+          "joystick": {
+            "type": "RADIAL",
+            "sectors": [
+              {
+                "k": "KI_X",
+                "a1": 0.1875,
+                "a2": 0.3125
+              },
+              {
+                "k": "KC_LEFT",
+                "a1": 0.3125,
+                "a2": 0.53125
+              },
+              {
+                "k": "KC_DOWN",
+                "a1": 0.53125,
+                "a2": 0.75
+              },
+              {
+                "k": "KC_RGHT",
+                "a1": 0.75,
+                "a2": 0.96875
+              },
+              {
+                "k": "KC_UP",
+                "a1": 0.96875,
+                "a2": 0.1875
+              }
+            ]
+          },
+          "base": [
+            [
+              {
+                "keycode": "KV_OAI_AG00"
+              },
+              {
+                "keycode": "KV_OAI_AG01"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_AG02"
+              },
+              {
+                "keycode": "KV_OAI_AG03"
+              },
+              {
+                "keycode": "KV_OAI_AG04"
+              },
+              {
+                "keycode": "KV_OAI_AG05"
+              }
+            ],
+            [
+              {
+                "keycode": "KA_2"
+              },
+              {
+                "keycode": "KA_3"
+              },
+              {
+                "keycode": "KA_4"
+              },
+              {
+                "keycode": "KC_ESC"
+              }
+            ],
+            [
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ]
+          ]
+        },
+        "os": 0,
+        "lights": {
+          "backlight": {
+            "effect": "solid",
+            "brightness": 1,
+            "speed": 0.5,
+            "magic": 1,
+            "color": "#FFFFFF"
+          },
+          "underglow": {
+            "effect": "rainbow",
+            "brightness": 1,
+            "speed": 0.55,
+            "magic": 1,
+            "color": "#FFFFFF"
+          }
+        },
+        "linkedAppId": 17
+      }
+    ]
+  },
+  "actions": [
+    {
+      "id": 0,
+      "name": "Claude Effort Up",
+      "color": null,
+      "keyInputs": [
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_LSFT",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_E",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_LSFT",
+          "delay": 0,
+          "actionType": 0
+        },
+        {
+          "keycode": "KC_LGUI",
+          "delay": 80,
+          "actionType": 0
+        },
+        {
+          "keycode": "KC_RGHT",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_ESC",
+          "delay": 10,
+          "actionType": 2
+        }
+      ]
+    },
+    {
+      "id": 1,
+      "name": "Claude Effort Down",
+      "color": null,
+      "keyInputs": [
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_LSFT",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_E",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_LSFT",
+          "delay": 0,
+          "actionType": 0
+        },
+        {
+          "keycode": "KC_LGUI",
+          "delay": 80,
+          "actionType": 0
+        },
+        {
+          "keycode": "KC_LEFT",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_ESC",
+          "delay": 10,
+          "actionType": 2
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Claude New",
+      "color": null,
+      "keyInputs": [
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_N",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 0
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Claude Voice",
+      "color": null,
+      "keyInputs": [
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_D",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 0
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Claude Diff",
+      "color": null,
+      "keyInputs": [
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_LSFT",
+          "delay": 0,
+          "actionType": 1
+        },
+        {
+          "keycode": "KC_D",
+          "delay": 0,
+          "actionType": 2
+        },
+        {
+          "keycode": "KC_LSFT",
+          "delay": 0,
+          "actionType": 0
+        },
+        {
+          "keycode": "KC_LGUI",
+          "delay": 0,
+          "actionType": 0
+        }
+      ]
+    }
+  ],
+  "multiactions": [],
+  "smartActions": [],
+  "actionGroups": [
+    {
+      "id": 0,
+      "name": "Claude macOS",
+      "actionIds": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ]
+    }
+  ],
+  "multiactionGroups": [
+    {
+      "id": 0,
+      "name": "Claude macOS",
+      "actionIds": []
+    }
+  ],
+  "smartActionGroups": [
+    {
+      "id": 0,
+      "name": "Claude macOS",
+      "actionIds": []
+    }
+  ]
+}

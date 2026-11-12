@@ -8,16 +8,16 @@
 // volatile HID reports are emitted; nothing is flashed, nothing goes into
 // Input's storage.
 //
-// Contention: the ChatGPT app pushes its own configuration every 35 to 40s and
-// the last write wins. Without --hold, a state set here can be overwritten;
+// Contention: the ChatGPT app can push its own configuration and the last write
+// wins. The historical 35–40s cadence was not reproduced in November probes.
+// Without --hold, a state set here can be overwritten;
 // with --hold, any detected foreign push triggers an immediate reapply (plus a
 // periodic safety net).
 
 import { spawn } from "node:child_process";
 import { promises as fs, watch } from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { createDeviceLink } from "./lib/device-link.mjs";
 import { DeviceError, DeviceSession, listInterfaces } from "./lib/hid-device.mjs";
 import {
   EFFECTS,
@@ -29,11 +29,11 @@ import {
   slotsToThreadEntries,
   threadEntry,
 } from "./lib/hid-lighting.mjs";
+import { createRunLoop } from "./lib/run-loop.mjs";
+import { statePaths } from "./lib/state-paths.mjs";
 import { SLOT_CONTROLS, SLOT_COUNT } from "./lib/thread-slots.mjs";
 
-const stateDir =
-  process.env.CLAUDE_THREAD_STATUS_DIR || path.join(os.homedir(), ".claude", "thread-status");
-const slotsPath = path.join(stateDir, "slots.json");
+const { slotsPath } = statePaths();
 
 // Guard time against the firmware's key repeats.
 const FOCUS_DEBOUNCE_MS = 300;
@@ -49,7 +49,8 @@ Commands
   set slot <1-${SLOT_COUNT}> <#RRGGBB> [opts]   colour/effect of one Agent key
   set all <#RRGGBB> [opts]                    same setting on all six keys
   set zones --keys=#RRGGBB --ambient=#RRGGBB [opts]   the two global zones
-  watch [--hold] [--focus]    push slots.json state colours continuously
+  watch [--hold] [--focus]    push slots.json state colours continuously; waits
+                              for the keyboard and reconnects when it returns
                               --focus: pressing an Agent key goes to its session
   listen                      log key and joystick events (v.oai.hid / v.oai.rad)
   off                         turn the six Agent keys off
@@ -62,8 +63,9 @@ Options
   --hold                      reapply as soon as a foreign write is detected
   --path=path                 specific HID interface (default: first one found)
 
-Contention: the ChatGPT app pushes its own configuration every 35 to 40s and the
-last write wins. Without --hold, the state set here can be overwritten.
+Contention: the ChatGPT app can overwrite lighting; last write wins. Its
+historical periodic cadence has not been reproduced on every version.
+Without --hold, the state set here can be overwritten.
 `;
 }
 
@@ -302,59 +304,74 @@ async function commandWatch(flags) {
     );
   }
 
+  // The keyboard comes and goes — unplugged, switched to Bluetooth, asleep. The
+  // link reopens it, and `onConnect` puts the colours back: they are volatile.
   let lastApplied = null;
-  const apply = async (reason) => {
-    if (!lastApplied) return;
-    await session.call(METHODS.threadsLighting, lastApplied).catch((error) => {
-      process.stderr.write(`  ! write failed (${reason}): ${error.message}\n`);
-    });
-  };
-
-  const session = await openSession(flags, {
-    onForeignWrite: flags.hold
-      ? (foreignMethod) => {
-          process.stdout.write(`  ! foreign write (${foreignMethod}) — reapplying\n`);
-          void apply("hold");
-        }
-      : undefined,
+  const stamp = () => new Date().toISOString();
+  const link = createDeviceLink({
+    open: () =>
+      DeviceSession.open({
+        path: flags.path === true ? undefined : flags.path,
+        onForeignWrite: flags.hold
+          ? (foreignMethod) => {
+              process.stdout.write(`  ! foreign write (${foreignMethod}) — reapplying\n`);
+              void apply("hold");
+            }
+          : undefined,
+      }),
+    onConnect: async (session) => {
+      process.stdout.write(`${stamp()}  keyboard connected\n`);
+      if (flags.focus) session.onNotification(METHODS.notifyHid, onAgentKey);
+      await apply("connected");
+    },
+    onMissing: (error) => process.stdout.write(`${stamp()}  ${error.message}\n  Waiting for the keyboard.\n`),
+    onLost: (error) => process.stdout.write(`${stamp()}  keyboard lost (${error.message}) — waiting for it to come back\n`),
   });
-  if (!session) return;
+
+  const apply = async (reason) => {
+    const session = link.session();
+    if (!session || !lastApplied) return;
+    try {
+      await session.call(METHODS.threadsLighting, lastApplied);
+    } catch (error) {
+      // A dead handle is the link's to deal with; anything else is worth a line.
+      if (!link.lost(error)) process.stderr.write(`  ! write failed (${reason}): ${error.message}\n`);
+    }
+  };
 
   // The six Agent keys emit `v.oai.hid` with `k` set to `AG00` through `AG05`:
   // the keyboard itself names the slot that was pressed, over the HID channel
   // already open. No global shortcut, no native API, no macOS permission.
   // `act` is 1 on press and 0 on release.
-  if (flags.focus) {
-    let lastPress = 0;
-    const focusScript = fileURLToPath(new URL("./thread-status.mjs", import.meta.url));
-    session.onNotification(METHODS.notifyHid, (params) => {
-      const match = /^AG0([0-5])$/.exec(params?.k ?? "");
-      if (!match || params.act !== 1) return;
-      const now = Date.now();
-      if (now - lastPress < FOCUS_DEBOUNCE_MS) return;
-      lastPress = now;
-      const slot = Number(match[1]) + 1;
-      const child = spawn(process.execPath, [focusScript, "focus", String(slot)], {
-        stdio: ["ignore", "pipe", "pipe"],
-      });
-      let output = "";
-      child.stdout.on("data", (chunk) => (output += chunk));
-      child.stderr.on("data", (chunk) => (output += chunk));
-      child.on("close", () => {
-        // Every line, not only the first: for a closed session, `focus` answers
-        // over two lines and the second one carries the resume command. Showing
-        // only one hid the part that mattered.
-        const lines = output.trim().split("\n").filter((line) => line.trim());
-        const stamp = `${new Date().toISOString()}  [key ${slot}]  `;
-        process.stdout.write(
-          lines.length
-            ? `${stamp}${lines[0]}\n${lines.slice(1).map((line) => `${" ".repeat(stamp.length)}${line.trim()}\n`).join("")}`
-            : `${stamp}no output\n`,
-        );
-      });
+  let lastPress = 0;
+  const focusScript = fileURLToPath(new URL("./thread-status.mjs", import.meta.url));
+  const onAgentKey = (params) => {
+    const match = /^AG0([0-5])$/.exec(params?.k ?? "");
+    if (!match || params.act !== 1) return;
+    const now = Date.now();
+    if (now - lastPress < FOCUS_DEBOUNCE_MS) return;
+    lastPress = now;
+    const slot = Number(match[1]) + 1;
+    const child = spawn(process.execPath, [focusScript, "focus", String(slot)], {
+      stdio: ["ignore", "pipe", "pipe"],
     });
-    process.stdout.write("Pressing an Agent key navigates to its session.\n");
-  }
+    let output = "";
+    child.stdout.on("data", (chunk) => (output += chunk));
+    child.stderr.on("data", (chunk) => (output += chunk));
+    child.on("close", () => {
+      // Every line, not only the first: for a closed session, `focus` answers
+      // over two lines and the second one carries the resume command. Showing
+      // only one hid the part that mattered.
+      const lines = output.trim().split("\n").filter((line) => line.trim());
+      const prefix = `${stamp()}  [key ${slot}]  `;
+      process.stdout.write(
+        lines.length
+          ? `${prefix}${lines[0]}\n${lines.slice(1).map((line) => `${" ".repeat(prefix.length)}${line.trim()}\n`).join("")}`
+          : `${prefix}no output\n`,
+      );
+    });
+  };
+  if (flags.focus) process.stdout.write("Pressing an Agent key navigates to its session.\n");
 
   const push = async (nextRows, reason) => {
     const entries = slotsToThreadEntries(nextRows);
@@ -363,25 +380,21 @@ async function commandWatch(flags) {
     lastApplied = entries;
     await apply(reason);
     const summary = nextRows.map((row) => `${row.slot}:${row.state}`).join("  ");
-    process.stdout.write(`${new Date().toISOString()}  [${reason}]  ${summary}\n`);
+    process.stdout.write(`${stamp()}  [${reason}]  ${summary}\n`);
   };
 
   await push(rows, "initial");
   holdNote(flags);
+  link.start();
 
-  let queued = false;
-  const watcher = watch(slotsPath, () => {
-    if (queued) return;
-    queued = true;
-    setTimeout(async () => {
-      queued = false;
-      try {
-        await push(await readSlots(), "slots.json");
-      } catch (error) {
-        process.stderr.write(`  ! re-read: ${error.message}\n`);
-      }
-    }, 100);
+  // A write to slots.json raises several change events. The delay lets them
+  // settle into one read; a change that lands while a push is under way gets
+  // its own pass afterwards.
+  const follow = createRunLoop(async () => push(await readSlots(), "slots.json"), {
+    delayMs: 100,
+    onError: (error) => process.stderr.write(`  ! re-read: ${error.message}\n`),
   });
+  const watcher = watch(slotsPath, follow.request);
 
   // Safety net: under --hold, reapply periodically whatever happens.
   const timer = flags.hold ? setInterval(() => void apply("safety-net"), HOLD_SAFETY_MS) : null;
@@ -390,7 +403,7 @@ async function commandWatch(flags) {
   process.on("SIGINT", async () => {
     watcher.close();
     if (timer) clearInterval(timer);
-    await session.close();
+    await link.stop();
     process.exit(0);
   });
 }

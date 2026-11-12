@@ -1,0 +1,210 @@
+{
+  "keyboard": "codex_micro",
+  "language": "us",
+  "profile": {
+    "id": 101,
+    "name": "Input 1.1 source",
+    "layers": [
+      {
+        "id": 0,
+        "name": "Layer 1",
+        "color": "#FF0000",
+        "layout": {
+          "encoders": [
+            [
+              {
+                "keycode": "KV_OAI_ENC_CC"
+              },
+              {
+                "keycode": "KV_OAI_ENC_CW"
+              },
+              {
+                "keycode": "KV_OAI_ENC_CLK"
+              }
+            ]
+          ],
+          "joystick": {
+            "type": "VENDOR",
+            "sectors": []
+          },
+          "base": [
+            [
+              {
+                "keycode": "KV_OAI_AG00"
+              },
+              {
+                "keycode": "KV_OAI_AG01"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_AG02"
+              },
+              {
+                "keycode": "KV_OAI_AG03"
+              },
+              {
+                "keycode": "KV_OAI_AG04"
+              },
+              {
+                "keycode": "KV_OAI_AG05"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_ACT06"
+              },
+              {
+                "keycode": "KV_OAI_ACT07"
+              },
+              {
+                "keycode": "KV_OAI_ACT08"
+              },
+              {
+                "keycode": "KV_OAI_ACT09"
+              }
+            ],
+            [
+              {
+                "keycode": "KV_OAI_ACT10"
+              },
+              {
+                "keycode": "KV_OAI_ACT11"
+              },
+              {
+                "keycode": "KV_OAI_ACT12"
+              }
+            ]
+          ]
+        },
+        "os": 0
+      },
+      {
+        "id": 1,
+        "name": "Claude",
+        "color": "#F00",
+        "layout": {
+          "encoders": [
+            [
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ]
+          ],
+          "joystick": {
+            "type": "RADIAL",
+            "sectors": [
+              {
+                "k": "KI_X",
+                "a1": 0.1875,
+                "a2": 0.3125
+              },
+              {
+                "k": "KC_NONE",
+                "a1": 0.3125,
+                "a2": 0.1875
+              }
+            ]
+          },
+          "base": [
+            [
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ],
+            [
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ],
+            [
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ],
+            [
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              },
+              {
+                "keycode": "KC_NONE"
+              }
+            ]
+          ]
+        },
+        "os": 0,
+        "lights": {
+          "backlight": {
+            "effect": "solid",
+            "brightness": 1,
+            "speed": 0.5,
+            "magic": 1,
+            "color": "#FFFFFF"
+          },
+          "underglow": {
+            "effect": "rainbow",
+            "brightness": 1,
+            "speed": 0.55,
+            "magic": 1,
+            "color": "#FFFFFF"
+          }
+        },
+        "linkedAppId": 17
+      }
+    ]
+  },
+  "actions": [],
+  "multiactions": [],
+  "smartActions": [],
+  "actionGroups": [
+    {
+      "id": 0,
+      "name": "Claude AppSense B",
+      "actionIds": []
+    }
+  ],
+  "multiactionGroups": [
+    {
+      "id": 0,
+      "name": "Claude AppSense B",
+      "actionIds": []
+    }
+  ],
+  "smartActionGroups": [
+    {
+      "id": 0,
+      "name": "Claude AppSense B",
+      "actionIds": []
+    }
+  ]
+}

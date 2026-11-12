@@ -2,7 +2,8 @@
 
 // Local companion for the six Agent keys. Reconciles two official sources:
 //
-//   - `claude agents --json` for the roster of live sessions;
+//   - `claude agents --json` for the roster of live sessions, asked once per
+//     Claude configuration directory, since each only lists its own;
 //   - the NDJSON journal written by the thread-status plugin for their states.
 //
 // It writes nothing to the device. Its output is `slots.json`, the seam the
@@ -13,45 +14,23 @@
 // is still open.
 
 import { spawnSync } from "node:child_process";
-import { existsSync, promises as fs, readdirSync, watch } from "node:fs";
-import os from "node:os";
+import { watch } from "node:fs";
 import path from "node:path";
+import { resolveClaudeBinary } from "./lib/claude-binary.mjs";
+import { collectConfigDirs, mergeRosters } from "./lib/config-dirs.mjs";
 import { redactHome } from "./lib/input-export.mjs";
-import {
-  SLOT_COUNT,
-  STATES,
-  applyHookEvent,
-  applyRoster,
-  emptySnapshot,
-  normalizeSnapshot,
-  resolveNavigation,
-  slotView,
-  ttyDevice,
-} from "./lib/thread-slots.mjs";
+import { learnConfigDirs, reconcileSnapshot } from "./lib/reconcile.mjs";
+import { enrichRoster, readRosters } from "./lib/roster-source.mjs";
+import { createRunLoop } from "./lib/run-loop.mjs";
+import { ROSTER_STATUSES } from "./lib/session-machine.mjs";
+import { createSlotStore } from "./lib/slot-store.mjs";
+import { focusTerminal } from "./lib/terminals.mjs";
+import { SLOT_COUNT, STATES, resolveNavigation, slotView } from "./lib/thread-slots.mjs";
 
-// Path contract shared with thread-status/bin/emit.mjs, which deliberately
-// stays dependency-free.
-const stateDir =
-  process.env.CLAUDE_THREAD_STATUS_DIR || path.join(os.homedir(), ".claude", "thread-status");
-const journalPath = path.join(stateDir, "events.ndjson");
-const snapshotPath = path.join(stateDir, "slots.json");
+const store = createSlotStore();
+const { stateDir, journalPath, slotsPath } = store.paths;
 
 const DEFAULT_INTERVAL_MS = 2000;
-
-// Host terminal detected from the executable name reported by `ps`. Only iTerm2
-// and Terminal are scriptable here; the others are named so the error message is
-// actionable instead of generic.
-const TERMINAL_APPS = [
-  { basename: "iTerm2", name: "iTerm2", driver: "iterm" },
-  { basename: "Terminal", name: "Terminal", driver: "terminal" },
-  { basename: "ghostty", name: "Ghostty", driver: null },
-  { basename: "wezterm-gui", name: "WezTerm", driver: null },
-  { basename: "alacritty", name: "Alacritty", driver: null },
-  { basename: "kitty", name: "kitty", driver: null },
-  { basename: "warp", name: "Warp", driver: null },
-  { basename: "hyper", name: "Hyper", driver: null },
-  { basename: "tmux", name: "tmux", driver: null },
-];
 
 function usage() {
   return `Usage: node scripts/thread-status.mjs <command>
@@ -63,7 +42,11 @@ Commands
   doctor                  check prerequisites and sources
 
 Environment
-  CLAUDE_THREAD_STATUS_DIR  state directory (default ~/.claude/thread-status)
+  CLAUDE_THREAD_STATUS_DIR          state directory (default ~/.claude/thread-status)
+  CLAUDE_THREAD_STATUS_CONFIG_DIRS  extra Claude configuration directories to
+                                    list sessions from, separated by "${path.delimiter}". The
+                                    default one, CLAUDE_CONFIG_DIR and those seen
+                                    in the hook journal are always included.
 `;
 }
 
@@ -72,188 +55,22 @@ function fail(message) {
   process.exitCode = 1;
 }
 
-// --- sources -----------------------------------------------------------------
+// --- one pass -----------------------------------------------------------------
 
-function resolveClaudeBinary() {
-  const candidates = [];
-  if (process.env.CLAUDE_CODE_EXECPATH) candidates.push(process.env.CLAUDE_CODE_EXECPATH);
-
-  const onPath = spawnSync("/bin/sh", ["-c", "command -v claude"], { encoding: "utf8" });
-  if (onPath.status === 0) {
-    const resolved = onPath.stdout.trim().split("\n")[0];
-    if (resolved) candidates.push(resolved);
-  }
-
-  const bundled = path.join(os.homedir(), "Library", "Application Support", "Claude", "claude-code");
-  try {
-    for (const version of readdirSync(bundled).sort().reverse()) {
-      candidates.push(path.join(bundled, version, "claude.app", "Contents", "MacOS", "claude"));
-    }
-  } catch {
-    // Not bundled with Claude Desktop: the other candidates are enough.
-  }
-
-  return candidates.find((candidate) => candidate && existsSync(candidate)) ?? null;
-}
-
-function readRoster(binary) {
-  const result = spawnSync(binary, ["agents", "--json"], { encoding: "utf8", timeout: 15000 });
-  if (result.status !== 0) {
-    throw new Error(`\`claude agents --json\` failed: ${(result.stderr || result.stdout || "").trim()}`);
-  }
-  const parsed = JSON.parse(result.stdout);
-  if (!Array.isArray(parsed)) throw new Error("`claude agents --json` did not return an array.");
-  return parsed;
-}
-
-// One single read of the process table: the session's tty and, by walking up
-// the parents, the terminal hosting it.
-function processTable() {
-  const result = spawnSync("ps", ["-Ao", "pid=,ppid=,tty=,comm="], { encoding: "utf8" });
-  const table = new Map();
-  if (result.status !== 0) return table;
-  for (const line of result.stdout.split("\n")) {
-    const match = line.match(/^\s*(\d+)\s+(\d+)\s+(\S+)\s+(.*)$/);
-    if (!match) continue;
-    table.set(Number(match[1]), { ppid: Number(match[2]), tty: match[3], comm: match[4].trim() });
-  }
-  return table;
-}
-
-function terminalFor(table, pid) {
-  let current = table.get(pid);
-  for (let depth = 0; current && depth < 10; depth += 1) {
-    const basename = path.basename(current.comm).toLowerCase();
-    const known = TERMINAL_APPS.find((app) => basename === app.basename.toLowerCase());
-    if (known) return known;
-    current = table.get(current.ppid);
-  }
-  return null;
-}
-
-function enrichRoster(roster) {
-  const table = processTable();
-  return roster.map((row) => {
-    const own = table.get(row.pid);
-    const terminal = terminalFor(table, row.pid);
-    return {
-      ...row,
-      tty: ttyDevice(own?.tty) ?? null,
-      terminalApp: terminal?.name ?? null,
-    };
-  });
-}
-
-// --- persistent state --------------------------------------------------------
-
-// Fingerprint of what a consumer actually observes. `slots.json` is the
-// DeviceAdapter's seam: rewritten on every tick, a `watch` following it would
-// push HID reports continuously while nothing moved. So the six entries are
-// compared before writing.
-//
-// `pending`, `dropped`, `overflow`, `journalOffset` and the timestamp are left
-// out of the fingerprint: they move without the display changing. The journal
-// cursor is therefore only persisted on a real change, and a restart replays at
-// worst the tail of events from that point — events which, by construction, had
-// changed nothing.
-function publishedFingerprint(snapshot) {
-  return JSON.stringify(snapshot.slots);
-}
-
-let lastPublished = null;
-
-async function loadState() {
-  try {
-    const raw = JSON.parse(await fs.readFile(snapshotPath, "utf8"));
-    const snapshot = normalizeSnapshot(raw.snapshot);
-    lastPublished = publishedFingerprint(snapshot);
-    return {
-      snapshot,
-      journalOffset: Number.isInteger(raw.journalOffset) ? raw.journalOffset : 0,
-    };
-  } catch {
-    return { snapshot: emptySnapshot(), journalOffset: 0 };
-  }
-}
-
-async function saveState(snapshot, journalOffset) {
-  const fingerprint = publishedFingerprint(snapshot);
-  if (fingerprint === lastPublished) return false;
-
-  await fs.mkdir(stateDir, { recursive: true });
-  const payload = {
-    updatedAt: new Date().toISOString(),
-    journalOffset,
-    slots: slotView(snapshot).map(({ slot, control, state, color, entry }) => ({
-      slot,
-      control,
-      state,
-      color,
-      sessionId: entry?.sessionId ?? null,
-      name: entry?.name ?? null,
-      cwd: entry?.cwd ? redactHome(entry.cwd) : null,
-    })),
-    snapshot,
-  };
-  await fs.writeFile(snapshotPath, `${JSON.stringify(payload, null, 2)}\n`);
-  lastPublished = fingerprint;
-  return true;
-}
-
-// Reads the lines appended since the last pass. A size below the offset signals
-// a journal rotation: start over from zero rather than read from the middle of
-// a record.
-async function readJournalSince(offset) {
-  let size = 0;
-  try {
-    size = (await fs.stat(journalPath)).size;
-  } catch {
-    return { events: [], offset: 0 };
-  }
-  if (size < offset) offset = 0;
-  if (size === offset) return { events: [], offset };
-
-  const handle = await fs.open(journalPath, "r");
-  try {
-    const length = size - offset;
-    const buffer = Buffer.alloc(length);
-    await handle.read(buffer, 0, length, offset);
-    const text = buffer.toString("utf8");
-    // A trailing incomplete line is left for the next pass.
-    const complete = text.endsWith("\n") ? text : text.slice(0, text.lastIndexOf("\n") + 1);
-    const events = [];
-    for (const line of complete.split("\n")) {
-      if (!line.trim()) continue;
-      try {
-        events.push(JSON.parse(line));
-      } catch {
-        // Line truncated by a concurrent rotation: ignored.
-      }
-    }
-    return { events, offset: offset + Buffer.byteLength(complete, "utf8") };
-  } finally {
-    await handle.close();
-  }
-}
-
+// Reads the journal and the rosters, and hands them to the pure reconciliation.
+// Only what the journal taught is persisted as `configDirs`: directories named
+// through the environment are read again from the environment on every start.
 async function reconcile(binary, state) {
-  const now = Date.now();
-  let snapshot = state.snapshot;
-
-  const journal = await readJournalSince(state.journalOffset);
-  const roster = applyRoster(snapshot, enrichRoster(readRoster(binary)), now);
-  snapshot = roster.snapshot;
-  let changed = roster.changed;
-
-  // Hooks after the roster: the roster opens the slot, the hooks set the state
-  // on it, including the one held pending before the session appeared.
-  for (const event of journal.events) {
-    const applied = applyHookEvent(snapshot, event, event.ts ?? now);
-    snapshot = applied.snapshot;
-    changed = changed || applied.changed;
-  }
-
-  return { snapshot, journalOffset: journal.offset, changed, notes: roster.notes };
+  const journal = await store.readJournalSince(state.journalOffset);
+  const configDirs = learnConfigDirs(state.configDirs ?? [], journal.events);
+  const result = reconcileSnapshot({
+    snapshot: state.snapshot,
+    events: journal.events,
+    rosters: readRosters(binary, collectConfigDirs({ known: configDirs })),
+    now: Date.now(),
+    enrich: enrichRoster,
+  });
+  return { ...result, journalOffset: journal.offset, configDirs };
 }
 
 // --- display -----------------------------------------------------------------
@@ -296,76 +113,8 @@ function renderTable(snapshot) {
 
 // --- navigation --------------------------------------------------------------
 
-function runAppleScript(script) {
-  const result = spawnSync("osascript", ["-e", script], { encoding: "utf8", timeout: 15000 });
-  const output = (result.stdout || result.stderr || "").trim();
-  // An AppleEvent that times out — `-1712`, or `osascript` killed by the
-  // timeout — almost always means Automation consent was not granted to the
-  // calling shell: macOS does not always show the prompt and simply lets the
-  // event expire. Confusing it with "window not found" sends you looking at the
-  // terminal, which is not where the problem is.
-  if (result.error?.code === "ETIMEDOUT" || result.signal || output.includes("-1712")) {
-    return { ok: false, reason: "automation-consent", output };
-  }
-  return { ok: result.status === 0, output };
-}
-
-// The tty comes from `ps`: revalidate it before interpolation rather than trust
-// where it came from.
-function focusTerminal(target) {
-  if (!/^\/dev\/tty[a-z0-9.]+$/i.test(target.tty)) {
-    return { ok: false, output: `unexpected terminal path: ${target.tty}` };
-  }
-  const app = TERMINAL_APPS.find((candidate) => candidate.name === target.app);
-  if (!app?.driver) {
-    return {
-      ok: false,
-      output: `terminal not scriptable${target.app ? `: ${target.app}` : ""}. Slot is on ${target.tty}.`,
-    };
-  }
-
-  // The order of operations decides the outcome when windows overlap.
-  // `activate` first raises the window that is already frontmost, and
-  // reordering afterwards does not hold: the target stays under the stack. So
-  // select the tab, bring its window to the front of the z-order, and only
-  // activate the app last. Side benefit: a `tty` that cannot be found no longer
-  // steals focus for nothing, since we return without ever activating.
-  if (app.driver === "iterm") {
-    return runAppleScript(`tell application "iTerm2"
-  repeat with w in windows
-    repeat with t in tabs of w
-      repeat with s in sessions of t
-        if tty of s is "${target.tty}" then
-          select w
-          select t
-          select s
-          activate
-          return "ok"
-        end if
-      end repeat
-    end repeat
-  end repeat
-end tell
-return "not-found"`);
-  }
-
-  return runAppleScript(`tell application "Terminal"
-  repeat with w in windows
-    repeat with t in tabs of w
-      if tty of t is "${target.tty}" then
-        set selected tab of w to t
-        set index of w to 1
-        activate
-        return "ok"
-      end if
-    end repeat
-  end repeat
-end tell
-return "not-found"`);
-}
-
 async function focus(slotNumber) {
-  const state = await loadState();
+  const state = await store.load();
   const index = slotNumber - 1;
   const entry = state.snapshot.slots[index];
   const target = resolveNavigation(entry);
@@ -393,9 +142,11 @@ async function focus(slotNumber) {
       // The session is closed: we do not resume it on the user's behalf, we hand
       // them the exact command. Resuming a live session from a second terminal
       // would interleave the two transcripts.
+      // A session only resumes under the configuration directory it ran in.
       const where = target.cwd ? redactHome(target.cwd) : ".";
+      const profile = entry.configDir ? `CLAUDE_CONFIG_DIR=${redactHome(entry.configDir)} ` : "";
       process.stdout.write(
-        `Slot ${slotNumber}: session closed. Resume it with:\n  cd ${where} && claude --resume ${target.sessionId}\n`,
+        `Slot ${slotNumber}: session closed. Resume it with:\n  cd ${where} && ${profile}claude --resume ${target.sessionId}\n`,
       );
       return undefined;
     }
@@ -447,9 +198,9 @@ async function focus(slotNumber) {
 // --- commands ----------------------------------------------------------------
 
 async function commandStatus(binary, asJson) {
-  const state = await loadState();
+  const state = await store.load();
   const result = await reconcile(binary, state);
-  await saveState(result.snapshot, result.journalOffset);
+  await store.save(result.snapshot, result.journalOffset, result.configDirs);
 
   if (asJson) {
     process.stdout.write(`${JSON.stringify(slotView(result.snapshot), null, 2)}\n`);
@@ -459,78 +210,104 @@ async function commandStatus(binary, asJson) {
   for (const note of result.notes) process.stdout.write(`  ! ${note}\n`);
   if (result.snapshot.overflow > 0) {
     process.stdout.write(
-      `  ! ${result.snapshot.overflow} session(s) left without a slot since startup: ${SLOT_COUNT} Agent keys, no more.\n`,
+      `  ! ${result.snapshot.overflow} live session(s) without a key: ${SLOT_COUNT} Agent keys, no more. ` +
+        "A working session takes the key of the oldest idle one.\n",
     );
   }
 }
 
 async function commandWatch(binary, intervalMs) {
-  let state = await loadState();
-  let running = false;
+  let state = await store.load();
 
-  const tick = async () => {
-    if (running) return;
-    running = true;
-    try {
+  // The poll catches missed hooks, the journal watch gives the latency. Both
+  // ask the same loop for a pass: one runs at a time, and a hook written while
+  // a pass is under way gets its own pass right after instead of waiting for
+  // the next poll.
+  const loop = createRunLoop(
+    async () => {
       const result = await reconcile(binary, state);
-      state = { snapshot: result.snapshot, journalOffset: result.journalOffset };
+      state = {
+        snapshot: result.snapshot,
+        journalOffset: result.journalOffset,
+        configDirs: result.configDirs,
+      };
       // The render follows the write, not `result.changed`: only a change that
       // was actually published deserves a line on screen, or an HID push.
-      if (await saveState(result.snapshot, result.journalOffset)) {
+      if (await store.save(result.snapshot, result.journalOffset, result.configDirs)) {
         process.stdout.write(`\n${new Date().toISOString()}\n${renderTable(result.snapshot)}\n`);
         for (const note of result.notes) process.stdout.write(`  ! ${note}\n`);
       }
-    } catch (error) {
-      process.stderr.write(`  ! ${error.message}\n`);
-    } finally {
-      running = false;
-    }
-  };
+    },
+    { onError: (error) => process.stderr.write(`  ! ${error.message}\n`) },
+  );
 
-  await fs.mkdir(stateDir, { recursive: true });
-  await fs.appendFile(journalPath, "");
-  // The poll catches missed hooks, the watch gives the latency.
-  const timer = setInterval(tick, intervalMs);
-  const watcher = watch(journalPath, () => void tick());
+  await store.prepare();
+  const timer = setInterval(loop.request, intervalMs);
+  const watcher = watch(journalPath, loop.request);
   process.on("SIGINT", () => {
     clearInterval(timer);
     watcher.close();
     process.exit(0);
   });
 
-  process.stdout.write(`Journal: ${redactHome(journalPath)}\nOutput:  ${redactHome(snapshotPath)}\n`);
-  await tick();
+  process.stdout.write(`Journal: ${redactHome(journalPath)}\nOutput:  ${redactHome(slotsPath)}\n`);
+  loop.request();
+}
+
+// The roster's `status` is what keeps a key truthful when a hook is missing.
+// Three outcomes are worth telling apart: nothing to read it from, a Claude Code
+// that does not publish it, and a value this code has never seen.
+function rosterStatusCheck(roster) {
+  if (roster.length === 0) return [true, "roster status: no live session to read it from"];
+  const statuses = [...new Set(roster.map((row) => row.status).filter(Boolean))];
+  if (statuses.length === 0) {
+    return [false, "roster status: absent — this Claude Code does not publish it; states come from the hooks alone"];
+  }
+  const unknown = statuses.filter((status) => !ROSTER_STATUSES.includes(status));
+  if (unknown.length > 0) {
+    return [false, `roster status: unrecognised value(s) ${unknown.join(", ")} — ignored, please report them`];
+  }
+  return [true, `roster status: ${statuses.join(", ")}`];
 }
 
 async function commandDoctor(binary) {
   const checks = [];
   checks.push([Boolean(binary), `claude binary: ${binary ? redactHome(binary) : "not found"}`]);
 
+  // Each configuration directory lists only its own sessions: report them one
+  // by one, so a profile that is silently missing is visible here.
   let roster = [];
   if (binary) {
-    try {
-      roster = readRoster(binary);
-      checks.push([true, `claude agents --json: ${roster.length} live session(s)`]);
-    } catch (error) {
-      checks.push([false, `claude agents --json: ${error.message}`]);
+    const saved = await store.load();
+    const queried = collectConfigDirs({ known: saved.configDirs });
+    const results = readRosters(binary, queried);
+    roster = mergeRosters(results).rows;
+    for (const result of results) {
+      const label = result.configDir ? redactHome(result.configDir) : "default configuration";
+      checks.push(
+        result.rows
+          ? [true, `claude agents --json (${label}): ${result.rows.length} live session(s)`]
+          : [false, `claude agents --json (${label}): ${result.error}`],
+      );
     }
+    checks.push(rosterStatusCheck(roster));
   }
 
   try {
-    await fs.mkdir(stateDir, { recursive: true });
-    await fs.access(stateDir);
+    await store.prepare();
     checks.push([true, `state directory reachable: ${redactHome(stateDir)}`]);
   } catch (error) {
     checks.push([false, `state directory: ${error.message}`]);
   }
 
-  const journal = await readJournalSince(0);
+  const journal = await store.readJournalSince(0);
   const last = journal.events.at(-1);
   checks.push([
     journal.events.length > 0,
     journal.events.length > 0
       ? `journal: ${journal.events.length} event(s), last ${last.event} ${Math.round((Date.now() - last.ts) / 1000)}s ago`
-      : "journal empty: the plugin has never emitted. Load thread-status/ then run a turn.",
+      : "journal empty: no hook event recorded. Explicit roster statuses still show running and permission waits; " +
+        "the plugin adds the done/idle distinction. Start a new interactive session after installing it.",
   ]);
 
   const withTty = enrichRoster(roster).filter((row) => row.tty);

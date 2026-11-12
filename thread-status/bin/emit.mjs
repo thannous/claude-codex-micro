@@ -53,6 +53,9 @@ function main() {
     pid: Number.parseInt(process.env.CLAUDE_PID ?? "", 10) || null,
     entrypoint: process.env.CLAUDE_CODE_ENTRYPOINT ?? null,
     hostSessionId: process.env.CLAUDE_CODE_HOST_SESSION_ID ?? null,
+    // The roster is per configuration directory: recording which one this
+    // session runs under is how the companion learns to ask it.
+    configDir: process.env.CLAUDE_CONFIG_DIR || null,
   };
 
   // Only the fields that carry a transition are kept. No message content, no

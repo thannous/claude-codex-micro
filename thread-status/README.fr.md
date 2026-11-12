@@ -46,12 +46,38 @@ npm run thread-status -- watch
 
 ## Installer durablement
 
-Deux options, au choix :
+Le dépôt est son propre marketplace :
 
-- copier `hooks/hooks.json` dans la clé `hooks` de `~/.claude/settings.json`, en
-  remplaçant `$CLAUDE_PLUGIN_ROOT` par le chemin absolu de ce répertoire ;
-- publier ce répertoire comme plugin et l'installer depuis un marketplace, ce qui
-  conserve `$CLAUDE_PLUGIN_ROOT` et la mise à jour versionnée.
+```
+/plugin install codex-micro-thread-status --marketplace thannous/claude-codex-micro
+```
+
+Depuis un clone local, `claude plugin marketplace add /chemin/vers/claude-codex-micro`
+puis `claude plugin install codex-micro-thread-status@claude-codex-micro`.
+
+Un plugin s'installe par répertoire de configuration Claude. Avec plusieurs
+profils (`CLAUDE_CONFIG_DIR`), l'installer dans chacun de ceux dont les sessions
+doivent être suivies ; chaque événement enregistre le répertoire sous lequel il a
+tourné, et c'est ainsi que le compagnon apprend à lister les sessions de ce
+profil.
+
+Les deux observateurs sont maintenus en marche d'une ouverture de session à
+l'autre par launchd :
+
+```sh
+node scripts/service.mjs install     # écrit deux agents sous ~/Library/LaunchAgents
+node scripts/service.mjs status
+node scripts/service.mjs uninstall
+```
+
+## Sans le plugin
+
+Depuis Claude Code 2.1.322 le roster porte un `status`, et le compagnon s'en
+sert : les touches montrent « travaille », « vous attend » et « au repos » sans
+aucun plugin. Le plugin déclenche une réconciliation dès l'arrivée d'un hook et
+distingue un tour terminé d'un prompt au repos. Le statut explicite du roster
+reste prioritaire : un hook en avance ne peut pas contredire un relevé `busy`,
+`idle` ou `waiting`.
 
 ## Bornes connues
 

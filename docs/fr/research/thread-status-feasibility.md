@@ -2,7 +2,17 @@
 
 # États des sessions Claude Code et touches Agent — mesures
 
-## Verdict
+## État actuel
+
+Claude Code `2.1.322` publie `busy`, `idle` et `waiting`. Ces statuts explicites
+décident désormais de l'état général affiché ; les hooks déclenchent un
+rafraîchissement anticipé, distinguent les tours terminés des interruptions et
+couvrent les anciennes versions sans statut. Voir les mesures de novembre plus
+bas. Les sections précédentes conservent leurs observations historiques, dont
+l'ancien modèle fondé sur les hooks et la cadence d'éclairage de ChatGPT ; cette
+cadence n'a pas été reproduite lors des sondes de novembre.
+
+## Verdict antérieur
 
 **Les états sont disponibles officiellement, les LED fonctionnent sur le layer
 `Claude`, et la navigation est vérifiée dans Claude Desktop ; le focus du
@@ -511,18 +521,66 @@ n'a été identifiée — seulement des hypothèses non testées, dont retirer �
 l'autorisation macOS de surveillance des saisies, ce qui désactiverait aussi ses
 propres touches.
 
+## Remesuré sur Claude Code 2.1.322 : le roster publie un statut
+
+Mesuré le 12 novembre 2026, Claude Code `2.1.322`, macOS `27.2`. Ce qui suit
+remplace « le roster ne publie aucun état » plus haut, vrai de la version mesurée
+en juillet.
+
+Chaque ligne de `claude agents --json` porte désormais un `status` :
+
+| `status` | Observé quand | Utilisé comme |
+| --- | --- | --- |
+| `busy` | un tour est en cours | `running` |
+| `idle` | le prompt attend une saisie | termine un `running` que les hooks n'ont pas terminé |
+| `waiting` | une demande de permission est à l'écran | `blocked` |
+
+Deux sessions réelles ont été pilotées par un pty avec le plugin chargé, le
+roster échantillonné toutes les 275 ms à côté du journal de hooks. Les
+enregistrements sont conservés, assainis, sous
+[`tests/fixtures/thread-status`](../../../tests/fixtures/thread-status), et
+`tests/thread-replay.test.mjs` les rejoue dans le réducteur.
+
+| Question | Mesure |
+| --- | --- |
+| Le roster est-il en retard sur les hooks ? | Sur 23 événements de hook, de 258 ms au plus ; il les devançait une fois sur deux environ. La priorité de 2000 ms donnée aux hooks a été retirée : le statut explicite du roster tranche désormais. |
+| Un tour interrompu émet-il `Stop` ? | Non. Avec les hooks seuls la touche restait sur `running` jusqu'au prompt suivant ; le `idle` du roster la ramène maintenant à `idle`. |
+| Quand une demande de permission apparaît-elle ? | Roster `waiting` 0,9 s après le prompt ; hook de notification `permission_prompt` 6,8 s après. |
+| La réponse à une demande de permission est-elle signalée ? | Par aucun hook. Le roster repasse à `busy`, ce qui éteint maintenant le rouge. |
+| Le roster est-il global ? | Non : il liste les sessions d'un seul répertoire de configuration. Avec trois profils sur une machine, le répertoire par défaut listait cinq sessions et chaque profil seulement les siennes. |
+
+Conséquences, toutes implémentées — depuis le 12 novembre 2026 sous la forme
+d'une machine à états explicite, `scripts/lib/session-machine.mjs`, décrite dans
+[`docs/fr/architecture.md`](../architecture.md) :
+
+- les touches disent vrai sans le plugin (`busy`, `idle`, `waiting`) ; le plugin
+  déclenche un rafraîchissement avant le prochain sondage prévu et la distinction
+  `done` / `idle` après un tour normal ;
+- le compagnon interroge chaque répertoire de configuration qu'il connaît — celui
+  par défaut, le sien, `CLAUDE_THREAD_STATUS_CONFIG_DIRS`, et ceux que les hooks
+  enregistrent ;
+- au-delà de six sessions vivantes, une session qui travaille ou attend prend la
+  touche de la plus ancienne session au repos. Une arrivante au repos n'évince
+  jamais une session au repos.
+
+Non mesuré : le statut du roster pendant `agent_needs_input` et
+`elicitation_dialog`. Un rouge posé par ces hooks n'est donc jamais éteint par le
+roster.
+
 ## Ce qui est implémenté
 
 | Composant | Chemin |
 | --- | --- |
 | Plugin de hooks | [`thread-status/`](../../../thread-status/README.fr.md) |
+| Cycle de vie d'une session, en machine à états | `scripts/lib/session-machine.mjs`, sur `scripts/lib/state-machine.mjs` |
 | Réducteur pur, six emplacements | `scripts/lib/thread-slots.mjs` |
+| Une passe de réconciliation, profils, persistance | `scripts/lib/reconcile.mjs`, `scripts/lib/config-dirs.mjs`, `scripts/lib/slot-store.mjs` |
 | Compagnon `watch` / `status` / `focus` / `doctor` | `scripts/thread-status.mjs` |
 | Cadrage HID et modèle d'éclairage | `scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs` |
 | Transport `node-hid` | `scripts/lib/hid-device.mjs` |
 | CLI d'éclairage, `DeviceAdapter` | `scripts/lighting.mjs` |
 | Keycodes Agent sur le layer `Claude` | `scripts/enable-agent-keys.mjs` |
-| Tests | `tests/thread-slots.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
+| Tests | `tests/session-machine.test.mjs`, `tests/thread-slots.test.mjs`, `tests/thread-replay.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
 
 La sortie du compagnon est `~/.claude/thread-status/slots.json`. C'est la couture
 que consomme le `DeviceAdapter` : `node scripts/lighting.mjs watch` suit ce
@@ -553,8 +611,9 @@ ouvert, si bien que `npm run lighting -- watch --focus` route un appui vers
 - Si Work Louder ou OpenAI accepteraient d'ouvrir le canal. C'est la seule voie
   qui lèverait à la fois la licence, la concurrence et la pérennité.
 - Le comportement du roster lorsque plus de six sessions vivent en parallèle du
-  point de vue de l'utilisateur : le débordement est compté et signalé, mais
-  l'ergonomie retenue n'est pas validée.
+  point de vue de l'utilisateur : une session qui travaille prend maintenant la
+  touche de la plus ancienne session au repos, mesuré avec huit sessions vivantes
+  sur une machine ; que ce soit l'ergonomie voulue n'est pas validé.
 
 ## Sources
 

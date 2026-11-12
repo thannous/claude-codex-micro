@@ -2,7 +2,16 @@
 
 # Claude Code session states and Agent keys — measurements
 
-## Verdict
+## Current state
+
+Claude Code `2.1.322` publishes `busy`, `idle` and `waiting`. These explicit
+statuses now decide the displayed coarse state; hooks trigger an early refresh,
+distinguish completed from interrupted turns and support older versions without
+status. See the November measurements below. The earlier sections retain their
+historical observations, including the old hook-only model and ChatGPT's observed
+lighting cadence; that cadence was not reproduced in the November probes.
+
+## Earlier verdict
 
 **The states are available officially, the LEDs work on the `Claude` layer, and
 navigation is verified in Claude Desktop; terminal focus is implemented but not
@@ -498,18 +507,63 @@ deterministic coexistence strategy has been identified — only untested
 hypotheses, among them removing ChatGPT's macOS input-monitoring permission,
 which would also disable its own keys.
 
+## Re-measured on Claude Code 2.1.322: the roster publishes a status
+
+Measured on 12 November 2026, Claude Code `2.1.322`, macOS `27.2`. What follows
+supersedes "the roster publishes no state at all" above, which was true of the
+version measured in July.
+
+Each row of `claude agents --json` now carries a `status`:
+
+| `status` | Observed when | Used as |
+| --- | --- | --- |
+| `busy` | a turn is running | `running` |
+| `idle` | the prompt is waiting for input | ends a `running` the hooks did not end |
+| `waiting` | a permission prompt is on screen | `blocked` |
+
+Two real sessions were driven through a pty with the plugin loaded, the roster
+sampled every 275 ms beside the hook journal. The recordings are kept, sanitised,
+under [`tests/fixtures/thread-status`](../../tests/fixtures/thread-status), and
+`tests/thread-replay.test.mjs` replays them through the reducer.
+
+| Question | Measurement |
+| --- | --- |
+| Does the roster trail the hooks? | Over 23 hook events, by 258 ms at most; it led them about half the time. The original 2000 ms hook grace has been removed: explicit roster status now wins. |
+| Does an interrupted turn emit `Stop`? | No. With hooks alone the key stayed on `running` until the next prompt; the roster's `idle` now returns it to `idle`. |
+| When does a permission prompt show? | Roster `waiting` 0.9 s after the prompt; the `permission_prompt` notification hook 6.8 s after it. |
+| Is the answer to a permission prompt reported? | By no hook. The roster goes back to `busy`, which now clears the red light. |
+| Is the roster global? | No: it lists the sessions of one configuration directory. With three profiles on one machine, the default directory listed five sessions and each profile only its own. |
+
+Consequences, all implemented — since 12 November 2026 as an explicit state
+machine, `scripts/lib/session-machine.mjs`, described in
+[`docs/architecture.md`](../architecture.md):
+
+- the keys are truthful without the plugin (`busy`, `idle`, `waiting`); the
+  plugin triggers a refresh before the next scheduled poll and adds the `done` / `idle`
+  distinction after a normal turn;
+- the companion asks every configuration directory it knows of — the default,
+  its own, `CLAUDE_THREAD_STATUS_CONFIG_DIRS`, and those the hooks record;
+- with more than six live sessions, a working or waiting session takes the key
+  of the oldest idle one. An idle newcomer never evicts an idle session.
+
+Not measured: the roster status during `agent_needs_input` and
+`elicitation_dialog`. A red light set by those hooks is therefore never cleared
+by the roster.
+
 ## What is implemented
 
 | Component | Path |
 | --- | --- |
 | Hooks plugin | [`thread-status/`](../../thread-status/README.md) |
+| Session lifecycle, as a state machine | `scripts/lib/session-machine.mjs`, on `scripts/lib/state-machine.mjs` |
 | Pure reducer, six slots | `scripts/lib/thread-slots.mjs` |
+| One reconciliation pass, profiles, persistence | `scripts/lib/reconcile.mjs`, `scripts/lib/config-dirs.mjs`, `scripts/lib/slot-store.mjs` |
 | `watch` / `status` / `focus` / `doctor` companion | `scripts/thread-status.mjs` |
 | HID framing and lighting model | `scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs` |
 | `node-hid` transport | `scripts/lib/hid-device.mjs` |
 | Lighting CLI, `DeviceAdapter` | `scripts/lighting.mjs` |
 | Agent keycodes on the `Claude` layer | `scripts/enable-agent-keys.mjs` |
-| Tests | `tests/thread-slots.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
+| Tests | `tests/session-machine.test.mjs`, `tests/thread-slots.test.mjs`, `tests/thread-replay.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
 
 The companion's output is `~/.claude/thread-status/slots.json`. It is the seam
 the `DeviceAdapter` consumes: `node scripts/lighting.mjs watch` follows that file
@@ -541,8 +595,9 @@ no native global shortcut and no macOS permission.
   route that would lift the licence, the contention and the longevity questions
   at once.
 - The roster's behaviour, from the user's point of view, when more than six
-  sessions are alive: overflow is counted and reported, but the ergonomics
-  retained are not validated.
+  sessions are alive: a working session now takes the key of the oldest idle
+  one, measured with eight live sessions on one machine; whether that is the
+  ergonomics people want is not validated.
 
 ## Sources
 

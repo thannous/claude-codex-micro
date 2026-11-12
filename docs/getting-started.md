@@ -40,7 +40,7 @@ Compare against
   historical logical contract, aligned with V1.
 
 The community manifest is not an Input export. The main path transforms an
-official Input `0.17.3` `*-profile.json` export locally. The study of the Input
+official Input `0.17.3` or `1.1.0` `*-profile.json` export locally. The study of the Input
 `0.17.2` `*-layer.json` format remains historical evidence.
 
 ## 4. Export and back up before any change

@@ -45,7 +45,7 @@ Codex layer.
 
 > [!IMPORTANT]
 > This is an actively developed community project. The local configurator and
-> profile generator work with the documented fixtures and Input `0.17.3`
+> profile generator work with the documented fixtures and Input `0.17.3` / `1.1.0`
 > profile flow, but the official `*-layer.json` round-trip and full hardware
 > checklist are still in progress.
 
@@ -90,9 +90,9 @@ pressing one goes to that session.
 
 **It only runs under three conditions.**
 
-1. **Quit the ChatGPT app.** It rewrites these LEDs every 35 to 40 seconds and
-   intercepts Agent key presses. Last write wins, so with it running you will
-   see your colours appear and then vanish.
+1. **Isolate the test from the ChatGPT app.** It can overwrite the LEDs and
+   react to the same Agent keys. The historical 35–40 second cadence was not
+   reproduced in the November probes; coexistence remains unqualified.
 2. `npm install`, so that `node-hid` — an optional dependency — is built.
 3. The Agent keycodes have to sit on the Claude layer. Input does not offer
    them in its key picker, so `scripts/enable-agent-keys.mjs` writes a profile
@@ -110,14 +110,26 @@ node scripts/lighting.mjs watch --hold  # push those colours onto the keys
 ```
 
 `thread-status` reconciles two official sources — `claude agents --json` for
-live sessions, and a plugin hook journal for their state — into
-`~/.claude/thread-status/slots.json`. `lighting watch` follows that file.
-`--hold` reapplies as soon as a foreign write is detected.
+live sessions and their coarse status, and a plugin hook journal for the exact
+transitions and the done/idle distinction — into `~/.claude/thread-status/slots.json`. `lighting
+watch` follows that file. `--hold` reapplies as soon as a foreign write is
+detected.
+
+To keep both running across logins, and to install the plugin for good:
+
+```sh
+node scripts/service.mjs install
+claude plugin marketplace add "$PWD"
+claude plugin install codex-micro-thread-status@claude-codex-micro
+```
+
+`node scripts/service.mjs uninstall` removes the two launchd agents again.
 
 ```console
 $ node scripts/thread-status.mjs doctor
   ✔ claude binary: $HOME/Library/Application Support/Claude/…/claude
-  ✔ claude agents --json: 6 live session(s)
+  ✔ claude agents --json (default configuration): 6 live session(s)
+  ✔ roster status: idle, busy
   ✔ state directory reachable: $HOME/.claude/thread-status
   ✔ journal: 194 event(s), last UserPromptSubmit 513s ago
   ✔ navigation: 4/6 session(s) in an identifiable terminal — the others are
@@ -136,6 +148,8 @@ original code from the observed format. No Work Louder SDK is redistributed.
 Protocol, measurements and limits:
 [`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md)
 and [`docs/research/thread-status-feasibility.md`](docs/research/thread-status-feasibility.md).
+How the code is organised, and the state machines that decide what a key shows:
+[`docs/architecture.md`](docs/architecture.md).
 
 > Independent community project, not affiliated with or endorsed by Work
 > Louder or Anthropic. Product names and trademarks belong to their respective
@@ -172,7 +186,7 @@ The repository now contains:
 - a local graphical configurator launched by `npm run configure`;
 - a Node.js tool for diagnosis, inventory, backup, dry run, sanitisation and
   rollback;
-- a local Input `0.17.3` profile generator that preserves the native layer and
+- a local Input `0.17.3` / `1.1.0` profile generator that preserves the native layer and
   the existing AppSense link;
 - transactional tests on isolated copies;
 - a reproducible analysis of the Input `0.17.2` sharing mechanism;
@@ -184,7 +198,7 @@ Claude file is deliberately not fabricated: its internal objects must come from 
 real Codex Micro export.
 
 The V1 manifest is `hardware-observed`: the generator was validated on an Input
-`0.17.3` export, but the round-trip of a `*-layer.json` artefact and the full
+`0.17.3` export and an official profile round-trip in `1.1.0`, but the round-trip of a `*-layer.json` artefact and the full
 hardware checklist are still open. The logical file `macos.example.json` stays
 separately `proposal-not-applied`: it is not a universal preset to import.
 
@@ -227,7 +241,7 @@ The validators fail if any of these actions appears on an active control.
 ### Observed compatibility
 
 - macOS `26.5.2` arm64;
-- Work Louder Input `0.17.3` for the profile generator;
+- Work Louder Input `0.17.3` and `1.1.0` for the profile generator;
 - Codex Micro firmware `v0.4.1`;
 - Claude Desktop `1.24012.9`;
 - Claude bundle `com.anthropic.claudefordesktop`;

@@ -291,7 +291,7 @@ async function commandInstall(args) {
     configRoot,
     profileExportPath,
     backupRoot: path.join(localRoot, "input-backups"),
-    inputVersion: manifest.compatibility.input.observedVersion,
+    inputVersion: compatibility.installedInput.version,
     firmwareVersion: manifest.compatibility.firmware.observedVersion,
   });
   const verification = await verifyBackup(backup.destination);
