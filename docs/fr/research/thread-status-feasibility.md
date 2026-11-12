@@ -549,8 +549,9 @@ enregistrements sont conservés, assainis, sous
 | La réponse à une demande de permission est-elle signalée ? | Par aucun hook. Le roster repasse à `busy`, ce qui éteint maintenant le rouge. |
 | Le roster est-il global ? | Non : il liste les sessions d'un seul répertoire de configuration. Avec trois profils sur une machine, le répertoire par défaut listait cinq sessions et chaque profil seulement les siennes. |
 
-Conséquences, toutes implémentées dans `scripts/lib/thread-slots.mjs` et
-`scripts/thread-status.mjs` :
+Conséquences, toutes implémentées — depuis le 12 novembre 2026 sous la forme
+d'une machine à états explicite, `scripts/lib/session-machine.mjs`, décrite dans
+[`docs/fr/architecture.md`](../architecture.md) :
 
 - les touches disent vrai sans le plugin (`busy`, `idle`, `waiting`) ; le plugin
   déclenche un rafraîchissement avant le prochain sondage prévu et la distinction
@@ -571,13 +572,15 @@ roster.
 | Composant | Chemin |
 | --- | --- |
 | Plugin de hooks | [`thread-status/`](../../../thread-status/README.fr.md) |
+| Cycle de vie d'une session, en machine à états | `scripts/lib/session-machine.mjs`, sur `scripts/lib/state-machine.mjs` |
 | Réducteur pur, six emplacements | `scripts/lib/thread-slots.mjs` |
+| Une passe de réconciliation, profils, persistance | `scripts/lib/reconcile.mjs`, `scripts/lib/config-dirs.mjs`, `scripts/lib/slot-store.mjs` |
 | Compagnon `watch` / `status` / `focus` / `doctor` | `scripts/thread-status.mjs` |
 | Cadrage HID et modèle d'éclairage | `scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs` |
 | Transport `node-hid` | `scripts/lib/hid-device.mjs` |
 | CLI d'éclairage, `DeviceAdapter` | `scripts/lighting.mjs` |
 | Keycodes Agent sur le layer `Claude` | `scripts/enable-agent-keys.mjs` |
-| Tests | `tests/thread-slots.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
+| Tests | `tests/session-machine.test.mjs`, `tests/thread-slots.test.mjs`, `tests/thread-replay.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
 
 La sortie du compagnon est `~/.claude/thread-status/slots.json`. C'est la couture
 que consomme le `DeviceAdapter` : `node scripts/lighting.mjs watch` suit ce

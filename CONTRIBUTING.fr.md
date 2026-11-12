@@ -47,7 +47,9 @@ un JSDoc adjacent. Documenter les entrées, sorties, erreurs stables, effets de
 bord et règles de préservation ; ne pas répéter l'implémentation ligne par ligne.
 Les frontières protégées couvrent actuellement le framing et les sessions HID,
 les charges d'éclairage, les transformations AppSense/profile, la navigation des
-emplacements de session et le workflow de profil du GUI.
+emplacements de session, les machines à états, les sources et la persistance du
+compagnon, et le workflow de profil du GUI. Le code des touches Agent est
+cartographié dans [`docs/fr/architecture.md`](docs/fr/architecture.md).
 
 `tests/api-docs.test.mjs` importe ces modules frontières et refuse les callables
 et constantes exportés sans contrat formel. Mettre à jour la liste explicite des

@@ -46,7 +46,9 @@ Exported APIs at hardware and data-integrity boundaries require adjacent JSDoc.
 Document inputs, outputs, stable errors, side effects and preservation rules;
 do not repeat the implementation line by line. The guarded boundaries currently
 cover HID framing and sessions, lighting payloads, AppSense/profile transforms,
-session-slot navigation and the GUI profile workflow.
+session-slot navigation, the state machines and the companion's sources and
+persistence, and the GUI profile workflow. The Agent-key code is mapped in
+[`docs/architecture.md`](docs/architecture.md).
 
 `tests/api-docs.test.mjs` imports these boundary modules and rejects an exported
 callable or constant without a formal contract. Update the test's explicit

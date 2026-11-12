@@ -157,6 +157,8 @@ original d'après le format observé. Aucun SDK Work Louder n'est redistribué.
 Protocole, mesures et bornes :
 [`docs/fr/research/hid-lighting-protocol.md`](docs/fr/research/hid-lighting-protocol.md)
 et [`docs/fr/research/thread-status-feasibility.md`](docs/fr/research/thread-status-feasibility.md).
+L'organisation du code et les machines à états qui décident de ce qu'affiche une
+touche : [`docs/fr/architecture.md`](docs/fr/architecture.md).
 
 > Projet communautaire indépendant, sans affiliation ni approbation de Work
 > Louder ou d'Anthropic. Les noms de produits et marques appartiennent à leurs

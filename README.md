@@ -148,6 +148,8 @@ original code from the observed format. No Work Louder SDK is redistributed.
 Protocol, measurements and limits:
 [`docs/research/hid-lighting-protocol.md`](docs/research/hid-lighting-protocol.md)
 and [`docs/research/thread-status-feasibility.md`](docs/research/thread-status-feasibility.md).
+How the code is organised, and the state machines that decide what a key shows:
+[`docs/architecture.md`](docs/architecture.md).
 
 > Independent community project, not affiliated with or endorsed by Work
 > Louder or Anthropic. Product names and trademarks belong to their respective

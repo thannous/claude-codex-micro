@@ -534,8 +534,9 @@ under [`tests/fixtures/thread-status`](../../tests/fixtures/thread-status), and
 | Is the answer to a permission prompt reported? | By no hook. The roster goes back to `busy`, which now clears the red light. |
 | Is the roster global? | No: it lists the sessions of one configuration directory. With three profiles on one machine, the default directory listed five sessions and each profile only its own. |
 
-Consequences, all implemented in `scripts/lib/thread-slots.mjs` and
-`scripts/thread-status.mjs`:
+Consequences, all implemented — since 12 November 2026 as an explicit state
+machine, `scripts/lib/session-machine.mjs`, described in
+[`docs/architecture.md`](../architecture.md):
 
 - the keys are truthful without the plugin (`busy`, `idle`, `waiting`); the
   plugin triggers a refresh before the next scheduled poll and adds the `done` / `idle`
@@ -554,13 +555,15 @@ by the roster.
 | Component | Path |
 | --- | --- |
 | Hooks plugin | [`thread-status/`](../../thread-status/README.md) |
+| Session lifecycle, as a state machine | `scripts/lib/session-machine.mjs`, on `scripts/lib/state-machine.mjs` |
 | Pure reducer, six slots | `scripts/lib/thread-slots.mjs` |
+| One reconciliation pass, profiles, persistence | `scripts/lib/reconcile.mjs`, `scripts/lib/config-dirs.mjs`, `scripts/lib/slot-store.mjs` |
 | `watch` / `status` / `focus` / `doctor` companion | `scripts/thread-status.mjs` |
 | HID framing and lighting model | `scripts/lib/hid-frame.mjs`, `scripts/lib/hid-lighting.mjs` |
 | `node-hid` transport | `scripts/lib/hid-device.mjs` |
 | Lighting CLI, `DeviceAdapter` | `scripts/lighting.mjs` |
 | Agent keycodes on the `Claude` layer | `scripts/enable-agent-keys.mjs` |
-| Tests | `tests/thread-slots.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
+| Tests | `tests/session-machine.test.mjs`, `tests/thread-slots.test.mjs`, `tests/thread-replay.test.mjs`, `tests/hid-frame.test.mjs`, `tests/hid-lighting.test.mjs` |
 
 The companion's output is `~/.claude/thread-status/slots.json`. It is the seam
 the `DeviceAdapter` consumes: `node scripts/lighting.mjs watch` follows that file

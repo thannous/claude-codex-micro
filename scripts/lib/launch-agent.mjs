@@ -72,8 +72,9 @@ export function toPlist(dict) {
  * `PATH` — so everything the watcher resolves at run time is pinned here: the
  * Node binary by absolute path, the `claude` binary through
  * `CLAUDE_CODE_EXECPATH`, and the state and profile variables of the installing
- * shell. `KeepAlive` restarts a watcher that exits (keyboard unplugged, `claude`
- * updated mid-run); `ThrottleInterval` keeps that from becoming a spin.
+ * shell. `KeepAlive` restarts a watcher that exits (a crash, `slots.json` not
+ * written yet); `ThrottleInterval` keeps that from becoming a spin. An unplugged
+ * keyboard is not such an exit: the lighting bridge waits for it.
  *
  * @param {object} input Installation facts.
  * @param {{name: string, script: string, args: readonly string[]}} input.agent One of {@link AGENTS}.

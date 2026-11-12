@@ -5,6 +5,7 @@
 // into the hooks-only family and back — so the documents carry the whole table
 // as two matrices, and one diagram of the everyday path.
 
+import { DEVICE_LINK_MACHINE } from "./device-link.mjs";
 import { RUN_LOOP_MACHINE } from "./run-loop.mjs";
 import { SESSION_MACHINE, displayState } from "./session-machine.mjs";
 
@@ -38,4 +39,5 @@ export const GENERATED = Object.freeze({
   "session-roster-table": () => matrix("roster."),
   "session-hook-table": () => matrix("hook."),
   "run-loop-diagram": () => RUN_LOOP_MACHINE.toMermaid(),
+  "device-link-diagram": () => DEVICE_LINK_MACHINE.toMermaid(),
 });
