@@ -44,12 +44,35 @@ npm run thread-status -- watch
 
 ## Installing it permanently
 
-Two options, either one:
+The repository is its own marketplace:
 
-- copy `hooks/hooks.json` into the `hooks` key of `~/.claude/settings.json`,
-  replacing `$CLAUDE_PLUGIN_ROOT` with the absolute path of this directory;
-- publish this directory as a plugin and install it from a marketplace, which
-  keeps `$CLAUDE_PLUGIN_ROOT` and versioned updates.
+```
+/plugin install codex-micro-thread-status --marketplace thannous/claude-codex-micro
+```
+
+From a local clone, `claude plugin marketplace add /path/to/claude-codex-micro`
+then `claude plugin install codex-micro-thread-status@claude-codex-micro`.
+
+A plugin is installed per Claude configuration directory. With several profiles
+(`CLAUDE_CONFIG_DIR`), install it in each one whose sessions should report; each
+event records the directory it ran under, which is how the companion learns to
+list that profile's sessions.
+
+The two watchers are kept running across logins by launchd:
+
+```sh
+node scripts/service.mjs install     # writes two agents under ~/Library/LaunchAgents
+node scripts/service.mjs status
+node scripts/service.mjs uninstall
+```
+
+## Without the plugin
+
+Since Claude Code 2.1.322 the roster carries a `status`, and the companion uses
+it: keys show working, waiting-for-you and idle with no plugin at all. The plugin
+triggers a reconciliation as soon as a hook arrives and distinguishes a
+finished turn from an idle prompt. Explicit roster statuses still take
+precedence: an early hook cannot contradict a sampled `busy`, `idle` or `waiting`.
 
 ## Known bounds
 

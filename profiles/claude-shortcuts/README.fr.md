@@ -9,7 +9,8 @@ lié avec AppSense et distinct du layer Codex natif protégé à l'index `0`.
 ## État réel
 
 - format communautaire et mapping : implémentés ;
-- générateur de profile : validé sur un export Input `0.17.3` ;
+- générateur de profile : validé sur Input `0.17.3` et par aller-retour réel dans
+  Input `1.1.0`, avec SHA-256 du layer natif identique ;
 - mécanisme officiel Input `*-layer.json` : observé historiquement dans Input
   `0.17.2` ;
 - sauvegarde, inventaire, dry-run et rollback : implémentés et testés sur des

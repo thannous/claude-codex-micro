@@ -5,22 +5,21 @@
 // reads no transcript. All the assignment and transition logic is therefore
 // testable without a running Claude.
 //
-// Two sources feed the reducer, and they are not interchangeable:
-//
-//   - the roster (`claude agents --json`) is the authority on membership: it
-//     alone decides which session occupies a slot;
-//   - the hooks are the authority on state: they alone know whether a turn is
-//     running, finished, or blocked on a decision.
+// The roster (`claude agents --json`) is the authority on membership: it alone
+// decides which session occupies a slot. What a session shows on its key is not
+// decided here but by the session machine (scripts/lib/session-machine.mjs),
+// which this reducer feeds with roster rows and hook events. Each slot carries
+// its `phase` in that machine, and `state` is the display state of that phase.
 //
 // This separation is not cosmetic. A missed hook (crash, `kill -9`) would pin
-// the state to `running` forever; the roster catches that. Conversely the roster
-// publishes no state at all; the hooks deliver it instantly.
+// the state to `running` forever; the roster catches that.
 
 /**
  * @typedef {object} SessionSlot
  * @property {string} sessionId Claude Code session identifier.
- * @property {string} state One of the shared `STATES` values.
- * @property {number} [updatedAt] Timestamp of the last state transition.
+ * @property {string} phase Phase in the session machine.
+ * @property {string} state Display state of `phase`, one of the shared `STATES` values.
+ * @property {number} [updatedAt] Timestamp of the last display change or hook.
  * @property {string} [name] Display name from the official roster.
  * @property {string} [cwd] Session working directory.
  * @property {number} [pid] Session process identifier.
@@ -28,15 +27,17 @@
  * @property {string} [terminalApp] Supported terminal application name.
  * @property {string} [entrypoint] Claude Code host entrypoint.
  * @property {string} [hostSessionId] Host grouping id, not a navigation target.
+ * @property {string|null} [configDir] `CLAUDE_CONFIG_DIR` the session runs under; null for the default.
  */
 
 /**
  * @typedef {object} SlotSnapshot
- * @property {1} version Snapshot schema version.
+ * @property {2} version Snapshot schema version. Version 1 slots had no `phase`.
  * @property {Array<SessionSlot|null>} slots Six physical Agent-key assignments.
- * @property {Record<string, string>} pending Hook states awaiting roster membership.
+ * @property {Record<string, string>} pending Display state last set by a hook, for sessions
+ * the roster does not list yet.
  * @property {number} dropped Pending states evicted from the bounded map.
- * @property {number} overflow Live sessions that could not claim a slot.
+ * @property {number} overflow Live sessions currently without a slot.
  */
 
 /**
@@ -66,15 +67,15 @@ export const SLOT_CONTROLS = Object.freeze(["key-9", "key-10", "key-5", "key-6",
 // shows the same legend, and a duplicated palette would end up diverging.
 export { LEGEND_ORDER, STATE_COLORS, STATES } from "../../shared/thread-status-palette.mjs";
 import { STATE_COLORS, STATES } from "../../shared/thread-status-palette.mjs";
-
-// The notification types that require a human. Any other type
-// (`auth_success`, `elicitation_complete`…) leaves the state alone: a red light
-// has to mean "you are being waited for", and nothing else.
-const BLOCKING_NOTIFICATIONS = new Set([
-  "permission_prompt",
-  "agent_needs_input",
-  "elicitation_dialog",
-]);
+import {
+  ROSTER_GONE,
+  SESSION_MACHINE,
+  displayState,
+  hookEvent,
+  nextPhase,
+  phaseFromDisplay,
+  rosterEvent,
+} from "./session-machine.mjs";
 
 // Hook events can arrive before the session shows up in the roster, and some
 // sessions never show up at all (`claude -p`, subagents). Their last state is
@@ -82,29 +83,16 @@ const BLOCKING_NOTIFICATIONS = new Set([
 const MAX_PENDING = 32;
 
 /**
- * Converts one Claude hook payload into a lighting state transition.
- * Non-blocking notifications and unrecognized events deliberately return null.
+ * Converts one Claude hook payload into the display state it stands for when
+ * hooks are the only source. Non-blocking notifications and unrecognized events
+ * deliberately return null.
  *
  * @param {object|null|undefined} event Normalized hook event.
  * @returns {string|null} A shared `STATES` value, or null for no transition.
  */
 export function stateFromHookEvent(event) {
-  switch (event?.event) {
-    case "SessionStart":
-      return STATES.idle;
-    case "UserPromptSubmit":
-      return STATES.running;
-    case "Notification":
-      if (BLOCKING_NOTIFICATIONS.has(event.notificationType)) return STATES.blocked;
-      if (event.notificationType === "idle_prompt") return STATES.idle;
-      return null;
-    case "Stop":
-      return STATES.done;
-    case "SessionEnd":
-      return STATES.ended;
-    default:
-      return null;
-  }
+  const name = hookEvent(event);
+  return name ? displayState(nextPhase(SESSION_MACHINE.initial, name)) : null;
 }
 
 /**
@@ -114,7 +102,7 @@ export function stateFromHookEvent(event) {
  */
 export function emptySnapshot() {
   return {
-    version: 1,
+    version: 2,
     slots: Array.from({ length: SLOT_COUNT }, () => null),
     pending: {},
     dropped: 0,
@@ -122,11 +110,28 @@ export function emptySnapshot() {
   };
 }
 
-// A defensive shallow copy is enough: the entries are flat objects.
+// Fields the reducer kept on a slot before the session machine held that
+// knowledge in `phase`.
+const LEGACY_FIELDS = ["stateSource", "rosterStatus", "lastHookState", "blockingNotification"];
+
+// A slot written before phases existed, or by hand, is known by its display
+// state only: it enters the machine as the hooks-only phase showing that state,
+// and the next roster row takes over from there.
+function withPhase(entry) {
+  const copy = { ...entry };
+  for (const field of LEGACY_FIELDS) delete copy[field];
+  if (!SESSION_MACHINE.states.includes(copy.phase)) copy.phase = phaseFromDisplay(copy.state);
+  copy.state = displayState(copy.phase);
+  return copy;
+}
+
+// A defensive shallow copy is enough: the entries are flat objects. Slots go
+// through `withPhase`, so a snapshot built by hand cannot reach the machine
+// without a phase.
 function cloneSnapshot(snapshot) {
   return {
-    version: 1,
-    slots: snapshot.slots.map((entry) => (entry ? { ...entry } : null)),
+    version: 2,
+    slots: snapshot.slots.map((entry) => (entry ? withPhase(entry) : null)),
     pending: { ...snapshot.pending },
     dropped: snapshot.dropped ?? 0,
     overflow: snapshot.overflow ?? 0,
@@ -136,6 +141,7 @@ function cloneSnapshot(snapshot) {
 /**
  * Sanitizes persisted data into the current snapshot shape and slot count.
  * Invalid snapshots fail closed to {@link emptySnapshot}; extra slots vanish.
+ * A slot with no valid `phase` is given the one matching its display state.
  *
  * @param {unknown} value Deserialized snapshot candidate.
  * @returns {SlotSnapshot} Defensive copy safe for reducer operations.
@@ -146,7 +152,7 @@ export function normalizeSnapshot(value) {
   for (let index = 0; index < SLOT_COUNT; index += 1) {
     const entry = value.slots[index];
     if (entry && typeof entry === "object" && typeof entry.sessionId === "string") {
-      base.slots[index] = { ...entry };
+      base.slots[index] = withPhase(entry);
     }
   }
   if (value.pending && typeof value.pending === "object") base.pending = { ...value.pending };
@@ -162,13 +168,19 @@ function slotOf(snapshot, sessionId) {
 // Eviction order: a free slot, then the oldest closed session, then the oldest
 // finished one. A live session that is working, or waiting on a decision, is
 // never evicted.
+//
+// An idle session is evicted last, and only for a newcomer that has something
+// to show (`urgent`: working, or waiting on a decision). Six open-but-idle
+// sessions must not hide the one that is actually running; and an idle newcomer
+// must not evict another idle session, or the two would trade the key on every
+// poll.
 const EVICTABLE = [STATES.ended, STATES.done];
 
-function claimSlot(snapshot) {
+function claimSlot(snapshot, { urgent = false } = {}) {
   const free = snapshot.slots.indexOf(null);
   if (free !== -1) return free;
 
-  for (const state of EVICTABLE) {
+  for (const state of urgent ? [...EVICTABLE, STATES.idle] : EVICTABLE) {
     let candidate = -1;
     let oldest = Infinity;
     snapshot.slots.forEach((entry, index) => {
@@ -191,6 +203,18 @@ function rememberPending(snapshot, sessionId, state) {
   snapshot.pending[sessionId] = state;
 }
 
+// Sends one event to a slot's machine. Returns whether the display changed,
+// which is also when `updatedAt` moves: a phase can change without the key
+// changing, and that must neither republish nor reorder evictions.
+function move(entry, event, now) {
+  entry.phase = nextPhase(entry.phase, event);
+  const shown = displayState(entry.phase);
+  if (shown === entry.state) return false;
+  entry.state = shown;
+  entry.updatedAt = now;
+  return true;
+}
+
 /**
  * Applies a hook transition without mutating the input snapshot. A session
  * missing from the roster gets no slot: its state remains pending until roster
@@ -204,21 +228,23 @@ function rememberPending(snapshot, sessionId, state) {
 export function applyHookEvent(snapshot, event, now = 0) {
   const next = cloneSnapshot(snapshot);
   const sessionId = event?.sessionId;
-  const state = stateFromHookEvent(event);
-  if (typeof sessionId !== "string" || !state) return { snapshot: next, changed: false };
+  const name = hookEvent(event);
+  if (typeof sessionId !== "string" || !name) return { snapshot: next, changed: false };
 
   const index = slotOf(next, sessionId);
   if (index === -1) {
-    rememberPending(next, sessionId, state);
+    rememberPending(next, sessionId, stateFromHookEvent(event));
     return { snapshot: next, changed: false };
   }
 
   const entry = next.slots[index];
-  // A `Stop` following a `blocked` is legitimate: the decision was made and the
-  // turn ended. No transition is forbidden here, then — only the moment of the
-  // change is recorded.
-  const changed = entry.state !== state;
-  entry.state = state;
+  // A closed session is the roster's to reopen: a late hook changes nothing,
+  // not even the age its slot is evicted by.
+  if (entry.phase === "ended") return { snapshot: next, changed: false };
+
+  const changed = move(entry, name, now);
+  // A hook is a sign of life: it keeps an idle session's key from being the
+  // first one given up, whether or not the display moved.
   entry.updatedAt = now;
   if (event.hostSessionId) entry.hostSessionId = event.hostSessionId;
   if (event.entrypoint) entry.entrypoint = event.entrypoint;
@@ -233,7 +259,9 @@ export function applyHookEvent(snapshot, event, now = 0) {
  *
  * @param {SlotSnapshot} snapshot Current reducer state.
  * @param {object[]} roster Rows from `claude agents --json`, optionally enriched
- * with `tty` and `terminalApp` by the caller.
+ * with `tty`, `terminalApp` and `configDir` by the caller. A row's `status`
+ * (`busy` / `idle` / `waiting`) is sent to the session machine as a roster
+ * event; a row without one, or with a status never measured, as `roster.silent`.
  * @param {number} [now=0] Timestamp recorded on membership changes.
  * @returns {{snapshot: SlotSnapshot, changed: boolean, notes: string[]}}
  * Next state, render hint, and explicit overflow diagnostics.
@@ -244,47 +272,44 @@ export function applyRoster(snapshot, roster, now = 0) {
   const live = new Set(rows.map((row) => row.sessionId));
   const notes = [];
   let changed = false;
+  // Recounted on every pass: it is the number of live sessions without a key
+  // right now, not a tally of polls.
+  next.overflow = 0;
 
   for (const row of rows) {
     let index = slotOf(next, row.sessionId);
     if (index === -1) {
-      index = claimSlot(next);
+      const promoted = next.pending[row.sessionId];
+      const urgent = promoted
+        ? promoted === STATES.running || promoted === STATES.blocked
+        : row.status === "busy" || row.status === "waiting";
+      index = claimSlot(next, { urgent });
       if (index === -1) {
         next.overflow += 1;
         notes.push(`No free slot for session ${row.sessionId}.`);
         continue;
       }
-      const promoted = next.pending[row.sessionId];
       delete next.pending[row.sessionId];
-      next.slots[index] = {
-        sessionId: row.sessionId,
-        state: promoted ?? STATES.idle,
-        updatedAt: now,
-      };
+      // A hook that fired before the roster listed the session is where its
+      // machine starts; the row's status is applied below like any other.
+      const phase = phaseFromDisplay(promoted);
+      next.slots[index] = { sessionId: row.sessionId, phase, state: displayState(phase), updatedAt: now };
       changed = true;
     }
 
     const entry = next.slots[index];
-    for (const field of ["name", "cwd", "pid", "kind", "startedAt", "tty", "terminalApp"]) {
+    for (const field of ["name", "cwd", "pid", "kind", "startedAt", "tty", "terminalApp", "configDir"]) {
       if (row[field] !== undefined && entry[field] !== row[field]) {
         entry[field] = row[field];
         changed = true;
       }
     }
-    // The process came back into the roster after we had declared it dead: this
-    // is not supposed to happen, but the roster remains the authority.
-    if (entry.state === STATES.ended) {
-      entry.state = STATES.idle;
-      entry.updatedAt = now;
-      changed = true;
-    }
+    if (move(entry, rosterEvent(row.status), now)) changed = true;
   }
 
   next.slots.forEach((entry) => {
-    if (!entry || live.has(entry.sessionId) || entry.state === STATES.ended) return;
-    entry.state = STATES.ended;
-    entry.updatedAt = now;
-    changed = true;
+    if (!entry || live.has(entry.sessionId)) return;
+    if (move(entry, ROSTER_GONE, now)) changed = true;
   });
 
   return { snapshot: next, changed, notes };

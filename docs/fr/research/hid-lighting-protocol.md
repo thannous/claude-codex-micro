@@ -15,6 +15,23 @@ globales, et écouter les événements touches et joystick.
 Mesures sur macOS `26.5.2` arm64, firmware Codex Micro `v0.4.1` (relevé par
 `sys.version`), `node-hid` `3.4.0`.
 
+**Revérifié sur le firmware `v0.6.3`**, le 12 novembre 2026, macOS `27.2` arm64,
+avec Work Louder Input `1.1.0` et l'app ChatGPT (`157.0.8103`) ouverts.
+`sys.version` répond `0.6.3`. Trois touches ont été allumées côte à côte et lues
+à l'œil : le thread `0` avec les noms de champs courts (`c`, `b`, `e`, `s`), le
+thread `1` avec les noms longs (`color`, `brightness`, `effect`, `speed`), le
+thread `2` avec les deux. **Les trois se sont allumées**, sur les touches que
+prédit `SLOT_THREAD_IDS`.
+
+Ce test existe parce qu'un projet indépendant
+([`creator-micro-agent-status`](https://github.com/coeckmath-maker/creator-micro-agent-status),
+`docs/PROTOCOL.md`) rapporte que les noms courts ont cessé d'être rendus sur un
+Creator Micro 2 en `v0.6.2`, tout en restant acquittés par `{"ok":1}`. Ce n'est
+pas le cas sur un Codex Micro en `v0.6.3`. La leçon tient quand même : un
+acquittement ne prouve rien du rendu, donc un changement de firmware de ce genre
+n'est visible que par une personne. `node scripts/lighting.mjs probe` est le
+contrôle à relancer après chaque mise à jour du firmware.
+
 ## Cadre légal, rappelé
 
 Ce document décrit un **format observé** : constantes, positions d'octets,
@@ -77,6 +94,15 @@ s'appuie dessus : toute poussée étrangère détectée déclenche une
 réapplication immédiate, avec un filet de sécurité périodique de 10 s. Sans
 `--hold`, l'état posé est recouvert à la cadence de ChatGPT — comportement
 attendu, affiché à l'utilisateur.
+
+Le 12 novembre 2026, deux exécutions de `watch --hold` (45 s et 75 s) avec l'app
+ChatGPT ouverte et au repos n'ont relevé **aucune** écriture étrangère, alors
+qu'une minuterie fixe de 35 à 40 secondes en prédit au moins une par exécution.
+La cadence de juillet avait été mesurée avec des threads Codex actifs. La lecture
+la plus simple qui tient les deux est que l'app écrit sur ses propres changements
+d'état, et non sur une minuterie — c'est aussi ce que décrit
+[FreeMicro](https://github.com/buddyh/freemicro) d'après sa propre lecture de
+l'app. Ce n'est pas tranché ; `--hold` est correct dans les deux cas.
 
 ## Composants livrés
 

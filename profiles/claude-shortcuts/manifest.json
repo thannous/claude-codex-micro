@@ -15,9 +15,10 @@
   },
   "compatibility": {
     "input": {
-      "observedVersion": "0.17.3",
+      "observedVersion": "1.1.0",
       "supportedVersions": [
-        "0.17.3"
+        "0.17.3",
+        "1.1.0"
       ],
       "bundleId": "it.focusense.input-app",
       "sharingMechanism": {
@@ -35,7 +36,7 @@
           "multiactionGroups",
           "smartActionGroups"
         ],
-        "importTest": "profile-generator-validated-on-0.17.3; official-layer-roundtrip-pending"
+        "importTest": "profile-generator-validated-on-0.17.3-and-1.1.0; native-layer-sha256-preserved-in-1.1.0-profile-roundtrip; official-layer-roundtrip-pending"
       }
     },
     "firmware": {
@@ -94,7 +95,8 @@
       "sensitive-action-policy-validation",
       "isolated-transaction-fixture-tests",
       "input-0.17.2-sharing-mechanism-inspection",
-      "input-0.17.3-profile-generator-validation"
+      "input-0.17.3-profile-generator-validation",
+      "input-1.1.0-profile-generator-roundtrip-validation"
     ]
   }
 }

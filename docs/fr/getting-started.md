@@ -41,7 +41,7 @@ Comparer avec
   contrat logique historique aligné sur V1.
 
 Le manifeste communautaire n'est pas un export Input. Le parcours principal
-transforme localement un export officiel `*-profile.json` d'Input `0.17.3`.
+transforme localement un export officiel `*-profile.json` d'Input `0.17.3` ou `1.1.0`.
 L'étude du format `*-layer.json` d'Input `0.17.2` reste une preuve historique.
 
 ## 4. Exporter et sauvegarder avant toute modification

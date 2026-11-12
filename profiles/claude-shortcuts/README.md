@@ -9,7 +9,8 @@ distinct from the native Codex layer protected at index `0`.
 ## Real state
 
 - community format and mapping: implemented;
-- profile generator: validated on an Input `0.17.3` export;
+- profile generator: validated on Input `0.17.3` and by a real Input `1.1.0`
+  profile round-trip with an identical native-layer SHA-256;
 - official Input `*-layer.json` mechanism: observed historically in Input
   `0.17.2`;
 - backup, inventory, dry run and rollback: implemented and tested on isolated

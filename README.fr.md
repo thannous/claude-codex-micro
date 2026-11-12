@@ -47,7 +47,7 @@ natif.
 > [!IMPORTANT]
 > Projet communautaire en développement actif. Le configurateur local et le
 > générateur de profile fonctionnent avec les fixtures documentées et le flux de
-> profile Input `0.17.3`, mais le round-trip officiel `*-layer.json` et la
+> profile Input `0.17.3` et `1.1.0`, mais le round-trip officiel `*-layer.json` et la
 > checklist matérielle complète restent en cours.
 
 ## Ce qui fonctionne aujourd'hui
@@ -93,9 +93,9 @@ Claude Code, et en presser une vous y emmène.
 
 **Trois conditions, et trois seulement.**
 
-1. **Quitter l'app ChatGPT.** Elle réécrit ces LED toutes les 35 à 40 secondes et
-   intercepte les appuis sur les touches Agent. La dernière écriture gagne : avec
-   elle ouverte, vous verrez vos couleurs apparaître puis disparaître.
+1. **Isoler le test de l'app ChatGPT.** Elle peut réécrire les LED et réagir aux
+   mêmes touches Agent. La cadence historique de 35 à 40 secondes n'a pas été
+   reproduite lors des sondes de novembre : la coexistence reste à qualifier.
 2. `npm install`, pour que `node-hid` — dépendance optionnelle — soit compilé.
 3. Les keycodes Agent doivent être posés sur le layer Claude. Input ne les
    propose pas dans son sélecteur de touches, donc
@@ -115,16 +115,29 @@ node scripts/lighting.mjs watch --hold  # pousse ces couleurs sur les touches
 ```
 
 `thread-status` réconcilie deux sources officielles — `claude agents --json` pour
-les sessions vivantes, et le journal de hooks d'un plugin pour leur état — dans
+les sessions vivantes et leur statut général, et le journal de hooks d'un plugin
+pour les transitions et la distinction terminé/repos — dans
 `~/.claude/thread-status/slots.json`. `lighting watch` suit ce fichier. `--hold`
 réapplique dès qu'une écriture étrangère est détectée.
+
+Pour garder les deux en marche d'une ouverture de session à l'autre, et installer
+le plugin pour de bon :
+
+```sh
+node scripts/service.mjs install
+claude plugin marketplace add "$PWD"
+claude plugin install codex-micro-thread-status@claude-codex-micro
+```
+
+`node scripts/service.mjs uninstall` retire les deux agents launchd.
 
 Les commandes et leur sortie sont en anglais, comme tout l'outillage du dépôt :
 
 ```console
 $ node scripts/thread-status.mjs doctor
   ✔ claude binary: $HOME/Library/Application Support/Claude/…/claude
-  ✔ claude agents --json: 6 live session(s)
+  ✔ claude agents --json (default configuration): 6 live session(s)
+  ✔ roster status: idle, busy
   ✔ state directory reachable: $HOME/.claude/thread-status
   ✔ journal: 194 event(s), last UserPromptSubmit 513s ago
   ✔ navigation: 4/6 session(s) in an identifiable terminal — the others are
@@ -180,7 +193,7 @@ Le dépôt contient désormais :
 - un configurateur graphique local lancé par `npm run configure` ;
 - un outil Node.js de diagnostic, inventaire, sauvegarde, dry-run, sanitation et
   rollback ;
-- un générateur local de profile Input `0.17.3` qui préserve le layer natif et
+- un générateur local de profile Input `0.17.3` et `1.1.0` qui préserve le layer natif et
   le lien AppSense existant ;
 - des tests transactionnels sur copies isolées ;
 - une analyse reproductible du mécanisme de partage d'Input `0.17.2` ;
@@ -191,8 +204,8 @@ L'analyse du package officiel confirme des commandes **Import layer** et
 attendue. Le vrai fichier Claude n'est volontairement pas fabriqué : ses objets
 internes doivent provenir d'un export réel du Codex Micro.
 
-Le manifeste V1 est `hardware-observed` : le générateur a été validé sur un
-export Input `0.17.3`, mais le round-trip d'un artefact `*-layer.json` et la
+Le manifeste V1 est `hardware-observed` : le générateur a été validé sur Input
+`0.17.3` et par aller-retour de profil dans `1.1.0`, mais le round-trip d'un artefact `*-layer.json` et la
 checklist matérielle complète restent ouverts. Le fichier logique
 `macos.example.json` reste séparément `proposal-not-applied` : ce n'est pas un
 preset universel à importer.
@@ -237,7 +250,7 @@ actif.
 ### Compatibilité observée
 
 - macOS `26.5.2` arm64 ;
-- Work Louder Input `0.17.3` pour le générateur de profile ;
+- Work Louder Input `0.17.3` et `1.1.0` pour le générateur de profile ;
 - firmware Codex Micro `v0.4.1` ;
 - Claude Desktop `1.24012.9` ;
 - bundle Claude `com.anthropic.claudefordesktop` ;

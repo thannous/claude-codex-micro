@@ -20,6 +20,22 @@ framing, the RPC channel and `v.oai.thstatus` survive two minor versions
 unchanged. The notification surface was measured in full on that occasion; the
 results are in the section below.
 
+**Re-verified on firmware `v0.6.3`**, 12 November 2026, macOS `27.2` arm64, with
+Work Louder Input `1.1.0` and the ChatGPT app (`157.0.8103`) both running.
+`sys.version` answers `0.6.3`. Three keys were lit side by side and read by eye:
+thread `0` with the short field names (`c`, `b`, `e`, `s`), thread `1` with the
+long ones (`color`, `brightness`, `effect`, `speed`), thread `2` with both. **All
+three rendered**, on the keys `SLOT_THREAD_IDS` predicts.
+
+That test exists because an independent project
+([`creator-micro-agent-status`](https://github.com/coeckmath-maker/creator-micro-agent-status),
+`docs/PROTOCOL.md`) reports that the short names stopped rendering on a Creator
+Micro 2 on `v0.6.2` while still being acknowledged with `{"ok":1}`. That is not
+the case on a Codex Micro on `v0.6.3`. The lesson stands regardless: an
+acknowledgement proves nothing about rendering, so a firmware change of this kind
+is only visible to a person. `node scripts/lighting.mjs probe` is the check to
+rerun after every firmware update.
+
 ## Legal framing, restated
 
 This document describes an **observed format**: constants, byte positions, JSON
@@ -80,6 +96,14 @@ responses" that Input logs as warnings). The `--hold` mode of
 immediate reapply, with a periodic 10s safety net. Without `--hold`, the state
 set here is overwritten at ChatGPT's cadence — expected behaviour, and shown to
 the user.
+
+On 12 November 2026, two runs of `watch --hold` (45 s and 75 s) with the ChatGPT
+app open and idle recorded **no** foreign write, where a fixed 35 to 40 second
+timer predicts at least one per run. The July cadence was measured with Codex
+threads active. The simplest reading that fits both is that the app writes on
+its own state changes rather than on a timer — which is also how
+[FreeMicro](https://github.com/buddyh/freemicro) describes it from its own
+reading of the app. This is not settled; `--hold` is correct under either.
 
 ## Shipped components
 
@@ -195,8 +219,8 @@ document is the measured one. And the `device.status` payload is what the shim
   unparseable lines**, so every notch that reached the host was parsed and the
   silent `catch` in `#dispatch` swallowed nothing. Settling the question needs
   an independent counter, not a human one.
-- Longevity: this is the format of firmware `v0.4.1`; an update may change it
-  without notice.
+- Longevity: this is the format observed on firmware `v0.4.1`, `v0.6.1` and
+  `v0.6.3`; an update may change it without notice.
 
 ## Sources
 

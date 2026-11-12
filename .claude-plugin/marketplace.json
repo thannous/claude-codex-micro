@@ -1,0 +1,16 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-codex-micro",
+  "description": "Claude Code plugins for the Work Louder Codex Micro",
+  "owner": {
+    "name": "Codex Micro × Claude community"
+  },
+  "plugins": [
+    {
+      "name": "codex-micro-thread-status",
+      "description": "Journals Claude Code session state for the six Agent keys of the Codex Micro. Writes nothing to the device and reads no transcript.",
+      "category": "productivity",
+      "source": "./thread-status"
+    }
+  ]
+}

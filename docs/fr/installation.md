@@ -2,7 +2,7 @@
 
 # Générer et installer le profile Claude V1
 
-Le parcours V1 transforme localement un export officiel d'Input `0.17.3`. Le
+Le parcours V1 transforme localement un export officiel d'Input `0.17.3` ou `1.1.0`. Le
 profile source doit contenir exactement un layer `Claude`, hors index `0` et
 déjà lié à Claude Desktop avec AppSense. Le générateur modifie uniquement ce
 layer dans une copie et produit un nouveau `*-profile.json`.
@@ -56,7 +56,7 @@ node scripts/input-layer.mjs doctor --json
 
 Vérifier notamment :
 
-- Input `0.17.3`, bundle `it.focusense.input-app` ;
+- Input `0.17.3` ou `1.1.0`, bundle `it.focusense.input-app` ;
 - Claude, bundle `com.anthropic.claudefordesktop` ;
 - le chemin de configuration Input détecté ;
 - le firmware `v0.4.1` dans l'écran Setup d'Input ;
@@ -282,6 +282,10 @@ Détail du comportement mesuré :
 ## 10. Validation matérielle
 
 Tester dans une conversation sans enjeu, une action à la fois :
+
+La [procédure de test sur le clavier](hardware-validation.md) fournit un ordre de
+passage et le retour à `Default`. Les lignes ci-dessous restent ouvertes tant
+que les actions physiques n'ont pas été exécutées.
 
 - [ ] Claude au premier plan active le layer existant, pas l'index `0` ;
 - [ ] `⌘N` ouvre une nouvelle conversation ;

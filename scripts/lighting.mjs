@@ -8,15 +8,14 @@
 // volatile HID reports are emitted; nothing is flashed, nothing goes into
 // Input's storage.
 //
-// Contention: the ChatGPT app pushes its own configuration every 35 to 40s and
-// the last write wins. Without --hold, a state set here can be overwritten;
+// Contention: the ChatGPT app can push its own configuration and the last write
+// wins. The historical 35–40s cadence was not reproduced in November probes.
+// Without --hold, a state set here can be overwritten;
 // with --hold, any detected foreign push triggers an immediate reapply (plus a
 // periodic safety net).
 
 import { spawn } from "node:child_process";
 import { promises as fs, watch } from "node:fs";
-import os from "node:os";
-import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { DeviceError, DeviceSession, listInterfaces } from "./lib/hid-device.mjs";
 import {
@@ -29,11 +28,11 @@ import {
   slotsToThreadEntries,
   threadEntry,
 } from "./lib/hid-lighting.mjs";
+import { createRunLoop } from "./lib/run-loop.mjs";
+import { statePaths } from "./lib/state-paths.mjs";
 import { SLOT_CONTROLS, SLOT_COUNT } from "./lib/thread-slots.mjs";
 
-const stateDir =
-  process.env.CLAUDE_THREAD_STATUS_DIR || path.join(os.homedir(), ".claude", "thread-status");
-const slotsPath = path.join(stateDir, "slots.json");
+const { slotsPath } = statePaths();
 
 // Guard time against the firmware's key repeats.
 const FOCUS_DEBOUNCE_MS = 300;
@@ -62,8 +61,9 @@ Options
   --hold                      reapply as soon as a foreign write is detected
   --path=path                 specific HID interface (default: first one found)
 
-Contention: the ChatGPT app pushes its own configuration every 35 to 40s and the
-last write wins. Without --hold, the state set here can be overwritten.
+Contention: the ChatGPT app can overwrite lighting; last write wins. Its
+historical periodic cadence has not been reproduced on every version.
+Without --hold, the state set here can be overwritten.
 `;
 }
 
@@ -369,19 +369,14 @@ async function commandWatch(flags) {
   await push(rows, "initial");
   holdNote(flags);
 
-  let queued = false;
-  const watcher = watch(slotsPath, () => {
-    if (queued) return;
-    queued = true;
-    setTimeout(async () => {
-      queued = false;
-      try {
-        await push(await readSlots(), "slots.json");
-      } catch (error) {
-        process.stderr.write(`  ! re-read: ${error.message}\n`);
-      }
-    }, 100);
+  // A write to slots.json raises several change events. The delay lets them
+  // settle into one read; a change that lands while a push is under way gets
+  // its own pass afterwards.
+  const follow = createRunLoop(async () => push(await readSlots(), "slots.json"), {
+    delayMs: 100,
+    onError: (error) => process.stderr.write(`  ! re-read: ${error.message}\n`),
   });
+  const watcher = watch(slotsPath, follow.request);
 
   // Safety net: under --hold, reapply periodically whatever happens.
   const timer = flags.hold ? setInterval(() => void apply("safety-net"), HOLD_SAFETY_MS) : null;
